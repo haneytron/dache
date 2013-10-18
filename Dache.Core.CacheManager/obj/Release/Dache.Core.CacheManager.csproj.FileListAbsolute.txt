@@ -1,0 +1,13 @@
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Core.CacheManager.dll
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Core.CacheManager.pdb
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Communication.BoardToManager.dll
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Communication.CacheToManager.dll
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Core.DataStructures.dll
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Core.Logging.dll
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Communication.BoardToManager.pdb
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Communication.CacheToManager.pdb
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Core.DataStructures.pdb
+D:\Dache\Dache.Core.CacheManager\bin\Release\Dache.Core.Logging.pdb
+D:\Dache\Dache.Core.CacheManager\obj\Release\Dache.Core.CacheManager.csprojResolveAssemblyReference.cache
+D:\Dache\Dache.Core.CacheManager\obj\Release\Dache.Core.CacheManager.dll
+D:\Dache\Dache.Core.CacheManager\obj\Release\Dache.Core.CacheManager.pdb

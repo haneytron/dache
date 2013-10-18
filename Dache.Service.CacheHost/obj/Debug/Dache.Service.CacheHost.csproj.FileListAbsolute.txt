@@ -1,0 +1,16 @@
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Service.CacheHost.exe.config
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Service.CacheHost.exe
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Service.CacheHost.pdb
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Communication.CacheToManager.dll
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Communication.ClientToCache.dll
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Core.CacheHost.dll
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Core.DataStructures.dll
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Core.Logging.dll
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Communication.CacheToManager.pdb
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Communication.ClientToCache.pdb
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Core.CacheHost.pdb
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Core.DataStructures.pdb
+D:\Dache\Dache.Service.CacheHost\bin\Debug\Dache.Core.Logging.pdb
+D:\Dache\Dache.Service.CacheHost\obj\Debug\Dache.Service.CacheHost.csprojResolveAssemblyReference.cache
+D:\Dache\Dache.Service.CacheHost\obj\Debug\Dache.Service.CacheHost.exe
+D:\Dache\Dache.Service.CacheHost\obj\Debug\Dache.Service.CacheHost.pdb

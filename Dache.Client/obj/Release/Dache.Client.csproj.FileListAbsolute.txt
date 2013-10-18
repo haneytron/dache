@@ -1,0 +1,7 @@
+D:\Dache\Dache.Client\bin\Release\Dache.Client.dll
+D:\Dache\Dache.Client\bin\Release\Dache.Client.pdb
+D:\Dache\Dache.Client\obj\Release\Dache.Client.dll
+D:\Dache\Dache.Client\obj\Release\Dache.Client.pdb
+D:\Dache\Dache.Client\bin\Release\Dache.Client.XML
+D:\Dache\Dache.Client\bin\Release\Client.Example.config
+D:\Dache\Dache.Client\obj\Release\Dache.Client.csprojResolveAssemblyReference.cache

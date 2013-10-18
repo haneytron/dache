@@ -1,0 +1,6 @@
+D:\Dache\Dache.Client\bin\Debug\Dache.Client.dll.config
+D:\Dache\Dache.Client\bin\Debug\Dache.Client.dll
+D:\Dache\Dache.Client\bin\Debug\Dache.Client.pdb
+D:\Dache\Dache.Client\obj\Debug\Dache.Client.csprojResolveAssemblyReference.cache
+D:\Dache\Dache.Client\obj\Debug\Dache.Client.dll
+D:\Dache\Dache.Client\obj\Debug\Dache.Client.pdb

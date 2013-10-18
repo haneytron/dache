@@ -1,0 +1,293 @@
+﻿@section JavaScript
+{
+    <script type="text/javascript" src="/js/dacheboard.js"></script>
+    <script type="text/javascript">
+        var globalRefreshIntervalMilliseconds = 1000;
+
+        var pieData = [{ "age": "<5", "population": "2704659" },
+            { "age": "5-13", "population": "4499890" },
+            { "age": "14-17", "population": "2159981" },
+            { "age": "18-24", "population": "3853788" },
+            { "age": "25-44", "population": "14106543" },
+            { "age": "45-64", "population": "8819342" },
+            { "age": "≥65", "population": "612463" }];
+
+        var random = d3.random.normal(2500, 800);
+        
+        // Panel 1
+        var totalCachedObjectDistributionPieChart = new PieChart(pieData, 200, 150, "#overviewCachedObjectDistributionPieChart");
+        var totalCacheHostMemoryUsagePieChart = new PieChart(pieData, 200, 150, "#overviewCacheHostMemoryUsagePieChart");
+
+        var totalOperationsPerSecondChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewOpsPerSecondChart");
+        var totalCachedObjectCountChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewCachedObjectCountChart");
+        // Panel 3
+        var totalAddsPerSecondChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewAddsPerSecondChart");
+        var totalGetsPerSecondChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewGetsPerSecondChart");
+        var totalRemovesPerSecondChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewRemovesPerSecondChart");
+        var totalEvictionsPerSecondChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewEvictionsPerSecondChart");
+        var totalMemoryUsagePercentChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewMemoryUsagePercentChart");
+        var totalMemoryUsageChart = new RealtimeLineChart(200, 150, [0, 5 - 1], "linear", "#overviewMemoryUsageChart");
+        // Stacked Bar Charts
+        var totalObjectCountVsOperationsStackedBarChart = new StackedBarChart(500, 500, "#overviewObjectCountVsOperationsStackedBarChart");
+        var totalAddsVsGetsVsRemovesStackedBarChart = new StackedBarChart(500, 500, "#overviewAddsVsGetsVsRemovesStackedBarChart");
+        window.setTimeout(function () { totalAddsVsGetsVsRemovesStackedBarChart.addData({ "CacheHost": "server9.ff.p10", "Object Count": 666666, "Ops / Sec": 666666, "Evictions / Sec": 222222 }); }, 1000);
+        window.setTimeout(function () { totalAddsVsGetsVsRemovesStackedBarChart.addData({ "CacheHost": "server10.ff.p10", "Object Count": 666666, "Ops / Sec": 666666, "Evictions / Sec": 222222 }); }, 1200);
+        window.setTimeout(function () { totalAddsVsGetsVsRemovesStackedBarChart.addData({ "CacheHost": "server11.ff.p10", "Object Count": 666666, "Ops / Sec": 666666, "Evictions / Sec": 222222 }); }, 1500);
+
+        // Test
+        window.setTimeout(function () { totalOperationsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds);
+        window.setTimeout(function () { totalOperationsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 2);
+        window.setTimeout(function () { totalOperationsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 3);
+        window.setTimeout(function () { totalCachedObjectCountChart.addPoint(5); }, globalRefreshIntervalMilliseconds);
+        window.setTimeout(function () { totalCachedObjectCountChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 2);
+        window.setTimeout(function () { totalCachedObjectCountChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 3);
+        window.setTimeout(function () { totalAddsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds);
+        window.setTimeout(function () { totalAddsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 2);
+        window.setTimeout(function () { totalAddsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 3);
+        window.setTimeout(function () { totalGetsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds);
+        window.setTimeout(function () { totalGetsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 2);
+        window.setTimeout(function () { totalGetsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 3);
+        window.setTimeout(function () { totalRemovesPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds);
+        window.setTimeout(function () { totalRemovesPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 2);
+        window.setTimeout(function () { totalRemovesPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 3);
+        window.setTimeout(function () { totalEvictionsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds);
+        window.setTimeout(function () { totalEvictionsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 2);
+        window.setTimeout(function () { totalEvictionsPerSecondChart.addPoint(5); }, globalRefreshIntervalMilliseconds * 3);
+    </script>
+    <style>
+        .x.axis line {
+          shape-rendering: auto;
+        }
+
+        .line {
+          fill: none;
+          stroke: #0066CC;
+          stroke-width: 3px;
+        }
+
+        .axis path, .axis line {
+            fill: none;
+            stroke: #000000;
+            stroke-width: 3px;
+        }
+
+        .y.axis .domain {
+          fill: none;
+          stroke: #000000;
+          stroke-width: 3px;
+        }
+
+        .cacheHostDetailsButton {
+		    padding: .4em 1em .4em 20px;
+		    text-decoration: none;
+		    position: relative;
+	    }
+
+        .cacheHostDetailsButton:link {
+            text-decoration: none;
+        }
+
+	    .cacheHostDetailsButton span.ui-icon {
+		    margin: 0 5px 0 0;
+		    position: absolute;
+		    left: .2em;
+		    top: 50%;
+		    margin-top: -8px;
+	    }
+	    #icons {
+		    margin: 0;
+		    padding: 0;
+	    }
+	    #icons li {
+		    margin: 2px;
+		    position: relative;
+		    padding: 4px 0;
+		    cursor: pointer;
+		    float: left;
+		    list-style: none;
+	    }
+	    #icons span.ui-icon {
+		    float: left;
+		    margin: 0 4px;
+	    }
+
+        /* stacked bar chart */
+        .stackedBarChart .axis path, .stackedBarChart .axis line {
+          fill: none;
+          stroke: #000;
+          shape-rendering: crispEdges;
+        }
+
+        .stackedBarChart .bar {
+          fill: steelblue;
+        }
+
+        .stackedBarChart .legend {
+            font-size: 12px;
+        }
+
+        .stackedBarChart .x.axis path {
+          display: none;
+        }
+
+        /* Icons in tabs */
+        .ui-tabs-nav .ui-icon { 
+            display: inline-block; 
+            margin-right: 3px;
+        }
+    </style>
+}
+                <div class="marginBottomSmall">
+                    <div id="panel1" class="leftFloat">
+                        <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom verticalWidget">
+                            <div>
+                                Overall Cached Object Distribution
+                            </div>
+                            <div id="overviewCachedObjectDistributionPieChart"></div>
+                        </div>
+                        <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom verticalWidget">
+                            <div>
+                                Total Operations / Sec
+                            </div>
+                            <div id="overviewOpsPerSecondChart"></div>
+                        </div>
+                        <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom verticalWidget">
+                            <div>
+                                Total Cached Object Count
+                            </div>
+                            <div id="overviewCachedObjectCountChart"></div>
+                        </div>
+                        <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom verticalWidget">
+                            <div>
+                                Overall Cache Host Memory Usage
+                            </div>
+                            <div id="overviewCacheHostMemoryUsagePieChart"></div>
+                        </div>
+                    </div>
+                    <div id="panel2" class="leftFloat">
+                        <div class="accordion">
+	                        <h3>server-1.ff.p10</h3>
+	                        <div>
+                                <b>Ops / sec</b>
+                                <p></p>
+                                Total: 5000<br />
+                                Adds: 5000<br />
+                                Gets: 5000<br />
+                                Removes: 5000<br />
+                                Evictions: 5000
+                                <p>
+                                    <a href="#" class="cacheHostDetailsButton ui-state-default ui-corner-all"><span class="ui-icon ui-icon-circle-zoomin"></span>Open</a>
+                                </p>
+	                        </div>
+	                        <h3>server-2.ff.p10</h3>
+	                        <div>
+                                <b>Ops / sec</b>
+                                <p></p>
+                                Total: 5000<br />
+                                Adds: 5000<br />
+                                Gets: 5000<br />
+                                Removes: 5000<br />
+                                Evictions: 5000
+                                <p>
+                                    <a href="#" class="cacheHostDetailsButton ui-state-default ui-corner-all"><span class="ui-icon ui-icon-newwin"></span>Open</a>
+                                </p>
+	                        </div>
+	                        <h3>server-3.ff.p10</h3>
+	                        <div>
+                                <b>Ops / sec</b>
+                                <p></p>
+                                Total: 5000<br />
+                                Adds: 5000<br />
+                                Gets: 5000<br />
+                                Removes: 5000<br />
+                                Evictions: 5000
+                                <p>
+                                    <a href="#" class="cacheHostDetailsButton ui-state-default ui-corner-all"><span class="ui-icon ui-icon-newwin"></span>Open</a>
+                                </p>
+	                        </div>
+                            @for (int i = 0; i < 20; i++)
+                            {
+                                <h3>server-@(i + 4).ff.p10</h3>
+	                        <div>
+                                <b>Ops / sec</b>
+                                <p></p>
+                                Total: 5000<br />
+                                Adds: 5000<br />
+                                Gets: 5000<br />
+                                Removes: 5000<br />
+                                Evictions: 5000
+                                <p>
+                                    <a href="#" class="cacheHostDetailsButton ui-state-default ui-corner-all"><span class="ui-icon ui-icon-newwin"></span>Open</a>
+                                </p>
+	                        </div>
+                            }
+                        </div>
+                    </div>
+                    <div id="panel3">
+                        <div id="panel3Tabs" class="tabs">
+	                        <ul>
+		                        <li><a href="#overallTabs-1"><span class="ui-icon ui-icon-check"></span>Performance</a></li>
+		                        <li><a href="#overallTabs-2"><span class="ui-icon ui-icon-heart"></span>Health</a></li>
+	                        </ul>
+	                        <div id="overallTabs-1">
+                                <div id="performanceTab" class="textCenter">
+                                    <div class="title">Overall Performance</div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetSmall">
+                                        <div>
+                                            Total Adds / Sec
+                                        </div>
+                                        <div id="overviewAddsPerSecondChart"></div>
+                                    </div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetSmall">
+                                        <div>
+                                            Total Gets / Sec
+                                        </div>
+                                        <div id="overviewGetsPerSecondChart"></div>
+                                    </div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetSmall">
+                                        <div>
+                                            Total Removes / Sec
+                                        </div>
+                                        <div id="overviewRemovesPerSecondChart"></div>
+                                    </div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetSmall">
+                                        <div>
+                                            Total Evictions / Sec
+                                        </div>
+                                        <div id="overviewEvictionsPerSecondChart"></div>
+                                    </div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetSmall">
+                                        <div>
+                                            Total Memory Usage %
+                                        </div>
+                                        <div id="overviewMemoryUsagePercentChart"></div>
+                                    </div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetSmall">
+                                        <div>
+                                            Total Memory Usage (MB)
+                                        </div>
+                                        <div id="overviewMemoryUsageChart"></div>
+                                    </div>
+                                </div>
+	                        </div>
+	                        <div id="overallTabs-2">
+                                <div id="healthTab" class="textCenter">
+                                    <div class="title">Overall Health</div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetMedium">
+                                        <div>
+                                            Object Count vs Operations
+                                        </div>
+                                        <div id="overviewObjectCountVsOperationsStackedBarChart"></div>
+                                    </div>
+                                    <div class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom inlineWidgetMedium">
+                                        <div>
+                                            Adds vs Gets vs Removes
+                                        </div>
+                                        <div id="overviewAddsVsGetsVsRemovesStackedBarChart"></div>
+                                    </div>
+                                </div>
+	                        </div>
+                        </div>
+                    </div>
+                    <div class="clearFloat"></div>
+                </div>

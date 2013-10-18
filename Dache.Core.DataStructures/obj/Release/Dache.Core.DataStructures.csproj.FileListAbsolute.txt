@@ -1,0 +1,7 @@
+D:\Dache\Dache.Core.DataStructures\bin\Release\Dache.Core.DataStructures.dll
+D:\Dache\Dache.Core.DataStructures\bin\Release\Dache.Core.DataStructures.pdb
+D:\Dache\Dache.Core.DataStructures\bin\Release\Dache.Core.Logging.dll
+D:\Dache\Dache.Core.DataStructures\bin\Release\Dache.Core.Logging.pdb
+D:\Dache\Dache.Core.DataStructures\obj\Release\Dache.Core.DataStructures.csprojResolveAssemblyReference.cache
+D:\Dache\Dache.Core.DataStructures\obj\Release\Dache.Core.DataStructures.dll
+D:\Dache\Dache.Core.DataStructures\obj\Release\Dache.Core.DataStructures.pdb

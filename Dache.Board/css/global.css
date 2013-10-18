@@ -1,0 +1,283 @@
+﻿/* global elements */
+
+body
+{
+    background-color: #CCD2DC; /* consider #EFEFEF */
+	font-family: Trebuchet MS,Tahoma,Verdana,Arial,sans-serif; /*Arial, Helvetica;*/
+	font-size: 14px;
+	color: #515151;
+	margin: 0px;
+	padding: 0px;
+	border: 0px;
+    font-weight: bold;
+}
+
+div
+{
+	margin: 0px;
+	padding: 0px;
+	border: 0px;	
+}
+
+img
+{
+    border: 0px;
+}
+
+a:link
+{
+    text-decoration: underline;
+    color: #0066CC;
+}
+
+a:visited
+{
+    text-decoration: underline;
+    color: #0066CC;
+}
+
+a:hover
+{
+    text-decoration: none;
+    color: #0066CC;
+}
+
+/* specific IDs */
+
+#header
+{
+    height: 60px;
+    background-color: #1E262C;
+}
+
+#headerContainer
+{
+    color: #EBF7F7;
+    padding-top: 15px;
+
+}
+
+#main
+{
+    background: url("/images/header-body-gradient2.png") repeat-x;
+    min-height: 129px;
+}
+
+#panel1
+{
+    width: 285px;
+    margin-left: 10px;
+    padding-right: 5px;
+}
+
+#panel2
+{
+    width: 235px;
+    padding-left: 5px;
+    padding-right: 5px;
+    overflow-y: auto;
+}
+
+#panel3
+{
+    overflow: hidden;
+    padding-left: 5px;
+    margin-right: 10px;
+}
+
+#footer
+{
+    width: 300px;
+}
+
+#footer a:link
+{
+    text-decoration: underline;
+    color: #515151;
+}
+
+#footer a:visited
+{
+    color: #515151;
+    text-decoration: underline;
+}
+
+#footer a:hover
+{
+    color: #000000;
+    text-decoration: none;
+}
+
+/* element specific classes */
+
+input.textInput
+{
+    background-color: #FFFFFF;
+	height: 16px;
+    width: 216px;
+    padding: 0px;
+    border: none;
+}
+
+/* IE7 and below select height hack */
+*:first-child+html select
+{
+	height: auto !important;	
+}
+
+/* Firefox select height hack */
+@-moz-document url-prefix()
+{
+    select
+    {
+        height: 19px !important;
+    }
+}
+
+select
+{
+	background-color: #FFFFFF;
+	height: 16px;
+    width: 216px;
+	padding: 0px;
+	border: none;
+}
+
+input.submitButton
+{
+    border: 0px;
+    width: 239px;
+    height: 58px;
+}
+
+div.title
+{
+    font-size: 36px;
+    margin-bottom: 10px;
+}
+
+div.verticalWidget
+{
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+div.verticalWidget:last-child
+{
+    margin-bottom: 0px;
+}
+
+div.inlineWidgetSmall
+{
+    display: inline-block;
+    width: 270px; 
+    padding: 10px; 
+    margin-right: 10px; 
+    margin-bottom: 10px; 
+    text-align: center;
+}
+
+div.inlineWidgetMedium
+{
+    display: inline-block;
+    width: 500px; 
+    padding: 10px; 
+    margin-right: 10px; 
+    margin-bottom: 10px; 
+    text-align: center;
+}
+
+div.leftFloat
+{
+	display: block;
+	float: left;	
+}
+
+div.rightFloat
+{
+	display: block;
+	float: right;
+}
+
+div.clearFloat
+{
+	clear: both;
+}
+
+a.blueButton:link
+{
+    text-decoration: none;
+    color: #FFFFFF;
+}
+
+a.blueButton:visited
+{
+    color: #FFFFFF;
+}
+
+a.blueButton:hover
+{
+    color: #FFFFFF;
+    text-decoration: underline;
+}
+
+/* generic classes */
+
+.fullWidth
+{
+    width: 100%;
+}
+
+.pageWidth
+{
+    width: 960px;
+}
+
+.centered
+{
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.marginLeftMedium
+{
+    margin-left: 15px;
+}
+
+
+.marginBottomSmall
+{
+    margin-bottom: 10px;
+}
+
+.marginBottomMedium
+{
+    margin-bottom: 15px;
+}
+
+.paddingTopSmall
+{
+    padding-top: 10px;
+}
+
+.paddingBottomSmall
+{
+    padding-bottom: 10px;
+}
+
+.textCenter
+{
+    text-align: center;
+}
+
+/* jQuery UI override to ensure uniform appearance of all 3 panels */
+.accordion h3:first-child
+{
+    margin-top: 0px;
+}
+
+/* chart stuff */
+.arc path {
+  stroke: #FFFFFF;
+}

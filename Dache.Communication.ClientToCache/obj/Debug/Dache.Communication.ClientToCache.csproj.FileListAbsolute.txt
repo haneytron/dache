@@ -1,0 +1,5 @@
+D:\Dache\Dache.Communication.ClientToCache\bin\Debug\Dache.Communication.ClientToCache.dll
+D:\Dache\Dache.Communication.ClientToCache\bin\Debug\Dache.Communication.ClientToCache.pdb
+D:\Dache\Dache.Communication.ClientToCache\obj\Debug\Dache.Communication.ClientToCache.csprojResolveAssemblyReference.cache
+D:\Dache\Dache.Communication.ClientToCache\obj\Debug\Dache.Communication.ClientToCache.dll
+D:\Dache\Dache.Communication.ClientToCache\obj\Debug\Dache.Communication.ClientToCache.pdb

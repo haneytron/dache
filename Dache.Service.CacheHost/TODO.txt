@@ -1,0 +1,172 @@
+﻿-Use a namespace with WCF
+-Interface the MemCache class and DI it
+-Switch WCF serialization to protobuf if it makes sense (is faster?)
+-Consider Streamed WCF?
+-Use Messages and Copying Messages via MessageBuffer: http://msdn.microsoft.com/en-us/library/ms734675.aspx
+-Offer both IIS hosting and classic Service hosting
+-Better way to do static Container classes?
+-LOWERCASE all keywords in XML comments
+-add same key to 2 diff servers at same time - ensure this situations works well. perhaps ordered messages
+-pass different cache item policy bools across WCF between Caches
+-Discovery mode WCF?
+-Loss-tolerant disconnect/reconnect based on a merge of routing tables... the more recent data is the correct data
+-Routing tables... if one gets too large, split into 2
+*eventual consolidation of tagged/keyworded entries to fewest possible servers
+
+*CLEAR TAG NAME WHEN TAG IS USED TO REMOVE ALL TAGGED THINGS
+
+
+------
+
+Flow of Hosts (an Add is an update):
+
+Registration: 
+
+-Hosts register with controller, atomically (blocks all routing adds/removes to ensure new host gets accurate routing table... also blocks other registrations)
+-Controller receives registration, holds callback stored at host's WCF address, sends current routing table
+-Controller publishes address to all other clients
+-Controller publishes all other clients to this client
+
+Cache Balancing Information Distribution:
+
+-Controller periodically pings hosts for cache %, distributes to all hosts to use for balancing
+
+Cache Balancing:
+
+-Hosts balance memory by sending entry directly to another host (oneway)
+-Host notifies controller of routing table update (oneway)
+-Controller updates Routing Table for all hosts (and itself)
+-Upon receipt of routing table add, host will check for and delete local entry
+
+Cache Add to Same Host:
+
+-Host receives add request
+-Host adds cache entry locally
+-Host notifies controller of routing table update (oneway)
+-Controller updates Routing Table for all hosts (and itself)
+
+Cache Add to Different Host
+-Host receives add request
+-Host calls add on another Host
+-Host adds cache entry locally
+-Host notifies controller of routing table update (oneway)
+-Controller updates Routing Table for all hosts (and itself)
+
+Cache Remove to Same Host
+-Host receives remove request
+-Host deletes cache entry -- other Hosts will now return null for entry
+-Host notifies controller of routing table delete (oneway)
+-Controller removes routing Table entry for all hosts (and itself)
+
+Cache Remove to Different Host
+-Host receives remove request
+-Host calls delete on another Host
+-Host deletes cache entry -- other Hosts will now return null for entry
+-Host notifies controller of routing table delete (oneway)
+-Controller removes routing Table entry for all hosts (and itself)
+
+Routing table Add/Update:
+
+-Host receives Add request
+-Host updates routing table
+-If Host has local entry already, it deletes it immediately after the routing add
+
+Routing Table Delete:
+
+-Host receives Delete
+-Host deletes routing table entry
+
+Host disconnection:
+
+-Controller detects disconnection
+-Controller deregisters host (drops it)
+-Controller calls deregister for all other hosts (all of this atomic, blocks routing table updates and registrations))
+
+Host detection of Host disconnection:
+
+-If load balancing, try a different host
+-If getting an entry, return null
+
+Host reconnection:
+
+(all atomic)
+-Hosts register with controller, atomically (blocks all routing adds/removes to ensure new host gets accurate routing table... also blocks other registrations)
+-Controller receives registration, holds callback stored at host's WCF address, sends current routing table
+-Controller publishes address to all other clients
+-Controller publishes all other clients to this client
+-Controller sees hosts existing Routing table send w/ registration so knows it is a reconnect
+-Controller compares against current routing table
+	-adds keys to all Hosts if key exists at disconnected host but not at other connected hosts
+	-in the case of overlapping keys calls Routing Table Delete to all hosts including the current one, bringing all back in sync
+
+------
+
+Controller fault tolerance:
+
+-If controller goes down, hosts remain up but now stagnated
+-adds and removes blocked until controller is re-established
+-Reconnect to controller every X time from the disconnect which should be nearly in sync
+-Possibility of inconsistency (A, B, C reconnect and have cache key X, D doesn't until later but D is accessed by clients)
+	-Solution: cache-aside algorithm
+
+------
+
+Host shutdown:
+
+-Immediately deregister, close WCF port
+-Load balance to all other hosts if app config setting is true
+
+------
+
+Accessing host that is shut down:
+
+-VIP mode at client setting
+	-true, rely on VIP
+	-false, indicate all valid hosts at all clients, and if a host fails to resolve, access another host
+
+------
+
+Keyword functionality:
+
+-Allows cache entries to be associated to a keyword
+-N entries to 1 keyword
+
+Add or Update:
+
+-Add cache entry per usual, but also update and broadcast keyword routing table (keyword --> cache keys)
+
+Get:
+
+-Get of keyword: use keyword routing table (routes keys at keyword) to resolve all entries in bulk, return IEnumerable of them
+
+Delete of all keys at Keyword:
+
+-Send delete command to all Hosts for keyword, clear keyword routing table entry
+-If an add under this key was happening at same time, basically Add old data --> delete all data --> deleted --> old data added now but should not be there
+	-Set a timer at each server to, right after delete (and locking on keyword) block entries (just ignore them) for time > timeout between client-server or server-server (whichever is longer)
+
+------
+
+Cache balancing alg:
+
+4 instances
+
+object counts: 4 4 2 2
+goal: 3 3 3 3
+
+eventual load balancing achieved by offloading the difference between the count and average to the servers which are below average, round robin style
+
+object counts: 8 8 2 2
+goal: 5 5 5 5
+
+7 7 4 2
+6 6 4 4
+5 5 6 4
+
+scenario 2: distributing in reverse
+
+7 7 2 4
+6 6 4 4
+5 5 6 4
+
+eventual load balancing achieved again

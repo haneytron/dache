@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html style="height: 100%;">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>Dacheboard - @ViewBag.PageTitle</title>
+    <meta name="keywords" content="distributed, caching, cache, .NET, dotnet, NET, c#, memory, ncache, appfabric, competitors, alternatives, session, state, provider, output, cache, fast, efficient, scale, scalable, performant, high, performance, reliable, stable" />
+    <meta name="description" content="Fast, scalable .NET distributed caching with meaningful performance metrics for your managers and a simple API for your development team. No database, file I/O, PowerShell, or MSMQ. Up to 90% of server memory can be used for caching. As your application grows, dache grows too – with less hardware investment required along the way. Over 100,000 operations per second per server. Bulk API and cached item tagging are exceptionally performant." />
+    <script type="text/javascript" src="/js/jquery-1.9.1.min.js"></script>
+    <script type="text/javascript" src="/js/jquery-ui-1.10.2.custom.min.js"></script>
+    <script type="text/javascript" src="/js/d3.v3.min.js"></script>
+
+    @RenderSection("JavaScript", false)
+
+    <link rel="stylesheet" type="text/css" href="/css/custom-theme/jquery-ui-1.10.2.custom.min.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="/css/global.css" media="screen" />
+
+    <meta itemprop="image" content="/images/favicon.png">
+</head>
+<body>
+    <div id="header">
+        <div id="headerContainer" class="fullWidth marginBottomMedium">
+            <div id="logo" class="marginLeftMedium">
+                <a href="/"><img src="/images/logo.png" alt="Dache Logo" width="83" height="28" /></a>
+            </div>
+        </div>
+    </div>
+    <div id="main" class="paddingTopSmall">
+        @RenderBody()
+    </div>
+    <div id="footer" class="ui-helper-reset ui-widget-content ui-corner-top ui-corner-bottom centered marginBottomSmall textCenter paddingTopSmall paddingBottomSmall">
+        &copy; @DateTime.Now.Year Dache, LLC. All rights reserved.
+    </div>
+</body>
+</html>

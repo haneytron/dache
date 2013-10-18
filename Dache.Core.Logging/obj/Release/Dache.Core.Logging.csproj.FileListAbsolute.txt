@@ -1,0 +1,5 @@
+D:\Dache\Dache.Core.Logging\bin\Release\Dache.Core.Logging.dll
+D:\Dache\Dache.Core.Logging\bin\Release\Dache.Core.Logging.pdb
+D:\Dache\Dache.Core.Logging\obj\Release\Dache.Core.Logging.dll
+D:\Dache\Dache.Core.Logging\obj\Release\Dache.Core.Logging.pdb
+D:\Dache\Dache.Core.Logging\obj\Release\Dache.Core.Logging.csprojResolveAssemblyReference.cache
