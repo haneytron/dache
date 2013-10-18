@@ -11,7 +11,12 @@ VERSION HISTORY
 1.0.0
 ------------------
 
--Initial rollout of Dache code
+Initial release of Dache
+
+-Includes cache manager, cache host, and client.
+-Some Dache Board work completed: needs more work in future.
+-Custom performance counters.
+
 
 ============================================
 INSTALLATION INSTRUCTIONS
