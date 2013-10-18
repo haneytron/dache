@@ -1,5 +1,0 @@
-D:\Dache\Dache.Communication.BoardToManager\bin\Release\Dache.Communication.BoardToManager.dll
-D:\Dache\Dache.Communication.BoardToManager\bin\Release\Dache.Communication.BoardToManager.pdb
-D:\Dache\Dache.Communication.BoardToManager\obj\Release\Dache.Communication.BoardToManager.dll
-D:\Dache\Dache.Communication.BoardToManager\obj\Release\Dache.Communication.BoardToManager.pdb
-D:\Dache\Dache.Communication.BoardToManager\obj\Release\Dache.Communication.BoardToManager.csprojResolveAssemblyReference.cache

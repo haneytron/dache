@@ -1,5 +1,0 @@
-D:\Dache\Dache.Core.Logging\bin\Debug\Dache.Core.Logging.dll
-D:\Dache\Dache.Core.Logging\bin\Debug\Dache.Core.Logging.pdb
-D:\Dache\Dache.Core.Logging\obj\Debug\Dache.Core.Logging.csprojResolveAssemblyReference.cache
-D:\Dache\Dache.Core.Logging\obj\Debug\Dache.Core.Logging.dll
-D:\Dache\Dache.Core.Logging\obj\Debug\Dache.Core.Logging.pdb
