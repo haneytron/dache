@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 
-namespace Dache.Core.DataStructures.Performance
+namespace Dache.Core.Performance
 {
     /// <summary>
     /// Manages custom performance counters.

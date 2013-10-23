@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
-namespace Dache.Core.DataStructures.Comparers
+namespace Dache.Core.Comparers
 {
     /// <summary>
     /// A generic comparer that takes as input a function which determines how comparisons are made.

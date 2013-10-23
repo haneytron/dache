@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.ServiceModel;
-using System.Text;
-using System.Threading;
-using Dache.Communication.ClientToCache;
-using Dache.Core.DataStructures.Interfaces;
 using Dache.Core.CacheHost.Storage;
-using Dache.Core.DataStructures.Routing;
+using Dache.Core.Interfaces;
 
 namespace Dache.Core.CacheHost
 {

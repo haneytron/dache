@@ -1,10 +1,6 @@
-﻿using Dache.Core.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 
-namespace Dache.Core.DataStructures.Logging
+namespace Dache.Core.Logging
 {
     /// <summary>
     /// Contains a logger that logs information while the services run.

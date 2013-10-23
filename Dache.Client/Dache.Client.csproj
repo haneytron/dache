@@ -46,13 +46,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Dache.Communication.ClientToCache\IClientToCacheContract.cs">
+    <Compile Include="..\Dache.Communication\IClientToCacheContract.cs">
       <Link>Communication\IClientToCacheContract.cs</Link>
     </Compile>
-    <Compile Include="..\Dache.Core.Logging\EventViewerLogger.cs">
+    <Compile Include="..\Dache.Core\Logging\EventViewerLogger.cs">
       <Link>Logging\EventViewerLogger.cs</Link>
     </Compile>
-    <Compile Include="..\Dache.Core.Logging\ILogger.cs">
+    <Compile Include="..\Dache.Core\Logging\ILogger.cs">
       <Link>Logging\ILogger.cs</Link>
     </Compile>
     <Compile Include="Configuration\CacheClientConfigurationSection.cs" />

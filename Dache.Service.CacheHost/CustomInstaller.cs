@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.ComponentModel;
-using System.ServiceProcess;
-using System.Reflection;
 using System.Configuration.Install;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
-using Dache.Core.DataStructures.Performance;
+using System.Reflection;
+using System.ServiceProcess;
+using Dache.Core.Performance;
 
 namespace Dache.Service.CacheHost
 {

@@ -7,8 +7,8 @@
     <ProjectGuid>{3F3041BD-DEEA-4C15-8AB4-305F8FD894F5}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Dache.Communication.ClientToCache</RootNamespace>
-    <AssemblyName>Dache.Communication.ClientToCache</AssemblyName>
+    <RootNamespace>Dache.Communication</RootNamespace>
+    <AssemblyName>Dache.Communication</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

@@ -1,25 +1,20 @@
-﻿using Dache.Communication.ClientToCache;
-using Dache.Core.CacheHost;
-using Dache.Core.CacheHost.Communication.ClientToCache;
-using Dache.Core.CacheHost.Storage;
-using Dache.Core.DataStructures.Interfaces;
-using Dache.Core.DataStructures.Logging;
-using Dache.Core.Logging;
-using Dache.Service.CacheHost.Configuration;
-using System;
+﻿using System;
 using System.Collections.Specialized;
-using System.Configuration;
-using System.Diagnostics;
-using System.Reflection;
-using System.Runtime.Caching;
+using System.Linq;
 using System.ServiceModel;
 using System.ServiceModel.Description;
 using System.ServiceProcess;
 using System.Threading;
-using Dache.Core.CacheHost.Polling;
-using System.Linq;
+using Dache.Communication;
+using Dache.Core.CacheHost;
+using Dache.Core.CacheHost.Communication.ClientToCache;
 using Dache.Core.CacheHost.Performance;
-using Dache.Core.DataStructures.Performance;
+using Dache.Core.CacheHost.Polling;
+using Dache.Core.CacheHost.Storage;
+using Dache.Core.Interfaces;
+using Dache.Core.Logging;
+using Dache.Core.Performance;
+using Dache.Service.CacheHost.Configuration;
 
 namespace Dache.Service.CacheHost
 {

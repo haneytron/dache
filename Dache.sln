@@ -5,13 +5,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Service.CacheHost", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Core.CacheHost", "Dache.Core.CacheHost\Dache.Core.CacheHost.csproj", "{D02AF7ED-EC9B-4893-9E20-68FEE4107C12}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Communication.ClientToCache", "Dache.Communication.ClientToCache\Dache.Communication.ClientToCache.csproj", "{3F3041BD-DEEA-4C15-8AB4-305F8FD894F5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Communication", "Dache.Communication\Dache.Communication.csproj", "{3F3041BD-DEEA-4C15-8AB4-305F8FD894F5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Core.DataStructures", "Dache.Core.DataStructures\Dache.Core.DataStructures.csproj", "{E304662C-AC30-4427-9CA0-F63297F37694}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Core", "Dache.Core\Dache.Core.csproj", "{E304662C-AC30-4427-9CA0-F63297F37694}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Client", "Dache.Client\Dache.Client.csproj", "{66581BD3-D11B-491A-BFE3-A0DA56C6D6F5}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Core.Logging", "Dache.Core.Logging\Dache.Core.Logging.csproj", "{57B17A05-F721-4680-8BEB-EE382E7E26C4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Board", "Dache.Board\Dache.Board.csproj", "{6CEC0B51-BBDC-4C86-BD07-BE252F7C2C4E}"
 EndProject

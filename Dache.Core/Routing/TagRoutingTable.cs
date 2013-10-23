@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
 using System.Threading;
 
-namespace Dache.Core.DataStructures.Routing
+namespace Dache.Core.Routing
 {
     /// <summary>
     /// The routing table that indicates which tags contain which cache keys. Thread safe.

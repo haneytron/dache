@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 using System.Runtime.Caching;
-using System.Text;
 using Dache.Core.CacheHost.Performance;
 
 namespace Dache.Core.CacheHost.Storage

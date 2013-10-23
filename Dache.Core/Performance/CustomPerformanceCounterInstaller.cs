@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+﻿using System.Diagnostics;
 
-namespace Dache.Core.DataStructures.Performance
+namespace Dache.Core.Performance
 {
     /// <summary>
     /// Installs or uninstalls custom performance counters.

@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Caching;
 using System.ServiceModel;
-using System.Text;
-using Dache.Communication.ClientToCache;
+using Dache.Communication;
 using Dache.Core.CacheHost.Storage;
-using Dache.Core.DataStructures.Logging;
-using Dache.Core.DataStructures.Routing;
+using Dache.Core.Routing;
 
 namespace Dache.Core.CacheHost.Communication.ClientToCache
 {
