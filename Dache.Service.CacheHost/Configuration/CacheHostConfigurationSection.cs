@@ -27,18 +27,6 @@ namespace Dache.Service.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The cache manager.
-        /// </summary>
-        [ConfigurationProperty("cacheManager", IsRequired = true)]
-        public CacheManagerElement CacheManager
-        {
-            get
-            {
-                return (CacheManagerElement)this["cacheManager"];
-            }
-        }
-
-        /// <summary>
         /// The custom logger.
         /// </summary>
         [ConfigurationProperty("customLogger", IsRequired = false)]

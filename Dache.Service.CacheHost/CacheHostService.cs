@@ -1,6 +1,5 @@
 ﻿using Dache.Communication.ClientToCache;
 using Dache.Core.CacheHost;
-using Dache.Core.CacheHost.Communication.CacheToManager;
 using Dache.Core.CacheHost.Communication.ClientToCache;
 using Dache.Core.CacheHost.Storage;
 using Dache.Core.DataStructures.Interfaces;
@@ -132,15 +131,6 @@ namespace Dache.Service.CacheHost
                 // Configure the service endpoint
                 clientToCacheServiceHost.AddServiceEndpoint(typeof(IClientToCacheContract), netTcpBinding, endpointAddress);
 
-                // Build the cache manager endpoint address
-                var cacheManagerEndpointAddress = string.Format("net.tcp://{0}:{1}/Dache/CacheManager",
-                    CacheHostConfigurationSection.Settings.CacheManager.Address,
-                    CacheHostConfigurationSection.Settings.CacheManager.Port);
-
-                // Initialize the cache manager client
-                int managerReconnectIntervalMilliseconds = 5000;
-                var cacheManagerClient = new CacheToManagerClient(cacheManagerEndpointAddress, managerReconnectIntervalMilliseconds);
-
                 // Configure the custom performance counter manager
                 var serviceHostAddress = clientToCacheServiceHost.Description.Endpoints.First().Address.Uri;
                 CustomPerformanceCounterManagerContainer.Instance = new CustomPerformanceCounterManager(string.Format("{0}_{1}", serviceHostAddress.Host, serviceHostAddress.Port), false);
@@ -149,7 +139,7 @@ namespace Dache.Service.CacheHost
                 var cacheHostInformationPoller = new CacheHostInformationPoller(1000);
 
                 // Instantiate the cache host engine
-                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, memCache, clientToCacheServiceHost, cacheManagerClient);
+                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, memCache, clientToCacheServiceHost);
             }
             catch (Exception ex)
             {

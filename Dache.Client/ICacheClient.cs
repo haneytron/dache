@@ -27,7 +27,7 @@ namespace Dache.Client
         /// <param name="cacheKeys">The cache keys.</param>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        IList<T> GetMany<T>(IEnumerable<string> cacheKeys);
+        List<T> GetMany<T>(IEnumerable<string> cacheKeys);
 
         /// <summary>
         /// Gets the objects stored at the given tag name from the cache.
@@ -35,7 +35,7 @@ namespace Dache.Client
         /// <param name="tagName">The tag name.</param>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
-        IList<T> GetTagged<T>(string tagName);
+        List<T> GetTagged<T>(string tagName);
 
         /// <summary>
         /// Adds or updates an object in the cache at the given cache key.

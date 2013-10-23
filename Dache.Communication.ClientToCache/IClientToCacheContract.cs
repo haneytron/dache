@@ -24,19 +24,17 @@ namespace Dache.Communication.ClientToCache
         /// Gets the serialized objects stored at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param> 
         /// <returns>A list of the serialized objects.</returns>
         [OperationContract(Name = "B")]
-        IList<byte[]> GetMany(IEnumerable<string> cacheKeys, bool isClientRequest);
+        List<byte[]> GetMany(IEnumerable<string> cacheKeys);
 
         /// <summary>
         /// Gets all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param>
         /// <returns>A list of the serialized objects.</returns>
         [OperationContract(Name = "C")]
-        IList<byte[]> GetTagged(string tagName, bool isClientRequest);
+        List<byte[]> GetTagged(string tagName);
 
         /// <summary>
         /// Adds or updates a serialized object in the cache at the given cache key.
@@ -163,8 +161,7 @@ namespace Dache.Communication.ClientToCache
         /// Removes all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param>
         [OperationContract(Name = "R", IsOneWay = true)]
-        void RemoveTagged(string tagName, bool isClientRequest);
+        void RemoveTagged(string tagName);
     }
 }

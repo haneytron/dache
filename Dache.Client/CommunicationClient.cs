@@ -100,9 +100,8 @@ namespace Dache.Client
         /// Gets the serialized objects stored at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param> 
         /// <returns>A list of the serialized objects.</returns>
-        public IList<byte[]> GetMany(IEnumerable<string> cacheKeys, bool isClientRequest)
+        public List<byte[]> GetMany(IEnumerable<string> cacheKeys)
         {
             // Sanitize
             if (cacheKeys == null)
@@ -116,7 +115,7 @@ namespace Dache.Client
 
             try
             {
-                return _proxy.GetMany(cacheKeys, isClientRequest);
+                return _proxy.GetMany(cacheKeys);
             }
             catch
             {
@@ -131,9 +130,8 @@ namespace Dache.Client
         /// Gets all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param>
         /// <returns>A list of the serialized objects.</returns>
-        public IList<byte[]> GetTagged(string tagName, bool isClientRequest)
+        public List<byte[]> GetTagged(string tagName)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
@@ -143,7 +141,7 @@ namespace Dache.Client
 
             try
             {
-                return _proxy.GetTagged(tagName, isClientRequest);
+                return _proxy.GetTagged(tagName);
             }
             catch
             {
@@ -583,8 +581,7 @@ namespace Dache.Client
         /// Removes all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param>
-        public void RemoveTagged(string tagName, bool isClientRequest)
+        public void RemoveTagged(string tagName)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
@@ -594,7 +591,7 @@ namespace Dache.Client
 
             try
             {
-                _proxy.RemoveTagged(tagName, isClientRequest);
+                _proxy.RemoveTagged(tagName);
             }
             catch
             {

@@ -6,7 +6,6 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
-using Dache.Board.Communication;
 using Dache.Board.Configuration;
 using Dache.Board.Custom.ActionAttributes;
 
@@ -71,7 +70,8 @@ namespace Dache.Board
             var endpointAddressFormattedString = "net.tcp://{0}:{1}/Dache/Dacheboard";
             var managerAddress = string.Format(endpointAddressFormattedString, address, port);
 
-            BoardToManagerClientContainer.Instance = new BoardToManagerClient(managerAddress, managerReconnectIntervalMilliseconds);
+            // TODO: initialize dache board cache host client here?
+            //BoardToManagerClientContainer.Instance = new BoardToManagerClient(managerAddress, managerReconnectIntervalMilliseconds);
         }
     }
 }

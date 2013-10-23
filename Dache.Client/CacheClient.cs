@@ -137,7 +137,7 @@ namespace Dache.Client
         /// <param name="cacheKeys">The cache keys.</param>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        public IList<T> GetMany<T>(IEnumerable<string> cacheKeys)
+        public List<T> GetMany<T>(IEnumerable<string> cacheKeys)
         {
             // Sanitize
             if (cacheKeys == null)
@@ -149,21 +149,44 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeys");
             }
 
-            IList<byte[]> rawResults = null;
-
+            List<byte[]> rawResults = null;
             do
             {
-                // Use the first key's client
-                var client = DetermineClient(cacheKeys.First());
+                // Need to batch up requests
+                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                List<string> clientCacheKeys = null;
+                foreach (var cacheKey in cacheKeys)
+                {
+                    // Get the communication client
+                    var client = DetermineClient(cacheKey);
+                    if (!routingDictionary.TryGetValue(client, out clientCacheKeys))
+                    {
+                        clientCacheKeys = new List<string>(10);
+                    }
+
+                    clientCacheKeys.Add(cacheKey);
+                }
 
                 try
                 {
-                    rawResults = client.GetMany(cacheKeys, true);
+                    // Now we've batched them, do the work
+                    rawResults = null;
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        if (rawResults == null)
+                        {
+                            rawResults = routingDictionaryEntry.Key.GetMany(routingDictionaryEntry.Value);
+                            continue;
+                        }
+                        rawResults.AddRange(routingDictionaryEntry.Key.GetMany(routingDictionaryEntry.Value));
+                    }
+
+                    // If we got here we did all of the work successfully
                     break;
                 }
                 catch
                 {
-                    // Try a different cache host if this one could not be reached
+                    // Rebalance and try again if a cache host could not be reached
                 }
             } while (true);
 
@@ -199,7 +222,7 @@ namespace Dache.Client
         /// <param name="tagName">The tag name.</param>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
-        public IList<T> GetTagged<T>(string tagName)
+        public List<T> GetTagged<T>(string tagName)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
@@ -216,7 +239,7 @@ namespace Dache.Client
 
                 try
                 {
-                    rawResults = client.GetTagged(tagName, true);
+                    rawResults = client.GetTagged(tagName);
                     break;
                 }
                 catch
@@ -396,50 +419,60 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            var count = cacheKeysAndObjects.Count;
-            if (count == 0)
+            if (cacheKeysAndObjects.Count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
 
-            var list = new List<KeyValuePair<string, byte[]>>(count);
-
-            foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
-            {
-                byte[] bytes = null;
-                try
-                {
-                    // Serialize
-                    bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
-                    // Add to list
-                    list.Add(new KeyValuePair<string,byte[]>(cacheKeyAndObjectKvp.Key, bytes));
-                }
-                catch
-                {
-                    // Log serialization error
-                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
-                }
-            }
-
-            // Ensure we're doing something
-            if (list.Count == 0)
-            {
-                return;
-            }
+            var routingDictionary = new Dictionary<CommunicationClient, List<KeyValuePair<string, byte[]>>>(_cacheHostLoadBalancingDistribution.Count);
+            List<KeyValuePair<string, byte[]>> clientCacheKeysAndObjects = null;
+            byte[] bytes = null;
 
             do
             {
-                // Get client for first cache key
-                var client = DetermineClient(list[0].Key);
+                foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
+                {
+                    try
+                    {
+                        // Serialize
+                        // TODO: don't reserialize on a failure
+                        bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+                    }
+                    catch
+                    {
+                        // Log serialization error
+                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    }
+
+                    // Get the communication client
+                    var client = DetermineClient(cacheKeyAndObjectKvp.Key);
+                    if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
+                    {
+                        clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
+                    }
+
+                    clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
+                }
+
+                // Ensure we're doing something
+                if (clientCacheKeysAndObjects.Count == 0)
+                {
+                    return;
+                }
 
                 try
                 {
-                    client.AddOrUpdateMany(list);
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        routingDictionaryEntry.Key.AddOrUpdateMany(routingDictionaryEntry.Value);
+                    }
+
+                    // If we got here we did all of the work successfully
                     break;
                 }
                 catch
                 {
-                    // Try a different cache host if this one could not be reached
+                    // Rebalance and try again if a cache host could not be reached
                 }
             } while (true);
         }
@@ -456,50 +489,60 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            var count = cacheKeysAndObjects.Count;
-            if (count == 0)
+            if (cacheKeysAndObjects.Count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
 
-            var list = new List<KeyValuePair<string, byte[]>>(count);
-
-            foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
-            {
-                byte[] bytes = null;
-                try
-                {
-                    // Serialize
-                    bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
-                    // Add to list
-                    list.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
-                }
-                catch
-                {
-                    // Log serialization error
-                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
-                }
-            }
-
-            // Ensure we're doing something
-            if (list.Count == 0)
-            {
-                return;
-            }
+            var routingDictionary = new Dictionary<CommunicationClient, List<KeyValuePair<string, byte[]>>>(_cacheHostLoadBalancingDistribution.Count);
+            List<KeyValuePair<string, byte[]>> clientCacheKeysAndObjects = null;
+            byte[] bytes = null;
 
             do
             {
-                // Get client for first cache key
-                var client = DetermineClient(list[0].Key);
+                foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
+                {
+                    try
+                    {
+                        // Serialize
+                        // TODO: don't reserialize on a failure
+                        bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+                    }
+                    catch
+                    {
+                        // Log serialization error
+                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    }
+
+                    // Get the communication client
+                    var client = DetermineClient(cacheKeyAndObjectKvp.Key);
+                    if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
+                    {
+                        clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
+                    }
+
+                    clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
+                }
+
+                // Ensure we're doing something
+                if (clientCacheKeysAndObjects.Count == 0)
+                {
+                    return;
+                }
 
                 try
                 {
-                    client.AddOrUpdateMany(list, absoluteExpiration);
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        routingDictionaryEntry.Key.AddOrUpdateMany(routingDictionaryEntry.Value, absoluteExpiration);
+                    }
+
+                    // If we got here we did all of the work successfully
                     break;
                 }
                 catch
                 {
-                    // Try a different cache host if this one could not be reached
+                    // Rebalance and try again if a cache host could not be reached
                 }
             } while (true);
         }
@@ -516,50 +559,60 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            var count = cacheKeysAndObjects.Count;
-            if (count == 0)
+            if (cacheKeysAndObjects.Count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
 
-            var list = new List<KeyValuePair<string, byte[]>>(count);
-
-            foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
-            {
-                byte[] bytes = null;
-                try
-                {
-                    // Serialize
-                    bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
-                    // Add to list
-                    list.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
-                }
-                catch
-                {
-                    // Log serialization error
-                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
-                }
-            }
-
-            // Ensure we're doing something
-            if (list.Count == 0)
-            {
-                return;
-            }
+            var routingDictionary = new Dictionary<CommunicationClient, List<KeyValuePair<string, byte[]>>>(_cacheHostLoadBalancingDistribution.Count);
+            List<KeyValuePair<string, byte[]>> clientCacheKeysAndObjects = null;
+            byte[] bytes = null;
 
             do
             {
-                // Get client for first cache key
-                var client = DetermineClient(list[0].Key);
+                foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
+                {
+                    try
+                    {
+                        // Serialize
+                        // TODO: don't reserialize on a failure
+                        bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+                    }
+                    catch
+                    {
+                        // Log serialization error
+                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    }
+
+                    // Get the communication client
+                    var client = DetermineClient(cacheKeyAndObjectKvp.Key);
+                    if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
+                    {
+                        clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
+                    }
+
+                    clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
+                }
+
+                // Ensure we're doing something
+                if (clientCacheKeysAndObjects.Count == 0)
+                {
+                    return;
+                }
 
                 try
                 {
-                    client.AddOrUpdateMany(list, slidingExpiration);
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        routingDictionaryEntry.Key.AddOrUpdateMany(routingDictionaryEntry.Value, slidingExpiration);
+                    }
+
+                    // If we got here we did all of the work successfully
                     break;
                 }
                 catch
                 {
-                    // Try a different cache host if this one could not be reached
+                    // Rebalance and try again if a cache host could not be reached
                 }
             } while (true);
         }
@@ -599,7 +652,8 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(cacheKey);
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
 
                 try
                 {
@@ -649,7 +703,8 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(cacheKey);
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
 
                 try
                 {
@@ -699,7 +754,8 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(cacheKey);
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
 
                 try
                 {
@@ -762,8 +818,8 @@ namespace Dache.Client
 
             do
             {
-                // Get client for first cache key
-                var client = DetermineClient(list[0].Key);
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
 
                 try
                 {
@@ -827,8 +883,8 @@ namespace Dache.Client
 
             do
             {
-                // Get client for first cache key
-                var client = DetermineClient(list[0].Key);
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
 
                 try
                 {
@@ -892,8 +948,8 @@ namespace Dache.Client
 
             do
             {
-                // Get client for first cache key
-                var client = DetermineClient(list[0].Key);
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
 
                 try
                 {
@@ -953,17 +1009,35 @@ namespace Dache.Client
 
             do
             {
-                // Get client for first cache key
-                var client = DetermineClient(cacheKeys.First());
+                // Need to batch up requests
+                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                List<string> clientCacheKeys = null;
+                foreach (var cacheKey in cacheKeys)
+                {
+                    // Get the communication client
+                    var client = DetermineClient(cacheKey);
+                    if (!routingDictionary.TryGetValue(client, out clientCacheKeys))
+                    {
+                        clientCacheKeys = new List<string>(10);
+                    }
+
+                    clientCacheKeys.Add(cacheKey);
+                }
 
                 try
                 {
-                    client.RemoveMany(cacheKeys);
+                    // Now we've batched them, do the work
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        routingDictionaryEntry.Key.RemoveMany(routingDictionaryEntry.Value);
+                    }
+
+                    // If we got here we did all of the work successfully
                     break;
                 }
                 catch
                 {
-                    // Try a different cache host if this one could not be reached
+                    // Rebalance and try again if a cache host could not be reached
                 }
             } while (true);
         }
@@ -982,12 +1056,12 @@ namespace Dache.Client
 
             do
             {
-                // Use the tag's client
+                // Cache all tagged items at the same server
                 var client = DetermineClient(tagName);
 
                 try
                 {
-                    client.RemoveTagged(tagName, true);
+                    client.RemoveTagged(tagName);
                     break;
                 }
                 catch
@@ -1022,19 +1096,22 @@ namespace Dache.Client
             try
             {
                 var cacheHostClient = _cacheHostLoadBalancingDistribution.FirstOrDefault(i => i.CacheHost.Equals(client));
-                if (cacheHostClient != null)
+                if (cacheHostClient == null)
                 {
-                    _cacheHostLoadBalancingDistribution.Remove(cacheHostClient);
-                    
-                    // Calculate load balancing distribution
-                    CalculateCacheHostLoadBalancingDistribution();
+                    // Already done
+                    return;
                 }
+                    
+                _cacheHostLoadBalancingDistribution.Remove(cacheHostClient);
+                    
+                // Calculate load balancing distribution
+                CalculateCacheHostLoadBalancingDistribution();
             }
             finally
             {
                 _lock.ExitWriteLock();
             }
-
+                    
             // Log the event
             _logger.Warn("Cache Host Disconnected", "The cache client has been disconnected from the cache host located at " + client.ToString() + " - it will be reconnected automatically as soon it can be successfully contacted.");
 
@@ -1156,7 +1233,7 @@ namespace Dache.Client
                 int hash = 17;
                 foreach (char c in cacheKey)
                 {
-                    // Multiply by C to add greater variation
+                    // Multiply by c to add greater variation
                     hash = (hash * 23 + c) * c;
                 }
                 return hash;

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Dache.Core.CacheHost.Performance;
-using Dache.Core.CacheHost.State;
 using Dache.Core.CacheHost.Storage;
 using Dache.Core.DataStructures.Interfaces;
 using Microsoft.VisualBasic.Devices;

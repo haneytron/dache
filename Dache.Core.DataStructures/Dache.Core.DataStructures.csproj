@@ -50,8 +50,7 @@
     <Compile Include="..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="Routing\RoutingTable.cs" />
-    <Compile Include="Routing\RoutingTableContainer.cs" />
+    <Compile Include="Routing\TagRoutingTable.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Dache.Core.Logging\Dache.Core.Logging.csproj">

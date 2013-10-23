@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Web;
-using Dache.Board.Communication;
 using Dache.Board.Configuration;
 
 namespace Dache.Board.Handlers
@@ -51,7 +50,8 @@ namespace Dache.Board.Handlers
             // Lock to prevent concurrent hits if the thread rolls over itself
             lock (_currentCacheInformation)
             {
-                _currentCacheInformation = BoardToManagerClientContainer.Instance.GetPerformanceInformation();
+                // TODO: get information from the cache hosts
+                //_currentCacheInformation = BoardToManagerClientContainer.Instance.GetPerformanceInformation();
             }
         }
     }

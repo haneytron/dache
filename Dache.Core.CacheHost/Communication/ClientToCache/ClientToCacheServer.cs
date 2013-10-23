@@ -5,9 +5,6 @@ using System.Runtime.Caching;
 using System.ServiceModel;
 using System.Text;
 using Dache.Communication.ClientToCache;
-using Dache.Core.CacheHost.Communication.CacheToCache;
-using Dache.Core.CacheHost.Communication.CacheToManager;
-using Dache.Core.CacheHost.State;
 using Dache.Core.CacheHost.Storage;
 using Dache.Core.DataStructures.Logging;
 using Dache.Core.DataStructures.Routing;
@@ -33,33 +30,16 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
                 return null;
             }
 
-            // First figure out where the object at this cache key should exist
-            ICacheToCacheClient cacheHostClient = null;
-            if (!CacheHostManager.TryGetCacheHostClient(cacheKey, out cacheHostClient))
-            {
-                // Try to get locally
-                return MemCacheContainer.Instance.Get(cacheKey);
-            }
-
-            // Go get it from the cache host
-            try
-            {
-                return cacheHostClient.Get(cacheKey);
-            }
-            catch
-            {
-                // Get failed, return null so that the client will try for an add on an available server
-                return null;
-            }
+            // Try to get value
+            return MemCacheContainer.Instance.Get(cacheKey);
         }
 
         /// <summary>
         /// Gets the serialized objects stored at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param>
         /// <returns>A list of the serialized objects.</returns>
-        public IList<byte[]> GetMany(IEnumerable<string> cacheKeys, bool isClientRequest)
+        public List<byte[]> GetMany(IEnumerable<string> cacheKeys)
         {
             // Sanitize
             if (cacheKeys == null)
@@ -67,7 +47,7 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
                 return null;
             }
 
-            var result = new List<byte[]>(1000);
+            var result = new List<byte[]>(10);
 
             // Iterate all cache keys
             foreach (var cacheKey in cacheKeys)
@@ -79,27 +59,11 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
                     continue;
                 }
 
-                // Try to get locally
+                // Try to get value
                 var getResult = MemCacheContainer.Instance.Get(cacheKey);
                 if (getResult != null)
                 {
                     result.Add(getResult);
-                }
-            }
-
-            if (isClientRequest)
-            {
-                // Now get what all the other servers have
-                foreach (var cacheHostClient in CacheHostManager.GetRegisteredCacheHosts())
-                {
-                    try
-                    {
-                        result.AddRange(cacheHostClient.GetMany(cacheKeys, false));
-                    }
-                    catch
-                    {
-                        // Get failed, so continue to another host
-                    }
                 }
             }
 
@@ -111,9 +75,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
         /// Gets all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param>
         /// <returns>A list of the serialized objects.</returns>
-        public IList<byte[]> GetTagged(string tagName, bool isClientRequest)
+        public List<byte[]> GetTagged(string tagName)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
@@ -122,31 +85,21 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             }
 
             // Compile a list of the serialized objects
-            List<byte[]> result = new List<byte[]>(1000);
+            List<byte[]> result = new List<byte[]>(10);
 
-            // First add what we have locally
-            var cacheKeys = RoutingTableContainer.Instance.GetTaggedCacheKeys(tagName);
+            // Get the values
+            var cacheKeys = TagRoutingTable.Instance.GetTaggedCacheKeys(tagName);
             if (cacheKeys != null)
             {
                 foreach (var cacheKey in cacheKeys)
                 {
-                    result.Add(MemCacheContainer.Instance.Get(cacheKey));
-                }
-            }
+                    var cacheValue = MemCacheContainer.Instance.Get(cacheKey);
+                    if (cacheValue == null)
+                    {
+                        continue;
+                    }
 
-            if (isClientRequest)
-            {
-                // Now get what all the other servers have
-                foreach (var cacheHostClient in CacheHostManager.GetRegisteredCacheHosts())
-                {
-                    try
-                    {
-                        result.AddRange(cacheHostClient.GetTagged(tagName, false));
-                    }
-                    catch
-                    {
-                        // Get failed, so continue to another host
-                    }
+                    result.Add(cacheValue);
                 }
             }
 
@@ -170,27 +123,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             // Define the cache item policy
             var cacheItemPolicy = new CacheItemPolicy();
 
-            // First figure out where the object at this cache key should exist
-            ICacheToCacheClient cacheHostClient = null;
-            if (!CacheHostManager.TryGetCacheHostClient(cacheKey, out cacheHostClient))
-            {
-                // Should exist locally
-                MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
-                return;
-            }
-
-            // Go add it to the cache host
-            try
-            {
-                cacheHostClient.AddOrUpdate(cacheKey, serializedObject);
-            }
-            catch
-            {
-                // Store the object locally
-                MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
-
-                return;
-            }
+            // Place object in cache
+            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
         }
 
         /// <summary>
@@ -213,25 +147,9 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
                 AbsoluteExpiration = absoluteExpiration
             };
 
-            // First figure out where the object at this cache key should exist
-            ICacheToCacheClient cacheHostClient = null;
-            if (!CacheHostManager.TryGetCacheHostClient(cacheKey, out cacheHostClient))
-            {
-                // Should exist locally
-                MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
-                return;
-            }
-
-            // Go add it to the cache host
-            try
-            {
-                cacheHostClient.AddOrUpdate(cacheKey, serializedObject, absoluteExpiration);
-            }
-            catch
-            {
-                // Store the object locally
-                MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
-            }
+            
+            // Place object in cache
+            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
         }
 
         /// <summary>
@@ -254,27 +172,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
                 SlidingExpiration = slidingExpiration
             };
 
-            // First figure out where the object at this cache key should exist
-            ICacheToCacheClient cacheHostClient = null;
-            if (!CacheHostManager.TryGetCacheHostClient(cacheKey, out cacheHostClient))
-            {
-                // Should exist locally
-                MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
-                return;
-            }
-
-            // Go add it to the cache host
-            try
-            {
-                cacheHostClient.AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
-            }
-            catch
-            {
-                // Store the object locally
-                MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
-
-                return;
-            }
+            // Place object in cache
+            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
         }
 
         /// <summary>
@@ -351,6 +250,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             }
             if (string.IsNullOrWhiteSpace(tagName))
             {
+                // If they didn't send a tag name ignore it
+                AddOrUpdate(cacheKey, serializedObject);
                 return;
             }
 
@@ -358,11 +259,10 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             var cacheItemPolicy = new CacheItemPolicy();
 
             // Store the serialized object locally
-            // We don't load balance tagged items so that there's a better chance that they'll end up on the same cache host
             MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
 
-            // Add to the local routing table
-            RoutingTableContainer.Instance.AddOrUpdate(cacheKey, tagName);
+            // Add to the local tag routing table
+            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -381,6 +281,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             }
             if (string.IsNullOrWhiteSpace(tagName))
             {
+                // If they didn't send a tag name ignore it
+                AddOrUpdate(cacheKey, serializedObject, absoluteExpiration);
                 return;
             }
 
@@ -391,11 +293,10 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             };
 
             // Store the serialized object locally
-            // We don't load balance tagged items so that there's a better chance that they'll end up on the same cache host
             MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
 
-            // Add to the local routing table
-            RoutingTableContainer.Instance.AddOrUpdate(cacheKey, tagName);
+            // Add to the local tag routing table
+            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -414,6 +315,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             }
             if (string.IsNullOrWhiteSpace(tagName))
             {
+                // If they didn't send a tag name ignore it
+                AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
                 return;
             }
 
@@ -424,11 +327,10 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             };
 
             // Store the serialized object locally
-            // We don't load balance tagged items so that there's a better chance that they'll end up on the same cache host
             MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
 
-            // Add to the local routing table
-            RoutingTableContainer.Instance.AddOrUpdate(cacheKey, tagName);
+            // Add to the local tag routing table
+            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -445,6 +347,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             }
             if (string.IsNullOrWhiteSpace(tagName))
             {
+                // If they didn't send a tag name ignore it
+                AddOrUpdateMany(cacheKeysAndSerializedObjects);
                 return;
             }
 
@@ -470,6 +374,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             }
             if (string.IsNullOrWhiteSpace(tagName))
             {
+                // If they didn't send a tag name ignore it
+                AddOrUpdateMany(cacheKeysAndSerializedObjects, absoluteExpiration);
                 return;
             }
 
@@ -496,6 +402,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
             }
             if (string.IsNullOrWhiteSpace(tagName))
             {
+                // If they didn't send a tag name ignore it
+                AddOrUpdateMany(cacheKeysAndSerializedObjects, slidingExpiration);
                 return;
             }
 
@@ -518,24 +426,8 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
                 return;
             }
 
-            // First figure out where the object at this cache key should exist
-            ICacheToCacheClient cacheHostClient = null;
-            if (!CacheHostManager.TryGetCacheHostClient(cacheKey, out cacheHostClient))
-            {
-                // Should exist locally
-                MemCacheContainer.Instance.Remove(cacheKey);
-                return;
-            }
-
-            // Go remove it from the cache host
-            try
-            {
-                cacheHostClient.Remove(cacheKey);
-            }
-            catch
-            {
-                // The cache host will receive the command as soon as possible since the remove will enqueue it for execution once reconnection happens
-            }
+            // Remove object from cache
+            MemCacheContainer.Instance.Remove(cacheKey);
         }
 
         /// <summary>
@@ -561,8 +453,7 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
         /// Removes all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="isClientRequest">Whether or not the request is from a client.</param>
-        public void RemoveTagged(string tagName, bool isClientRequest)
+        public void RemoveTagged(string tagName)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
@@ -570,29 +461,13 @@ namespace Dache.Core.CacheHost.Communication.ClientToCache
                 return;
             }
 
-            // First remove what we have locally
-            var cacheKeys = RoutingTableContainer.Instance.GetTaggedCacheKeys(tagName);
+            // Remove them all
+            var cacheKeys = TagRoutingTable.Instance.GetTaggedCacheKeys(tagName);
             if (cacheKeys != null)
             {
                 foreach (var cacheKey in cacheKeys)
                 {
                     MemCacheContainer.Instance.Remove(cacheKey);
-                }
-            }
-
-            if (isClientRequest)
-            {
-                // Now remove at all other cache hosts
-                foreach (var cacheHostClient in CacheHostManager.GetRegisteredCacheHosts())
-                {
-                    try
-                    {
-                        cacheHostClient.RemoveTagged(tagName, false);
-                    }
-                    catch
-                    {
-                        // Remove failed, so continue to another host
-                    }
                 }
             }
         }
