@@ -56,8 +56,8 @@ Host
 --------
 
 
-The host is the actual process that does the caching work. Install it via .NET 4.0's installutil 
-from a command prompt:
+The host is the actual process that does the caching work. To install it, run install.bat or
+install it manually via .NET 4.0's installutil from a command prompt:
 
 
 C:\Windows\Microsoft.NET\Framework\v4.0.30319>installutil "C:\Path\To\Dache.CacheHost.exe"
