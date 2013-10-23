@@ -7,7 +7,7 @@ using System.Reflection;
 using System.ServiceProcess;
 using Dache.Core.Performance;
 
-namespace Dache.Service.CacheHost
+namespace Dache.CacheHost
 {
     /// <summary>
     /// Configures the service with the intended values for name, version, description, account type and start-up type, etc.

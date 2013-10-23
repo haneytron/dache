@@ -1,6 +1,6 @@
 ﻿using System.Configuration;
 
-namespace Dache.Service.CacheHost.Configuration
+namespace Dache.CacheHost.Configuration
 {
     /// <summary>
     /// An application configuration section that allows a user to specify cache host settings.

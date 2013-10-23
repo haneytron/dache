@@ -1,6 +1,6 @@
 ﻿using System.Configuration;
 
-namespace Dache.Service.CacheHost.Configuration
+namespace Dache.CacheHost.Configuration
 {
     /// <summary>
     /// Provides a custom logger element for configuration.

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Dache.Core.CacheHost.Storage
+namespace Dache.CacheHost.Storage
 {
     /// <summary>
     /// Contains an instance of a mem cache.

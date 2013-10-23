@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Runtime.Caching;
-using Dache.Core.CacheHost.Performance;
+using Dache.CacheHost.Performance;
 
-namespace Dache.Core.CacheHost.Storage
+namespace Dache.CacheHost.Storage
 {
     /// <summary>
     /// Encapsulates a memory cache that can store byte arrays. This type is thread safe.

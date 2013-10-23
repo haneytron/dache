@@ -1,6 +1,6 @@
 ﻿using Dache.Core.Performance;
 
-namespace Dache.Core.CacheHost.Performance
+namespace Dache.CacheHost.Performance
 {
     /// <summary>
     /// Contains an instance of a custom performance counter manager.

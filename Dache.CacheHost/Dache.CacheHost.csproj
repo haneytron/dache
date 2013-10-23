@@ -7,8 +7,8 @@
     <ProjectGuid>{1B9FCBF1-DFCA-4911-8A2D-345D45C77FE6}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Dache.Service.CacheHost</RootNamespace>
-    <AssemblyName>Dache.Service.CacheHost</AssemblyName>
+    <RootNamespace>Dache.CacheHost</RootNamespace>
+    <AssemblyName>Dache.CacheHost</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -34,6 +34,7 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Configuration.Install" />
@@ -49,11 +50,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CacheHostEngine.cs" />
     <Compile Include="CacheHostService.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Communication\ClientToCacheServer.cs" />
     <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
     <Compile Include="Configuration\CustomLoggerElement.cs" />
+    <Compile Include="Performance\CustomPerformanceCounterManagerContainer.cs" />
+    <Compile Include="Polling\CacheHostInformationPoller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
@@ -61,15 +66,14 @@
     <Compile Include="CustomInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Storage\LoadBalancingChangeMonitor.cs" />
+    <Compile Include="Storage\MemCache.cs" />
+    <Compile Include="Storage\MemCacheContainer.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Dache.Communication\Dache.Communication.csproj">
       <Project>{3f3041bd-deea-4c15-8ab4-305f8fd894f5}</Project>
-      <Name>Dache.Communication.ClientToCache</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Dache.Core.CacheHost\Dache.Core.CacheHost.csproj">
-      <Project>{d02af7ed-ec9b-4893-9e20-68fee4107c12}</Project>
-      <Name>Dache.Core.CacheHost</Name>
+      <Name>Dache.Communication</Name>
     </ProjectReference>
     <ProjectReference Include="..\Dache.Core\Dache.Core.csproj">
       <Project>{e304662c-ac30-4427-9ca0-f63297f37694}</Project>
@@ -79,6 +83,12 @@
   <ItemGroup>
     <None Include="App.config">
       <SubType>Designer</SubType>
+    </None>
+    <None Include="install.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="uninstall.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -5,18 +5,18 @@ using System.ServiceModel;
 using System.ServiceModel.Description;
 using System.ServiceProcess;
 using System.Threading;
+using Dache.CacheHost;
+using Dache.CacheHost.Communication;
+using Dache.CacheHost.Configuration;
+using Dache.CacheHost.Performance;
+using Dache.CacheHost.Polling;
+using Dache.CacheHost.Storage;
 using Dache.Communication;
-using Dache.Core.CacheHost;
-using Dache.Core.CacheHost.Communication.ClientToCache;
-using Dache.Core.CacheHost.Performance;
-using Dache.Core.CacheHost.Polling;
-using Dache.Core.CacheHost.Storage;
 using Dache.Core.Interfaces;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
-using Dache.Service.CacheHost.Configuration;
 
-namespace Dache.Service.CacheHost
+namespace Dache.CacheHost
 {
     /// <summary>
     /// The cache host windows service. Responsible for initializing, starting, and stopping the cache host functionality.

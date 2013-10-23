@@ -50,7 +50,7 @@ namespace Dache.Client
             }
 
             // Add the cache hosts to the cache client list
-            foreach (CacheHostElement cacheHost in cacheHosts)
+            foreach (CacheHostElement cacheHost in cacheHosts.Cast<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
                 // Build the endpoint address
                 var endpointAddressFormattedString = "net.tcp://{0}:{1}/Dache/CacheHost";

@@ -1,4 +1,4 @@
-DACHE 1.0.0
+DACHE 1.1.0
 =======
 
 
@@ -9,6 +9,17 @@ info@getdache.net
 
 VERSION HISTORY
 ============================================
+
+
+1.1.0
+------------------
+
+
+-Removal of cache manager entirely as it was not necessary
+
+-Simplification of solution as a whole; consolidation of assemblies
+
+-More efficent tagging and bulk API operations
 
 
 1.0.0
@@ -37,6 +48,9 @@ to talk to Dache from. Add it as a reference and begin coding. There is an inclu
 that Intellisense will show you method and type information. An example configuration file is 
 also included to show you how to configure your application.
 
+NOTE: all clients should be configured with the same list of servers. The list of servers does 
+not have to be in the same order, but each client's list should contain the same servers.
+
 
 Host
 --------
@@ -46,37 +60,19 @@ The host is the actual process that does the caching work. Install it via .NET 4
 from a command prompt:
 
 
-C:\Windows\Microsoft.NET\Framework\v4.0.30319>installutil "C:\Path\To\Dache.Service.CacheHost.exe"
+C:\Windows\Microsoft.NET\Framework\v4.0.30319>installutil "C:\Path\To\Dache.CacheHost.exe"
 
 
 You will be offered custom installation settings at this time, including the ability to rename the 
 service if you want to install multiple Dache hosts on a single server under unique names.
 
 
-After installation, open the Dache.Service.CacheHost.exe.config file and configure the appropriate 
-settings.
+After installation, open the Dache.CacheHost.exe.config file and configure the appropriate 
+settings. The configuration file is fully XML commented.
 
-
-Manager
---------
-
-
-The manager exists to help cache hosts register with each other and communicate with each other. 
-It is a very low overhead, low network traffic service that is not processor or memory intensive. 
-We recommend that you install this alongside a host on any particular server, though you can dedicate 
-a server to it if you wish. Install it via .NET 4.0's installutil from a command prompt:
-
-
-C:\Windows\Microsoft.NET\Framework\v4.0.30319>installutil "C:\Path\To\Dache.Service.CacheManager.exe"
-
-
-You will be offered custom installation settings at this time.
-
-
-After installation, open the Dache.Service.CacheManager.exe.config file and configure the appropriate 
-settings.
 
 Board
 --------
+
 
 Not yet completed. Feel free to contribute! :)

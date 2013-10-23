@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using Dache.Core.CacheHost.Performance;
-using Dache.Core.CacheHost.Storage;
+using Dache.CacheHost.Performance;
+using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 using Microsoft.VisualBasic.Devices;
 
-namespace Dache.Core.CacheHost.Polling
+namespace Dache.CacheHost.Polling
 {
     /// <summary>
     /// Polls cache hosts for information.

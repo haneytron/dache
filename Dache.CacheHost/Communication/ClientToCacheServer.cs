@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Runtime.Caching;
 using System.ServiceModel;
 using Dache.Communication;
-using Dache.Core.CacheHost.Storage;
+using Dache.CacheHost.Storage;
 using Dache.Core.Routing;
 
-namespace Dache.Core.CacheHost.Communication.ClientToCache
+namespace Dache.CacheHost.Communication
 {
     /// <summary>
     /// The WCF server for client to cache communication.

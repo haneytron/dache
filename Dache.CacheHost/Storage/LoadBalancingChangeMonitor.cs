@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Caching;
 
-namespace Dache.Core.CacheHost.Storage
+namespace Dache.CacheHost.Storage
 {
     /// <summary>
     /// A change monitor that allows for load balancing via redistribution of cached items to hosts.

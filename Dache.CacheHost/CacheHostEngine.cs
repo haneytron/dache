@@ -1,9 +1,9 @@
 ﻿using System;
 using System.ServiceModel;
-using Dache.Core.CacheHost.Storage;
+using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 
-namespace Dache.Core.CacheHost
+namespace Dache.CacheHost
 {
     /// <summary>
     /// The engine which runs the cache host.
