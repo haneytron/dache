@@ -21,6 +21,10 @@ VERSION HISTORY
 
 -More efficent tagging and bulk API operations
 
+-Order of listed cache hosts in client config no longer matters
+
+-Added install.bat and uninstall.bat for easy installation and uninstallation
+
 
 1.0.0
 ------------------
