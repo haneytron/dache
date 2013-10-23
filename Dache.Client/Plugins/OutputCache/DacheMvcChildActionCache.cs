@@ -26,6 +26,14 @@ namespace Dache.Client.Plugins.OutputCache
         
         }
         
+        /// <summary>
+        /// Inserts a cache entry into the cache, overwriting any existing cache entry.
+        /// </summary>
+        /// <param name="key">A unique identifier for the cache entry.</param>
+        /// <param name="value">The object to insert.</param>
+        /// <param name="absoluteExpiration">The fixed date and time at which the cache entry will expire.</param>
+        /// <param name="regionName">Ignored.</param>
+        /// <returns>true if insertion succeeded, false otherwise.</returns>
         public override bool Add(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
         {
             var cacheKey = string.Format(_cacheKey, key);
@@ -35,6 +43,12 @@ namespace Dache.Client.Plugins.OutputCache
             return true;
         }
         
+        /// <summary>
+        /// Gets the specified cache entry from the cache as an object.
+        /// </summary>
+        /// <param name="key">A unique identifier for the cache entry to get.</param>
+        /// <param name="regionName">Ignored.</param>
+        /// <returns>The cache entry that is identified by key.</returns>
         public override object Get(string key, string regionName = null)
         {
             var cacheKey = string.Format(_cacheKey, key);

@@ -162,6 +162,7 @@ namespace Dache.Client
                     if (!routingDictionary.TryGetValue(client, out clientCacheKeys))
                     {
                         clientCacheKeys = new List<string>(10);
+                        routingDictionary.Add(client, clientCacheKeys);
                     }
 
                     clientCacheKeys.Add(cacheKey);
@@ -449,6 +450,7 @@ namespace Dache.Client
                     if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
                     {
                         clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
+                        routingDictionary.Add(client, clientCacheKeysAndObjects);
                     }
 
                     clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
@@ -519,6 +521,7 @@ namespace Dache.Client
                     if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
                     {
                         clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
+                        routingDictionary.Add(client, clientCacheKeysAndObjects);
                     }
 
                     clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
@@ -589,6 +592,7 @@ namespace Dache.Client
                     if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
                     {
                         clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
+                        routingDictionary.Add(client, clientCacheKeysAndObjects);
                     }
 
                     clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
@@ -1019,6 +1023,7 @@ namespace Dache.Client
                     if (!routingDictionary.TryGetValue(client, out clientCacheKeys))
                     {
                         clientCacheKeys = new List<string>(10);
+                        routingDictionary.Add(client, clientCacheKeys);
                     }
 
                     clientCacheKeys.Add(cacheKey);

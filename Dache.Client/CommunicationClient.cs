@@ -420,7 +420,6 @@ namespace Dache.Client
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
         /// <param name="tagName">The tag name.</param>
         public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
         {
@@ -455,7 +454,6 @@ namespace Dache.Client
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, DateTimeOffset absoluteExpiration)
@@ -491,7 +489,6 @@ namespace Dache.Client
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, TimeSpan slidingExpiration)

@@ -7,6 +7,7 @@ namespace Dache.Client.Serialization
 {
     /// <summary>
     /// Represents a binary serializer. You can implement this interface to inject your own custom serialization into a Dache client.
+    /// NOTE: your custom serializer should be thread safe.
     /// </summary>
     public interface IBinarySerializer
     {

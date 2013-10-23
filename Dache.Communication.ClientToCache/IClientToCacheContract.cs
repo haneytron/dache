@@ -118,7 +118,6 @@ namespace Dache.Communication.ClientToCache
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
         /// <param name="tagName">The tag name.</param>
         [OperationContract(Name = "M", IsOneWay = true)]
         void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName);
@@ -127,7 +126,6 @@ namespace Dache.Communication.ClientToCache
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         [OperationContract(Name = "N", IsOneWay = true)]
@@ -137,7 +135,6 @@ namespace Dache.Communication.ClientToCache
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
         [OperationContract(Name = "O", IsOneWay = true)]

@@ -26,6 +26,11 @@ namespace Dache.Client.Plugins.SessionState
         // The session state config
         private SessionStateSection _sessionStateSection = null;
 
+        /// <summary>
+        /// Initializes the provider.
+        /// </summary>
+        /// <param name="name">The friendly name of the provider.</param>
+        /// <param name="config">A collection of the name/value pairs representing the provider-specific attributes specified in the configuration for this provider.</param>
         public override void Initialize(string name, NameValueCollection config)
         {
             // Initialize values from web.config
@@ -62,11 +67,23 @@ namespace Dache.Client.Plugins.SessionState
             }
         }
 
+        /// <summary>
+        /// Creates a new SessionStateStoreData object to be used for the current request.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="timeout">The session-state Timeout value for the new SessionStateStoreData.</param>
+        /// <returns>A new SessionStateStoreData for the current request.</returns>
         public override SessionStateStoreData CreateNewStoreData(HttpContext context, int timeout)
         {
             return new SessionStateStoreData(new SessionStateItemCollection(), SessionStateUtility.GetSessionStaticObjects(context), timeout);
         }
 
+        /// <summary>
+        /// Adds a new session-state item to the data store.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="id">The SessionID for the current request.</param>
+        /// <param name="timeout">The session Timeout for the current request.</param>
         public override void CreateUninitializedItem(HttpContext context, string id, int timeout)
         {
             var now = DateTime.Now;
@@ -86,16 +103,33 @@ namespace Dache.Client.Plugins.SessionState
             });
         }
 
+        /// <summary>
+        /// Releases all resources used by the SessionStateStoreProviderBase implementation.
+        /// </summary>
         public override void Dispose()
         {
             // Do nothing
         }
 
+        /// <summary>
+        /// Called by the SessionStateModule object at the end of a request.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
         public override void EndRequest(HttpContext context)
         {
             // Do nothing
         }
 
+        /// <summary>
+        /// Returns read-only session-state data from the session data store.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="id">The SessionID for the current request.</param>
+        /// <param name="locked">When this method returns, contains a Boolean value that is set to true if the requested session item is locked at the session data store; otherwise, false.</param>
+        /// <param name="lockAge">When this method returns, contains a TimeSpan object that is set to the amount of time that an item in the session data store has been locked.</param>
+        /// <param name="lockId">When this method returns, contains an object that is set to the lock identifier for the current request. For details on the lock identifier, see "Locking Session-Store Data" in the SessionStateStoreProviderBase class summary.</param>
+        /// <param name="actions">When this method returns, contains one of the SessionStateActions values, indicating whether the current session is an uninitialized, cookieless session.</param>
+        /// <returns>A SessionStateStoreData populated with session values and information from the session data store.</returns>
         public override SessionStateStoreData GetItem(HttpContext context, string id, out bool locked, out TimeSpan lockAge, out object lockId, out SessionStateActions actions)
         {
             // Initial values for return value and out parameters
@@ -174,6 +208,16 @@ namespace Dache.Client.Plugins.SessionState
             return item;
         }
 
+        /// <summary>
+        /// Returns read-only session-state data from the session data store.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="id">The SessionID for the current request.</param>
+        /// <param name="locked">When this method returns, contains a Boolean value that is set to true if a lock is successfully obtained; otherwise, false.</param>
+        /// <param name="lockAge">When this method returns, contains a TimeSpan object that is set to the amount of time that an item in the session data store has been locked.</param>
+        /// <param name="lockId">When this method returns, contains an object that is set to the lock identifier for the current request. For details on the lock identifier, see "Locking Session-Store Data" in the SessionStateStoreProviderBase class summary.</param>
+        /// <param name="actions">When this method returns, contains one of the SessionStateActions values, indicating whether the current session is an uninitialized, cookieless session.</param>
+        /// <returns>A SessionStateStoreData populated with session values and information from the session data store.</returns>
         public override SessionStateStoreData GetItemExclusive(HttpContext context, string id, out bool locked, out TimeSpan lockAge, out object lockId, out SessionStateActions actions)
         {
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
@@ -199,11 +243,21 @@ namespace Dache.Client.Plugins.SessionState
             return GetItem(context, id, out locked, out lockAge, out lockId, out actions);
         }
 
+        /// <summary>
+        /// Called by the SessionStateModule object for per-request initialization.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
         public override void InitializeRequest(HttpContext context)
         {
             // Do nothing
         }
 
+        /// <summary>
+        /// Releases a lock on an item in the session data store.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="id">The session identifier for the current request.</param>
+        /// <param name="lockId">The lock identifier for the current request.</param>
         public override void ReleaseItemExclusive(HttpContext context, string id, object lockId)
         {
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
@@ -223,6 +277,13 @@ namespace Dache.Client.Plugins.SessionState
             }
         }
 
+        /// <summary>
+        /// Deletes item data from the session data store.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="id">The session identifier for the current request.</param>
+        /// <param name="lockId">The lock identifier for the current request.</param>
+        /// <param name="item">The SessionStateStoreData that represents the item to delete from the data store.</param>
         public override void RemoveItem(HttpContext context, string id, object lockId, SessionStateStoreData item)
         {
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
@@ -239,6 +300,11 @@ namespace Dache.Client.Plugins.SessionState
             }
         }
 
+        /// <summary>
+        /// Updates the expiration date and time of an item in the session data store.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="id">The session identifier for the current request.</param>
         public override void ResetItemTimeout(HttpContext context, string id)
         {
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
@@ -250,6 +316,14 @@ namespace Dache.Client.Plugins.SessionState
             }
         }
 
+        /// <summary>
+        /// Updates the session-item information in the session-state data store with values from the current request, and clears the lock on the data.
+        /// </summary>
+        /// <param name="context">The HttpContext for the current request.</param>
+        /// <param name="id">The session identifier for the current request.</param>
+        /// <param name="item">The SessionStateStoreData object that contains the current session values to be stored.</param>
+        /// <param name="lockId">The lock identifier for the current request.</param>
+        /// <param name="newItem">true to identify the session item as a new item; false to identify the session item as an existing item.</param>
         public override void SetAndReleaseItemExclusive(HttpContext context, string id, SessionStateStoreData item, object lockId, bool newItem)
         {
             // Serialize the SessionStateItemCollection as a string
@@ -287,6 +361,11 @@ namespace Dache.Client.Plugins.SessionState
             });
         }
 
+        /// <summary>
+        /// Sets a reference to the SessionStateItemExpireCallback delegate for the Session_OnEnd event defined in the Global.asax file.
+        /// </summary>
+        /// <param name="expireCallback">The SessionStateItemExpireCallback delegate for the Session_OnEnd event defined in the Global.asax file.</param>
+        /// <returns>true if the session-state store provider supports calling the Session_OnEnd event; otherwise, false.</returns>
         public override bool SetItemExpireCallback(SessionStateItemExpireCallback expireCallback)
         {
             return false;

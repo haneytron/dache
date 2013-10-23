@@ -14,9 +14,6 @@ namespace Dache.Client.Serialization
     /// </summary>
     internal class BinarySerializer : IBinarySerializer
     {
-        // The binary formatter
-        private readonly BinaryFormatter _binaryFormatter = new BinaryFormatter();
-
         /// <summary>
         /// Serializes an object to byte array.
         /// </summary>
@@ -32,10 +29,7 @@ namespace Dache.Client.Serialization
 
             using (var memoryStream = new MemoryStream())
             {
-                lock (_binaryFormatter)
-                {
-                    _binaryFormatter.Serialize(memoryStream, value);
-                }
+                new BinaryFormatter().Serialize(memoryStream, value);
 
                 return memoryStream.ToArray();
             }
@@ -54,13 +48,10 @@ namespace Dache.Client.Serialization
                 return null;
             }
 
-            var memoryStream = new MemoryStream();
+            var memoryStream = new MemoryStream(bytes.Length);
             memoryStream.Write(bytes, 0, bytes.Length);
             memoryStream.Seek(0, SeekOrigin.Begin);
-            lock (_binaryFormatter)
-            {
-                return _binaryFormatter.Deserialize(memoryStream);
-            }
+            return new BinaryFormatter().Deserialize(memoryStream);
         }
     }
 }
