@@ -1,5 +1,0 @@
-﻿-Switch WCF serialization to protobuf if it makes sense (is faster?)
--Consider Streamed WCF?
--Offer both IIS hosting and classic Service hosting
--Better way to do static Container classes?
--clear tag from memory when removing all tagged items from host
