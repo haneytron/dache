@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Runtime.Caching;
+using System.Threading;
 using Dache.CacheHost.Performance;
 
 namespace Dache.CacheHost.Storage
@@ -12,6 +14,10 @@ namespace Dache.CacheHost.Storage
     {
         // The underlying memory cache
         private readonly MemoryCache _memoryCache = null;
+        // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
+        private readonly IDictionary<string, string> _internDictionary = null;
+        // The intern dictionary lock
+        private readonly ReaderWriterLockSlim _internDictionaryLock = new ReaderWriterLockSlim();
 
         /// <summary>
         /// The constructor.
@@ -27,6 +33,7 @@ namespace Dache.CacheHost.Storage
             }
 
             _memoryCache = new MemoryCache(cacheName, cacheConfig);
+            _internDictionary = new Dictionary<string, string>(100);
         }
 
         /// <summary>
@@ -57,7 +64,24 @@ namespace Dache.CacheHost.Storage
             //LoadBalanceRequired += loadBalancingChangeMonitor.LoadBalancingRequired;
             //cacheItemPolicy.ChangeMonitors.Add(loadBalancingChangeMonitor);
 
-            _memoryCache.Set(key, value, cacheItemPolicy);
+            // Intern this key
+            var hashKey = CalculateHash(value);
+            _internDictionaryLock.EnterWriteLock();
+            try
+            {
+                // Intern the value
+                _internDictionary[key] = hashKey;
+            }
+            finally
+            {
+                _internDictionaryLock.ExitWriteLock();
+            }
+
+            // Now possibly add to MemoryCache
+            if (!_memoryCache.Contains(hashKey))
+            {
+                _memoryCache[hashKey] = value;
+            }
 
             // Increment the Add counter
             CustomPerformanceCounterManagerContainer.Instance.AddsPerSecond.RawValue++;
@@ -83,7 +107,22 @@ namespace Dache.CacheHost.Storage
             // Increment the Total counter
             CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
 
-            return _memoryCache.Get(key) as byte[];
+            string hashKey = null;
+            _internDictionaryLock.EnterReadLock();
+            try
+            {
+                if (!_internDictionary.TryGetValue(key, out hashKey))
+                {
+                    // Doesn't exist
+                    return null;
+                }
+            }
+            finally
+            {
+                _internDictionaryLock.ExitReadLock();
+            }
+
+            return _memoryCache.Get(hashKey) as byte[];
         }
 
         /// <summary>
@@ -97,6 +136,33 @@ namespace Dache.CacheHost.Storage
             if (string.IsNullOrWhiteSpace(key))
             {
                 return null;
+            }
+
+            string hashKey = null;
+            // Delete this interned key
+            _internDictionaryLock.EnterUpgradeableReadLock();
+            try
+            {
+                if (!_internDictionary.TryGetValue(key, out hashKey))
+                {
+                    // Nothing to do
+                    return null;
+                }
+
+                // Got it, remove it
+                _internDictionaryLock.EnterWriteLock();
+                try
+                {
+                    _internDictionary.Remove(key);
+                }
+                finally
+                {
+                    _internDictionaryLock.ExitWriteLock();
+                }
+            }
+            finally
+            {
+                _internDictionaryLock.ExitUpgradeableReadLock();
             }
 
             // Increment the Remove counter
@@ -113,24 +179,7 @@ namespace Dache.CacheHost.Storage
         /// <returns>The cache entry count.</returns>
         public long GetCount()
         {
-            return _memoryCache.GetCount();
-        }
-
-        /// <summary>
-        /// Triggered when load balancing is required.
-        /// </summary>
-        public event EventHandler LoadBalanceRequired;
-
-        /// <summary>
-        /// Triggers the load balancing required event.
-        /// </summary>
-        public void OnLoadBalanceRequired()
-        {
-            var loadBalanceRequired = LoadBalanceRequired;
-            if (loadBalanceRequired != null)
-            {
-                loadBalanceRequired(this, EventArgs.Empty);
-            }
+            return _internDictionary.Count;
         }
 
         /// <summary>
@@ -139,6 +188,22 @@ namespace Dache.CacheHost.Storage
         public void Dispose()
         {
             _memoryCache.Dispose();
+        }
+
+        /// <summary>
+        /// Calculates a unique hash for a byte array.
+        /// </summary>
+        /// <param name="value">The byte array.</param>
+        /// <returns>The resulting hash value.</returns>
+        private string CalculateHash(byte[] value)
+        {
+            int result = 13 * value.Length;
+            for (int i = 0; i < value.Length; i++)
+            {
+                result = (17 * result) + value[i];
+            }
+            // TODO: should I intern this?
+            return string.Intern(result.ToString());
         }
     }
 }
