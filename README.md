@@ -1,5 +1,5 @@
-DACHE 1.1.0
-=======
+DACHE 1.1.1
+===========
 
 
 http://www.getdache.net
@@ -9,6 +9,19 @@ info@getdache.net
 
 VERSION HISTORY
 ============================================
+
+
+1.1.1
+------------------
+
+
+-Intelligent interning of all objects stored in cache. This results in a > 40% memory use reduction for repeatedly cached objects at a performance hit of roughly 0.2% - a good trade!
+
+-Removed erroneous TODO.txt reference in Dache.CacheHost project
+
+-Updated uninstall.bat output (it said it was installing when it was actually uninstalling)
+
+-Updated TODO.txt with tasks that need to get done soon
 
 
 1.1.0
@@ -63,13 +76,10 @@ Host
 The host is the actual process that does the caching work. To install it, run install.bat or
 install it manually via .NET 4.0's installutil from a command prompt:
 
-
 C:\Windows\Microsoft.NET\Framework\v4.0.30319>installutil "C:\Path\To\Dache.CacheHost.exe"
-
 
 You will be offered custom installation settings at this time, including the ability to rename the 
 service if you want to install multiple Dache hosts on a single server under unique names.
-
 
 After installation, open the Dache.CacheHost.exe.config file and configure the appropriate 
 settings. The configuration file is fully XML commented.
