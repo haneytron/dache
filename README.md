@@ -1,5 +1,5 @@
-DACHE 1.1.0
-=======
+DACHE 1.1.1
+===========
 
 
 http://www.getdache.net
@@ -9,6 +9,19 @@ info@getdache.net
 
 VERSION HISTORY
 ============================================
+
+
+1.1.1
+------------------
+
+
+-Intelligent interning of all objects stored in cache. This results in a > 40% memory use reduction for repeatedly cached objects at a performance hit of roughly 0.2% - a good trade!
+
+-Removed erroneous TODO.txt reference in Dache.CacheHost project
+
+-Updated uninstall.bat output (it said it was installing when it was actually uninstalling)
+
+-Updated TODO.txt with tasks that need to get done soon
 
 
 1.1.0

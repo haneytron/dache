@@ -2,6 +2,7 @@
 -Consider Streamed WCF?
 -Offer both IIS hosting and classic Service hosting
 -Better way to do static Container classes?
--clear tag from memory when removing all tagged items from host
--"Key Chain" where I could add an object at key Test1, then Key Chain Test2 to Test1 so that it would return the same object and when Test1 is removed, so is Test2.
-    -All related keys should be on the same server and the client should somehow deterministically know this... therein lies the tricky part
+-Clear tag from TagRoutingTable memory when removing all tagged items from host
+-Chained updates: like tagging, mark cache keys for chaining and when you update the value of an object, it updates it for all of the cache keys
+-Introduce of Sorted Sets/Lists with weights
+-Create integer storage methods and increment/decrement methods?
