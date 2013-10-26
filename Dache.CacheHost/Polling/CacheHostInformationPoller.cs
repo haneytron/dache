@@ -4,7 +4,6 @@ using System.Threading;
 using Dache.CacheHost.Performance;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
-using Microsoft.VisualBasic.Devices;
 
 namespace Dache.CacheHost.Polling
 {
@@ -15,12 +14,8 @@ namespace Dache.CacheHost.Polling
     {
         // The polling interval in milliseconds
         private readonly int _pollingIntervalMilliseconds = 0;
-
         // The cache host information polling timer
         private readonly Timer _cacheHostInformationPollingTimer = null;
-
-        // The computer info
-        private readonly ComputerInfo _computerInfo = new ComputerInfo();
         // The performance counter for the process' current memory
         private readonly PerformanceCounter _currentMemoryPerformanceCounter = new PerformanceCounter("Process", "Private Bytes", Process.GetCurrentProcess().ProcessName, true);
         // The performance counter for the cache trim count
@@ -70,19 +65,22 @@ namespace Dache.CacheHost.Polling
         /// <param name="state">The state. Ignored but required for timer callback methods. Pass null.</param>
         private void PollCacheHost(object state)
         {
+            var customPerformanceCounterManager = CustomPerformanceCounterManagerContainer.Instance;
+            var memCache = MemCacheContainer.Instance;
+
             // Lock to ensure atomicity (no overlap)
             lock (_cacheHostInformationPollingTimer)
             {
                 // Update performance counters
-                CustomPerformanceCounterManagerContainer.Instance.NumberOfCachedObjects.RawValue = MemCacheContainer.Instance.GetCount();
+                customPerformanceCounterManager.NumberOfCachedObjects.RawValue = memCache.Count;
                 var usedMemoryMb = _currentMemoryPerformanceCounter.RawValue / 1048576; // bytes / (1024 * 1024) for MB
 
-                CustomPerformanceCounterManagerContainer.Instance.CacheMemoryUsageMb.RawValue = usedMemoryMb;
-                CustomPerformanceCounterManagerContainer.Instance.CacheMemoryUsagePercent.RawValue = usedMemoryMb;
-                CustomPerformanceCounterManagerContainer.Instance.CacheMemoryUsageBasePercent.RawValue = (long)(_computerInfo.TotalPhysicalMemory / 1048576);
+                customPerformanceCounterManager.CacheMemoryUsageMb.RawValue = usedMemoryMb;
+                customPerformanceCounterManager.CacheMemoryUsagePercent.RawValue = usedMemoryMb;
+                customPerformanceCounterManager.CacheMemoryUsageBasePercent.RawValue = memCache.MemoryLimit;
 
                 // Calculate expirations and evictions
-                CustomPerformanceCounterManagerContainer.Instance.CacheExpirationsAndEvictionsPerSecond.RawValue = _currentCacheTrimPerformanceCounter.RawValue - _lastCacheTrimmedValue;
+                customPerformanceCounterManager.CacheExpirationsAndEvictionsPerSecond.RawValue = _currentCacheTrimPerformanceCounter.RawValue - _lastCacheTrimmedValue;
                 _lastCacheTrimmedValue = _currentCacheTrimPerformanceCounter.RawValue;
             }
         }

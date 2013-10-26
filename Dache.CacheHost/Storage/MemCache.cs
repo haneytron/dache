@@ -190,6 +190,11 @@ namespace Dache.CacheHost.Storage
                 return null;
             }
 
+            // Increment the Remove counter
+            CustomPerformanceCounterManagerContainer.Instance.RemovesPerSecond.RawValue++;
+            // Increment the Total counter
+            CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
+
             string hashKey = null;
             int referenceCount = 0;
             // Delete this interned key
@@ -226,22 +231,31 @@ namespace Dache.CacheHost.Storage
                 _internDictionaryLock.ExitUpgradeableReadLock();
             }
 
-            // Increment the Remove counter
-            CustomPerformanceCounterManagerContainer.Instance.RemovesPerSecond.RawValue++;
-            // Increment the Total counter
-            CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
             // Interned object still exists, so fake the removal return of the object
             return _memoryCache.Get(hashKey) as byte[];
         }
 
         /// <summary>
-        /// Returns the total number of cache entries in the cache.
+        /// Total number of objects in the cache.
         /// </summary>
-        /// <returns>The cache entry count.</returns>
-        public long GetCount()
+        public long Count
         {
-            // The total interned keys minus the actual hash keys plus the regular count
-            return _internDictionary.Count - _internReferenceDictionary.Count + _memoryCache.GetCount();
+            get
+            {
+                // The total interned keys minus the actual hash keys plus the regular count
+                return _internDictionary.Count - _internReferenceDictionary.Count + _memoryCache.GetCount();
+            }
+        }
+
+        /// <summary>
+        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
+        /// </summary>
+        public long MemoryLimit
+        {
+            get
+            {
+                return _memoryCache.CacheMemoryLimit;
+            }
         }
 
         /// <summary>
