@@ -16,6 +16,10 @@ namespace Dache.CacheHost.Storage
         private readonly MemoryCache _memoryCache = null;
         // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
         private readonly IDictionary<string, string> _internDictionary = null;
+        // The dictionary that serves as an intern reference count, with the key being the hash code and the value being the number of references to the object
+        private readonly IDictionary<string, int> _internReferenceDictionary = null;
+        // The interned object cache item policy
+        private static readonly CacheItemPolicy _internCacheItemPolicy = new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable };
         // The intern dictionary lock
         private readonly ReaderWriterLockSlim _internDictionaryLock = new ReaderWriterLockSlim();
 
@@ -34,10 +38,11 @@ namespace Dache.CacheHost.Storage
 
             _memoryCache = new MemoryCache(cacheName, cacheConfig);
             _internDictionary = new Dictionary<string, string>(100);
+            _internReferenceDictionary = new Dictionary<string, int>(100);
         }
 
         /// <summary>
-        /// Inserts or updates a byte array to the cache at the given key with the specified or default cache item policy.
+        /// Inserts or updates a byte array in the cache at the given key with the specified cache item policy.
         /// </summary>
         /// <param name="key">The key of the byte array. Null is not supported.</param>
         /// <param name="value">The byte array. Null is not supported.</param>
@@ -59,18 +64,50 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("cacheItemPolicy");
             }
 
-            // Add the custom change monitor
-            //var loadBalancingChangeMonitor = new LoadBalancingChangeMonitor(key, loadBalancingMethod);
-            //LoadBalanceRequired += loadBalancingChangeMonitor.LoadBalancingRequired;
-            //cacheItemPolicy.ChangeMonitors.Add(loadBalancingChangeMonitor);
+            // Add to the cache
+            _memoryCache.Set(key, value, cacheItemPolicy);
+
+            // Increment the Add counter
+            CustomPerformanceCounterManagerContainer.Instance.AddsPerSecond.RawValue++;
+            // Increment the Total counter
+            CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
+        }
+
+        /// <summary>
+        /// Inserts or updates an interned byte array in the cache at the given key. 
+        /// Interned values cannot expire or be evicted unless removed manually.
+        /// </summary>
+        /// <param name="key">The key of the byte array. Null is not supported.</param>
+        /// <param name="value">The byte array. Null is not supported.</param>
+        public void AddInterned(string key, byte[] value)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException("key is null, empty, or white space");
+            }
+            if (value == null)
+            {
+                // MemoryCache does not support null values
+                throw new ArgumentNullException("value");
+            }
 
             // Intern this key
             var hashKey = CalculateHash(value);
+            int referenceCount = 0;
+
             _internDictionaryLock.EnterWriteLock();
             try
             {
                 // Intern the value
                 _internDictionary[key] = hashKey;
+                if (!_internReferenceDictionary.TryGetValue(hashKey, out referenceCount))
+                {
+                    _internReferenceDictionary[hashKey] = referenceCount;
+                }
+
+                referenceCount++;
+                _internReferenceDictionary[hashKey] = referenceCount;
             }
             finally
             {
@@ -80,7 +117,7 @@ namespace Dache.CacheHost.Storage
             // Now possibly add to MemoryCache
             if (!_memoryCache.Contains(hashKey))
             {
-                _memoryCache[hashKey] = value;
+                _memoryCache.Set(hashKey, value, _internCacheItemPolicy);
             }
 
             // Increment the Add counter
@@ -139,21 +176,30 @@ namespace Dache.CacheHost.Storage
             }
 
             string hashKey = null;
+            int referenceCount = 0;
             // Delete this interned key
             _internDictionaryLock.EnterUpgradeableReadLock();
             try
             {
                 if (!_internDictionary.TryGetValue(key, out hashKey))
                 {
-                    // Nothing to do
-                    return null;
+                    // Not interned, do normal work
+                    return _memoryCache.Remove(key) as byte[];
                 }
 
-                // Got it, remove it
+                // Is interned, remove it
                 _internDictionaryLock.EnterWriteLock();
                 try
                 {
                     _internDictionary.Remove(key);
+                    referenceCount = --_internReferenceDictionary[hashKey];
+
+                    // Check if reference is dead
+                    if (referenceCount == 0)
+                    {
+                        // Remove actual object
+                        return _memoryCache.Remove(hashKey) as byte[];
+                    }
                 }
                 finally
                 {
@@ -169,8 +215,8 @@ namespace Dache.CacheHost.Storage
             CustomPerformanceCounterManagerContainer.Instance.RemovesPerSecond.RawValue++;
             // Increment the Total counter
             CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
-
-            return _memoryCache.Remove(key) as byte[];
+            // Interned object still exists, so fake the removal return of the object
+            return _memoryCache.Get(hashKey) as byte[];
         }
 
         /// <summary>
@@ -203,7 +249,7 @@ namespace Dache.CacheHost.Storage
                 result = (17 * result) + value[i];
             }
             // TODO: should I intern this?
-            return string.Intern(result.ToString());
+            return string.Intern("__InternedCacheKey_" + result.ToString());
         }
     }
 }

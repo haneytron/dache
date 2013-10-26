@@ -14,6 +14,9 @@ namespace Dache.CacheHost.Communication
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single, ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false, MaxItemsInObjectGraph = int.MaxValue, Namespace = "http://schemas.getdache.net/cachehost")]
     public class ClientToCacheServer : IClientToCacheContract
     {
+        // The default cache item policy
+        private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
+
         /// <summary>
         /// Gets the serialized object stored at the given cache key from the cache.
         /// </summary>
@@ -117,11 +120,8 @@ namespace Dache.CacheHost.Communication
                 return;
             }
 
-            // Define the cache item policy
-            var cacheItemPolicy = new CacheItemPolicy();
-
             // Place object in cache
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
+            MemCacheContainer.Instance.Add(cacheKey, serializedObject, _defaultCacheItemPolicy);
         }
 
         /// <summary>
@@ -252,11 +252,8 @@ namespace Dache.CacheHost.Communication
                 return;
             }
 
-            // Define the cache item policy
-            var cacheItemPolicy = new CacheItemPolicy();
-
             // Store the serialized object locally
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
+            MemCacheContainer.Instance.Add(cacheKey, serializedObject, _defaultCacheItemPolicy);
 
             // Add to the local tag routing table
             TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
