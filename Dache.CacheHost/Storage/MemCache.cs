@@ -157,14 +157,16 @@ namespace Dache.CacheHost.Storage
             // Increment the Total counter
             CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
 
+
+            // Check for interned
             string hashKey = null;
             _internDictionaryLock.EnterReadLock();
             try
             {
                 if (!_internDictionary.TryGetValue(key, out hashKey))
                 {
-                    // Doesn't exist
-                    return null;
+                    // Not interned
+                    return _memoryCache.Get(key) as byte[];
                 }
             }
             finally
@@ -238,7 +240,8 @@ namespace Dache.CacheHost.Storage
         /// <returns>The cache entry count.</returns>
         public long GetCount()
         {
-            return _internDictionary.Count;
+            // The total interned keys minus the actual hash keys plus the regular count
+            return _internDictionary.Count - _internReferenceDictionary.Count + _memoryCache.GetCount();
         }
 
         /// <summary>
