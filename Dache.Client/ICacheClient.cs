@@ -61,24 +61,41 @@ namespace Dache.Client
         void AddOrUpdate(string cacheKey, object value, TimeSpan slidingExpiration);
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys.
+        /// Adds or updates an interned object in the cache at the given cache key.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
         /// </summary>
-        /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
-        void AddOrUpdateMany(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects);
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="value">The value.</param>
+        void AddOrUpdateInterned(string cacheKey, object value);
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys.
+        /// Adds or updates many objects in the cache at the given cache keys.
+        /// </summary>
+        /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
+        void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects);
+
+        /// <summary>
+        /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        void AddOrUpdateMany(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration);
+        void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration);
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys.
+        /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        void AddOrUpdateMany(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration);
+        void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration);
+
+        /// <summary>
+        /// Adds or updates the interned objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
+        void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects);
 
         /// <summary>
         /// Adds or updates an object in the cache at the given cache key with the associated tag name.
@@ -107,27 +124,46 @@ namespace Dache.Client
         void AddOrUpdateTagged(string cacheKey, object value, string tagName, TimeSpan slidingExpiration);
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys with the associated tag name.
+        /// Adds or updates the interned object in the cache at the given cache key with the associated tag name.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="value">The value.</param>
+        /// <param name="tagName">The tag name.</param>
+        void AddOrUpdateTaggedInterned(string cacheKey, object value, string tagName);
+
+        /// <summary>
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
-        void AddOrUpdateManyTagged(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName);
+        void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName);
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys with the associated tag name.
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        void AddOrUpdateManyTagged(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration);
+        void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration);
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys with the associated tag name.
+        /// Adds or updates many objects in the cache at thr given cache keys with the associated tag name.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        void AddOrUpdateManyTagged(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration);
+        void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration);
+
+        /// <summary>
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
+        /// <param name="tagName">The tag name.</param>
+        void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName);
 
         /// <summary>
         /// Removes the object at the given cache key from the cache.

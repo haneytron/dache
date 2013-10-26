@@ -61,10 +61,20 @@ namespace Dache.Communication
         void AddOrUpdate(string cacheKey, byte[] serializedObject, TimeSpan slidingExpiration);
 
         /// <summary>
+        /// Adds or updates an interned serialized object in the cache at the given cache key.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="serializedObject">The serialized object.</param>
+        [OperationContract(Name = "G", IsOneWay = true)]
+        void AddOrUpdateInterned(string cacheKey, byte[] serializedObject);
+
+        /// <summary>
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        [OperationContract(Name = "G", IsOneWay = true)]
+        [OperationContract(Name = "H", IsOneWay = true)]
         void AddOrUpdateMany(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects);
 
         /// <summary>
@@ -72,7 +82,7 @@ namespace Dache.Communication
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        [OperationContract(Name = "H", IsOneWay = true)]
+        [OperationContract(Name = "I", IsOneWay = true)]
         void AddOrUpdateMany(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, DateTimeOffset absoluteExpiration);
 
         /// <summary>
@@ -80,8 +90,17 @@ namespace Dache.Communication
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        [OperationContract(Name = "I", IsOneWay = true)]
+        [OperationContract(Name = "J", IsOneWay = true)]
         void AddOrUpdateMany(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, TimeSpan slidingExpiration);
+
+        /// <summary>
+        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
+        [OperationContract(Name = "K", IsOneWay = true)]
+        void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects);
 
         /// <summary>
         /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
@@ -89,7 +108,7 @@ namespace Dache.Communication
         /// <param name="cacheKey">The cache key.</param>
         /// <param name="serializedObject">The serialized object.</param>
         /// <param name="tagName">The tag name.</param>
-        [OperationContract(Name = "J", IsOneWay = true)]
+        [OperationContract(Name = "L", IsOneWay = true)]
         void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName);
 
         /// <summary>
@@ -99,7 +118,7 @@ namespace Dache.Communication
         /// <param name="serializedObject">The serialized object.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        [OperationContract(Name = "K", IsOneWay = true)]
+        [OperationContract(Name = "M", IsOneWay = true)]
         void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, DateTimeOffset absoluteExpiration);
 
         /// <summary>
@@ -109,15 +128,26 @@ namespace Dache.Communication
         /// <param name="serializedObject">The serialized object.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        [OperationContract(Name = "L", IsOneWay = true)]
+        [OperationContract(Name = "N", IsOneWay = true)]
         void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, TimeSpan slidingExpiration);
+
+        /// <summary>
+        /// Adds or updates the interned serialized object in the cache at the given cache key and associates it with the given tag name.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="serializedObject">The serialized object.</param>
+        /// <param name="tagName">The tag name.</param>
+        [OperationContract(Name = "O", IsOneWay = true)]
+        void AddOrUpdateTaggedInterned(string cacheKey, byte[] serializedObject, string tagName);
 
         /// <summary>
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="tagName">The tag name.</param>
-        [OperationContract(Name = "M", IsOneWay = true)]
+        [OperationContract(Name = "P", IsOneWay = true)]
         void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName);
 
         /// <summary>
@@ -126,7 +156,7 @@ namespace Dache.Communication
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        [OperationContract(Name = "N", IsOneWay = true)]
+        [OperationContract(Name = "Q", IsOneWay = true)]
         void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, DateTimeOffset absoluteExpiration);
 
         /// <summary>
@@ -135,28 +165,38 @@ namespace Dache.Communication
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        [OperationContract(Name = "O", IsOneWay = true)]
+        [OperationContract(Name = "R", IsOneWay = true)]
         void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, TimeSpan slidingExpiration);
+
+        /// <summary>
+        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
+        /// <param name="tagName">The tag name.</param>
+        [OperationContract(Name = "S", IsOneWay = true)]
+        void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName);
 
         /// <summary>
         /// Removes the serialized object at the given cache key from the cache.
         /// </summary>
         /// <param name="cacheKey">The cache key.</param>
-        [OperationContract(Name = "P", IsOneWay = true)]
+        [OperationContract(Name = "T", IsOneWay = true)]
         void Remove(string cacheKey);
 
         /// <summary>
         /// Removes the serialized objects at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
-        [OperationContract(Name = "Q", IsOneWay = true)]
+        [OperationContract(Name = "U", IsOneWay = true)]
         void RemoveMany(IEnumerable<string> cacheKeys);
 
         /// <summary>
         /// Removes all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        [OperationContract(Name = "R", IsOneWay = true)]
+        [OperationContract(Name = "V", IsOneWay = true)]
         void RemoveTagged(string tagName);
     }
 }

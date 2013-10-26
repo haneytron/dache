@@ -1,4 +1,4 @@
-DACHE 1.1.1
+DACHE 1.1.2
 ===========
 
 
@@ -9,6 +9,19 @@ info@getdache.net
 
 VERSION HISTORY
 ============================================
+
+
+1.1.2
+------------------
+
+
+-Further testing proved that interning everything was quite troublesome, so interning has been changed. Interning methods are now exposed on the client-server contract and are opt-in only. Interned objects cannot expire or be evicted - they must be removed manually when appropriate.
+
+-Updated client contract with IEnumerable<T> to be more flexible than the previous ICollection<T>
+
+-Modified the comments of the client to be clearer
+
+-Preparing for unit and performance testing, which is definitely needed
 
 
 1.1.1

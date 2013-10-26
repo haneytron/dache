@@ -164,6 +164,10 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
+            }
 
             try
             {
@@ -190,6 +194,10 @@ namespace Dache.Client
             if (string.IsNullOrWhiteSpace(cacheKey))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
+            }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
             }
 
             try
@@ -218,10 +226,46 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
+            }
 
             try
             {
                 _proxy.AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
+            }
+            catch
+            {
+                // Enter the disconnected state
+                DisconnectFromServer();
+                // Rethrow
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds or updates an interned serialized object in the cache at the given cache key.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="serializedObject">The serialized object.</param>
+        public void AddOrUpdateInterned(string cacheKey, byte[] serializedObject)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
+            }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
+            }
+
+            try
+            {
+                _proxy.AddOrUpdateInterned(cacheKey, serializedObject);
             }
             catch
             {
@@ -322,6 +366,38 @@ namespace Dache.Client
         }
 
         /// <summary>
+        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
+        [OperationContract(Name = "K", IsOneWay = true)]
+        public void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
+        {
+            // Sanitize
+            if (cacheKeysAndSerializedObjects == null)
+            {
+                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
+            }
+            if (!cacheKeysAndSerializedObjects.Any())
+            {
+                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
+            }
+
+            try
+            {
+                _proxy.AddOrUpdateManyInterned(cacheKeysAndSerializedObjects);
+            }
+            catch
+            {
+                // Enter the disconnected state
+                DisconnectFromServer();
+                // Rethrow
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
         /// </summary>
         /// <param name="cacheKey">The cache key.</param>
@@ -333,6 +409,10 @@ namespace Dache.Client
             if (string.IsNullOrWhiteSpace(cacheKey))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
+            }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
             }
             if (string.IsNullOrWhiteSpace(tagName))
             {
@@ -366,6 +446,10 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
+            }
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -398,6 +482,10 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
+            }
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -406,6 +494,43 @@ namespace Dache.Client
             try
             {
                 _proxy.AddOrUpdateTagged(cacheKey, serializedObject, tagName, slidingExpiration);
+            }
+            catch
+            {
+                // Enter the disconnected state
+                DisconnectFromServer();
+                // Rethrow
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds or updates the interned serialized object in the cache at the given cache key and associates it with the given tag name.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="serializedObject">The serialized object.</param>
+        /// <param name="tagName">The tag name.</param>
+        public void AddOrUpdateTaggedInterned(string cacheKey, byte[] serializedObject, string tagName)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
+            }
+            if (serializedObject == null)
+            {
+                throw new ArgumentNullException("serializedObject");
+            }
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+            }
+
+            try
+            {
+                _proxy.AddOrUpdateTaggedInterned(cacheKey, serializedObject, tagName);
             }
             catch
             {
@@ -510,6 +635,42 @@ namespace Dache.Client
             try
             {
                 _proxy.AddOrUpdateManyTagged(cacheKeysAndSerializedObjects, tagName, slidingExpiration);
+            }
+            catch
+            {
+                // Enter the disconnected state
+                DisconnectFromServer();
+                // Rethrow
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
+        /// <param name="tagName">The tag name.</param>
+        public void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
+        {
+            // Sanitize
+            if (cacheKeysAndSerializedObjects == null)
+            {
+                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
+            }
+            if (!cacheKeysAndSerializedObjects.Any())
+            {
+                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
+            }
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+            }
+
+            try
+            {
+                _proxy.AddOrUpdateManyTaggedInterned(cacheKeysAndSerializedObjects, tagName);
             }
             catch
             {

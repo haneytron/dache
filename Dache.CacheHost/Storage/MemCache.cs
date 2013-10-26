@@ -99,6 +99,20 @@ namespace Dache.CacheHost.Storage
             _internDictionaryLock.EnterWriteLock();
             try
             {
+                // Get the old hash key if it exists
+                if (_internDictionary.ContainsKey(key))
+                {
+                    var oldHashKey = _internDictionary[key];
+                    // Do a remove to decrement intern reference count
+                    referenceCount = --_internReferenceDictionary[oldHashKey];
+
+                    // Check if reference is dead
+                    if (referenceCount == 0)
+                    {
+                        // Remove actual old object
+                        _memoryCache.Remove(oldHashKey);
+                    }
+                }
                 // Intern the value
                 _internDictionary[key] = hashKey;
                 if (!_internReferenceDictionary.TryGetValue(hashKey, out referenceCount))
@@ -106,8 +120,7 @@ namespace Dache.CacheHost.Storage
                     _internReferenceDictionary[hashKey] = referenceCount;
                 }
 
-                referenceCount++;
-                _internReferenceDictionary[hashKey] = referenceCount;
+                _internReferenceDictionary[hashKey]++;
             }
             finally
             {

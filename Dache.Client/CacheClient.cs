@@ -410,17 +410,63 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys.
+        /// Adds or updates an interned object in the cache at the given cache key.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="value">The value.</param>
+        public void AddOrUpdateInterned(string cacheKey, object value)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
+            }
+            if (value == null)
+            {
+                throw new ArgumentNullException("value");
+            }
+
+            byte[] bytes = null;
+            try
+            {
+                // Serialize
+                bytes = _binarySerializer.Serialize(value);
+            }
+            catch (Exception ex)
+            {
+                throw new SerializationException("value could not be serialized.", ex);
+            }
+
+            do
+            {
+                var client = DetermineClient(cacheKey);
+
+                try
+                {
+                    client.AddOrUpdateInterned(cacheKey, bytes);
+                    break;
+                }
+                catch
+                {
+                    // Try a different cache host if this one could not be reached
+                }
+            } while (true);
+        }
+
+        /// <summary>
+        /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
-        public void AddOrUpdateMany(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects)
+        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            if (cacheKeysAndObjects.Count == 0)
+            if (!cacheKeysAndObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
@@ -480,18 +526,18 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys.
+        /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateMany(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration)
+        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            if (cacheKeysAndObjects.Count == 0)
+            if (!cacheKeysAndObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
@@ -551,18 +597,18 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys.
+        /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateMany(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration)
+        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            if (cacheKeysAndObjects.Count == 0)
+            if (!cacheKeysAndObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
@@ -609,6 +655,78 @@ namespace Dache.Client
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
                         routingDictionaryEntry.Key.AddOrUpdateMany(routingDictionaryEntry.Value, slidingExpiration);
+                    }
+
+                    // If we got here we did all of the work successfully
+                    break;
+                }
+                catch
+                {
+                    // Rebalance and try again if a cache host could not be reached
+                }
+            } while (true);
+        }
+
+        /// <summary>
+        /// Adds or updates the interned objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
+        public void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects)
+        {
+            // Sanitize
+            if (cacheKeysAndObjects == null)
+            {
+                throw new ArgumentNullException("cacheKeysAndObjects");
+            }
+            if (!cacheKeysAndObjects.Any())
+            {
+                throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
+            }
+
+            var routingDictionary = new Dictionary<CommunicationClient, List<KeyValuePair<string, byte[]>>>(_cacheHostLoadBalancingDistribution.Count);
+            List<KeyValuePair<string, byte[]>> clientCacheKeysAndObjects = null;
+            byte[] bytes = null;
+
+            do
+            {
+                foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
+                {
+                    try
+                    {
+                        // Serialize
+                        // TODO: don't reserialize on a failure
+                        bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+                    }
+                    catch
+                    {
+                        // Log serialization error
+                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    }
+
+                    // Get the communication client
+                    var client = DetermineClient(cacheKeyAndObjectKvp.Key);
+                    if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
+                    {
+                        clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
+                        routingDictionary.Add(client, clientCacheKeysAndObjects);
+                    }
+
+                    clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
+                }
+
+                // Ensure we're doing something
+                if (clientCacheKeysAndObjects.Count == 0)
+                {
+                    return;
+                }
+
+                try
+                {
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        routingDictionaryEntry.Key.AddOrUpdateManyInterned(routingDictionaryEntry.Value);
                     }
 
                     // If we got here we did all of the work successfully
@@ -774,18 +892,70 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys with the associated tag name.
+        /// Adds or updates the interned object in the cache at the given cache key with the associated tag name.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="value">The value.</param>
+        /// <param name="tagName">The tag name.</param>
+        public void AddOrUpdateTaggedInterned(string cacheKey, object value, string tagName)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(cacheKey))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
+            }
+            if (value == null)
+            {
+                throw new ArgumentNullException("value");
+            }
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+            }
+
+            byte[] bytes = null;
+            try
+            {
+                // Serialize
+                bytes = _binarySerializer.Serialize(value);
+            }
+            catch (Exception ex)
+            {
+                throw new SerializationException("value could not be serialized.", ex);
+            }
+
+            do
+            {
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
+
+                try
+                {
+                    client.AddOrUpdateTaggedInterned(cacheKey, bytes, tagName);
+                    break;
+                }
+                catch
+                {
+                    // Try a different cache host if this one could not be reached
+                }
+            } while (true);
+        }
+
+        /// <summary>
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateManyTagged(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName)
+        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            var count = cacheKeysAndObjects.Count;
+            var count = cacheKeysAndObjects.Count();
             if (count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
@@ -838,19 +1008,19 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys with the associated tag name.
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateManyTagged(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration)
+        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            var count = cacheKeysAndObjects.Count;
+            var count = cacheKeysAndObjects.Count();
             if (count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
@@ -903,19 +1073,19 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Adds or updates many objects in the cache at their given cache keys with the associated tag name.
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateManyTagged(ICollection<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration)
+        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
-            var count = cacheKeysAndObjects.Count;
+            var count = cacheKeysAndObjects.Count();
             if (count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
@@ -958,6 +1128,72 @@ namespace Dache.Client
                 try
                 {
                     client.AddOrUpdateManyTagged(list, tagName, slidingExpiration);
+                    break;
+                }
+                catch
+                {
+                    // Try a different cache host if this one could not be reached
+                }
+            } while (true);
+        }
+
+        /// <summary>
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
+        /// <param name="tagName">The tag name.</param>
+        public void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName)
+        {
+            // Sanitize
+            if (cacheKeysAndObjects == null)
+            {
+                throw new ArgumentNullException("cacheKeysAndObjects");
+            }
+            var count = cacheKeysAndObjects.Count();
+            if (count == 0)
+            {
+                throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
+            }
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+            }
+
+            var list = new List<KeyValuePair<string, byte[]>>(count);
+
+            foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
+            {
+                byte[] bytes = null;
+                try
+                {
+                    // Serialize
+                    bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+                    // Add to list
+                    list.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
+                }
+                catch
+                {
+                    // Log serialization error
+                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                }
+            }
+
+            // Ensure we're doing something
+            if (list.Count == 0)
+            {
+                return;
+            }
+
+            do
+            {
+                // Cache all tagged items at the same server
+                var client = DetermineClient(tagName);
+
+                try
+                {
+                    client.AddOrUpdateManyTagged(list, tagName);
                     break;
                 }
                 catch

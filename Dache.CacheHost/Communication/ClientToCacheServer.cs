@@ -114,12 +114,6 @@ namespace Dache.CacheHost.Communication
         /// <param name="serializedObject">The serialized object.</param>
         public void AddOrUpdate(string cacheKey, byte[] serializedObject)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                return;
-            }
-
             // Place object in cache
             MemCacheContainer.Instance.Add(cacheKey, serializedObject, _defaultCacheItemPolicy);
         }
@@ -132,18 +126,11 @@ namespace Dache.CacheHost.Communication
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdate(string cacheKey, byte[] serializedObject, DateTimeOffset absoluteExpiration)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                return;
-            }
-
             // Define the cache item policy
             var cacheItemPolicy = new CacheItemPolicy
             {
                 AbsoluteExpiration = absoluteExpiration
             };
-
             
             // Place object in cache
             MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
@@ -157,12 +144,6 @@ namespace Dache.CacheHost.Communication
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdate(string cacheKey, byte[] serializedObject, TimeSpan slidingExpiration)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                return;
-            }
-
             // Define the cache item policy
             var cacheItemPolicy = new CacheItemPolicy
             {
@@ -171,6 +152,19 @@ namespace Dache.CacheHost.Communication
 
             // Place object in cache
             MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
+        }
+
+        /// <summary>
+        /// Adds or updates an interned serialized object in the cache at the given cache key.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="serializedObject">The serialized object.</param>
+        public void AddOrUpdateInterned(string cacheKey, byte[] serializedObject)
+        {
+            // Place object in cache
+            MemCacheContainer.Instance.AddInterned(cacheKey, serializedObject);
         }
 
         /// <summary>
@@ -233,6 +227,27 @@ namespace Dache.CacheHost.Communication
         }
 
         /// <summary>
+        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
+        public void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
+        {
+            // Sanitize
+            if (cacheKeysAndSerializedObjects == null)
+            {
+                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
+            }
+
+            // Iterate all cache keys and associated serialized objects
+            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+            {
+                AddOrUpdateInterned(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value);
+            }
+        }
+
+        /// <summary>
         /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
         /// </summary>
         /// <param name="cacheKey">The cache key.</param>
@@ -241,10 +256,6 @@ namespace Dache.CacheHost.Communication
         public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName)
         {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                return;
-            }
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
@@ -252,8 +263,7 @@ namespace Dache.CacheHost.Communication
                 return;
             }
 
-            // Store the serialized object locally
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, _defaultCacheItemPolicy);
+            AddOrUpdate(cacheKey, serializedObject);
 
             // Add to the local tag routing table
             TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
@@ -269,10 +279,6 @@ namespace Dache.CacheHost.Communication
         public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, DateTimeOffset absoluteExpiration)
         {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                return;
-            }
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
@@ -286,8 +292,7 @@ namespace Dache.CacheHost.Communication
                 AbsoluteExpiration = absoluteExpiration
             };
 
-            // Store the serialized object locally
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
+            AddOrUpdate(cacheKey, serializedObject, absoluteExpiration);
 
             // Add to the local tag routing table
             TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
@@ -303,10 +308,6 @@ namespace Dache.CacheHost.Communication
         public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, TimeSpan slidingExpiration)
         {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                return;
-            }
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
@@ -320,8 +321,31 @@ namespace Dache.CacheHost.Communication
                 SlidingExpiration = slidingExpiration
             };
 
-            // Store the serialized object locally
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
+            AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
+
+            // Add to the local tag routing table
+            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
+        }
+
+        /// <summary>
+        /// Adds or updates the interned serialized object in the cache at the given cache key and associates it with the given tag name.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="serializedObject">The serialized object.</param>
+        /// <param name="tagName">The tag name.</param>
+        public void AddOrUpdateTaggedInterned(string cacheKey, byte[] serializedObject, string tagName)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                // If they didn't send a tag name ignore it
+                AddOrUpdateInterned(cacheKey, serializedObject);
+                return;
+            }
+
+            AddOrUpdateInterned(cacheKey, serializedObject);
 
             // Add to the local tag routing table
             TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
@@ -405,6 +429,34 @@ namespace Dache.CacheHost.Communication
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
                 AddOrUpdateTagged(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, tagName, slidingExpiration);
+            }
+        }
+
+        /// <summary>
+        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
+        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
+        /// You must remove them manually when appropriate or else you may face a memory leak.
+        /// </summary>
+        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
+        /// <param name="tagName">The tag name.</param>
+        public void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
+        {
+            // Sanitize
+            if (cacheKeysAndSerializedObjects == null)
+            {
+                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
+            }
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                // If they didn't send a tag name ignore it
+                AddOrUpdateMany(cacheKeysAndSerializedObjects);
+                return;
+            }
+
+            // Iterate all cache keys and associated serialized objects
+            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+            {
+                AddOrUpdateTagged(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, tagName);
             }
         }
 
