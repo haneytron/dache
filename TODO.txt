@@ -1,5 +1,5 @@
-﻿-Switch WCF serialization to protobuf if it makes sense (if it is faster?)
--Consider Streamed WCF?
+﻿*Move to native low level TCP sockets for optimal performance and invent a syntax/grammar to allow non .NET clients
+
 -Offer both IIS hosting and classic Service hosting
 -Better way to do static Container classes?
 -Clear tag from TagRoutingTable memory when removing all tagged items from host
