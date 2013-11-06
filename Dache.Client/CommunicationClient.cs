@@ -2,10 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.ServiceModel;
-using System.ServiceModel.Channels;
 using System.Text;
 using System.Threading;
+using System.Net;
+using System.Net.Sockets;
+using System.IO;
 
 namespace Dache.Client
 {
@@ -14,15 +15,18 @@ namespace Dache.Client
     /// </summary>
     internal class CommunicationClient : IClientToCacheContract
     {
-        // The WCF channel factory
-        private readonly ChannelFactory<IClientToCacheContract> _channelFactory = null;
-        // The WCF proxy
-        private IClientToCacheContract _proxy = null;
-        // The WCF proxy communication object
-        private ICommunicationObject _proxyComm = null;
-
+        // The remote endpoint
+        private readonly IPEndPoint _remoteEndPoint = null;
+        // The socket for communication
+        private Socket _client = null;
         // The cache host reconnect interval, in milliseconds
         private readonly int _hostReconnectIntervalMilliseconds = 0;
+        // The communication encoding
+        private static readonly Encoding _communicationEncoding = Encoding.ASCII;
+        // The communication delimiter - four 0 bytes in a row
+        private static readonly byte[] _communicationDelimiter = new byte[] { 0, 0, 0, 0 };
+        // The byte that represents a space
+        private static readonly byte[] _spaceByte = _communicationEncoding.GetBytes(" ");
 
         // Whether or not the communication client is connected
         private volatile bool _isConnected = false;
@@ -31,37 +35,47 @@ namespace Dache.Client
         // The timer used to reconnect to the server
         private readonly Timer _reconnectTimer = null;
 
+        // The socket send and receive locks
+        private readonly object _clientSendLock = new object();
+        private readonly object _clientReceiveLock = new object();
+
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="binding">The binding.</param>
-        /// <param name="endpointAddress">The endpoint address.</param>
+        /// <param name="address">The address.</param>
+        /// <param name="port">The port.</param>
         /// <param name="hostReconnectIntervalMilliseconds">The cache host reconnect interval, in milliseconds.</param>
-        public CommunicationClient(Binding binding, EndpointAddress endpointAddress, int hostReconnectIntervalMilliseconds)
+        public CommunicationClient(string address, int port, int hostReconnectIntervalMilliseconds)
         {
             // Sanitize
-            if (binding == null)
+            if (String.IsNullOrWhiteSpace(address))
             {
-                throw new ArgumentNullException("binding");
+                throw new ArgumentException("cannot be null, empty, or white space", "address");
             }
-            if (endpointAddress == null)
+            if (port <= 0)
             {
-                throw new ArgumentNullException("endpointAddress");
+                throw new ArgumentException("must be greater than 0", "port");
             }
             if (hostReconnectIntervalMilliseconds <= 0)
             {
                 throw new ArgumentException("must be greater than 0", "hostReconnectIntervalMilliseconds");
             }
 
-            // Initialize the channel factory with the binding and endpoint address
-            _channelFactory = new ChannelFactory<IClientToCacheContract>(binding, endpointAddress);
+            // Establish the remote endpoint for the socket
+            var ipHostInfo = Dns.GetHostEntry(address);
+            var ipAddress = ipHostInfo.AddressList[0];
+            _remoteEndPoint = new IPEndPoint(ipAddress, port);
+
+            // Create the TCP/IP socket
+            _client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            // Disable the Nagle algorithm
+            _client.NoDelay = true;
+
+            // Connect to the remote endpoint
+            _client.Connect(_remoteEndPoint);
 
             // Set the cache host reconnect interval
             _hostReconnectIntervalMilliseconds = hostReconnectIntervalMilliseconds;
-
-            // Initialize WCF
-            _proxy = _channelFactory.CreateChannel();
-            _proxyComm = _proxy as ICommunicationObject;
 
             // Set connected before opening to avoid a race
             _isConnected = true;
@@ -85,7 +99,11 @@ namespace Dache.Client
 
             try
             {
-                return _proxy.Get(cacheKey);
+                // Send
+                var command = _communicationEncoding.GetBytes(string.Format("get {0}", cacheKey));
+                _client.Send(command);
+                // Receive
+                return Receive();
             }
             catch
             {
@@ -113,9 +131,21 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeys");
             }
 
+            int cacheKeysCount = 0;
+
             try
             {
-                return _proxy.GetMany(cacheKeys);
+                var sb = new StringBuilder("get ");
+                foreach (var cacheKey in cacheKeys)
+                {
+                    sb.Append(cacheKey).Append(" ");
+                    cacheKeysCount++;
+                }
+                var command = _communicationEncoding.GetBytes(sb.ToString());
+                // Send
+                _client.Send(command);
+                // Receive
+                return ReceiveDelimitedResult(cacheKeysCount);
             }
             catch
             {
@@ -141,7 +171,11 @@ namespace Dache.Client
 
             try
             {
-                return _proxy.GetTagged(tagName);
+                // Send
+                var command = _communicationEncoding.GetBytes(string.Format("get-tag {0}", tagName));
+                _client.Send(command);
+                // Receive
+                return ReceiveDelimitedResult();
             }
             catch
             {
@@ -171,7 +205,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdate(cacheKey, serializedObject);
+                var command = _communicationEncoding.GetBytes(string.Format("set {0} ", cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -202,7 +239,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdate(cacheKey, serializedObject, absoluteExpiration);
+                var command = _communicationEncoding.GetBytes(string.Format("set {0} {1} ", absoluteExpiration.ToString("yyMMddhhmmss"), cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -233,7 +273,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
+                var command = _communicationEncoding.GetBytes(string.Format("set {0} {1} ", (int)slidingExpiration.TotalSeconds, cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -265,7 +308,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateInterned(cacheKey, serializedObject);
+                var command = _communicationEncoding.GetBytes(string.Format("set-intern {0} ", cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -294,7 +340,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateMany(cacheKeysAndSerializedObjects);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes("set"));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -324,7 +389,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateMany(cacheKeysAndSerializedObjects, absoluteExpiration);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set {0}", absoluteExpiration.ToString("yyMMddhhmmss"))));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -354,7 +438,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateMany(cacheKeysAndSerializedObjects, slidingExpiration);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set {0}", (int)slidingExpiration.TotalSeconds)));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -371,7 +474,6 @@ namespace Dache.Client
         /// You must remove them manually when appropriate or else you may face a memory leak.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        [OperationContract(Name = "K", IsOneWay = true)]
         public void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
         {
             // Sanitize
@@ -386,7 +488,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateManyInterned(cacheKeysAndSerializedObjects);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes("set-intern"));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -421,7 +542,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateTagged(cacheKey, serializedObject, tagName);
+                var command = _communicationEncoding.GetBytes(string.Format("set-tag {0} {1} ", tagName, cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -457,7 +581,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateTagged(cacheKey, serializedObject, tagName, absoluteExpiration);
+                var command = _communicationEncoding.GetBytes(string.Format("set-tag {0} {1} {2} ", tagName, absoluteExpiration.ToString("yyMMddhhmmss"), cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -493,7 +620,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateTagged(cacheKey, serializedObject, tagName, slidingExpiration);
+                var command = _communicationEncoding.GetBytes(string.Format("set-tag {0} {1} {2} ", tagName, (int)slidingExpiration.TotalSeconds, cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -530,7 +660,10 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateTaggedInterned(cacheKey, serializedObject, tagName);
+                var command = _communicationEncoding.GetBytes(string.Format("set-tag-intern {0} {1} ", tagName, cacheKey));
+                command = Combine(command, serializedObject);
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -564,7 +697,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateManyTagged(cacheKeysAndSerializedObjects, tagName);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag {0}", tagName)));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -599,7 +751,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateManyTagged(cacheKeysAndSerializedObjects, tagName, absoluteExpiration);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag {0} {1}", tagName, absoluteExpiration.ToString("yyMMddhhmmss"))));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -634,7 +805,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateManyTagged(cacheKeysAndSerializedObjects, tagName, slidingExpiration);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag {0} {1}", tagName, (int)slidingExpiration.TotalSeconds)));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -670,7 +860,26 @@ namespace Dache.Client
 
             try
             {
-                _proxy.AddOrUpdateManyTaggedInterned(cacheKeysAndSerializedObjects, tagName);
+                byte[] bytes = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream))
+                    {
+                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag-intern {0}", tagName)));
+                        foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                        {
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
+                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
+                        }
+
+                        bytes = memoryStream.ToArray();
+                    }
+                }
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -695,7 +904,9 @@ namespace Dache.Client
 
             try
             {
-                _proxy.Remove(cacheKey);
+                var command = _communicationEncoding.GetBytes(string.Format("del {0}", cacheKey));
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -724,7 +935,15 @@ namespace Dache.Client
 
             try
             {
-                _proxy.RemoveMany(cacheKeys);
+                var sb = new StringBuilder("del ");
+                foreach (var cacheKey in cacheKeys)
+                {
+                    sb.Append(cacheKey).Append(" ");
+                }
+                var command = _communicationEncoding.GetBytes(sb.ToString());
+
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -749,7 +968,9 @@ namespace Dache.Client
 
             try
             {
-                _proxy.RemoveTagged(tagName);
+                var command = _communicationEncoding.GetBytes(string.Format("del-tag {0}", tagName));
+                // Send Async as we don't want to wait for it
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -766,7 +987,7 @@ namespace Dache.Client
         /// <returns>A string containing the cache host address and port.</returns>
         public override string ToString()
         {
-            return _channelFactory.Endpoint.Address.Uri.Host + ":" + _channelFactory.Endpoint.Address.Uri.Port;
+            return _remoteEndPoint.Address + ":" + _remoteEndPoint.Port;
         }
 
         /// <summary>
@@ -839,26 +1060,29 @@ namespace Dache.Client
                     return;
                 }
 
-                // Close and abort the Proxy Communication if needed
+                // Close and abort the socket if needed
                 try
                 {
                     // Attempt the close
-                    _proxyComm.Close();
+                    _client.Shutdown(SocketShutdown.Both);
+                    _client.Close();
                 }
                 catch
                 {
                     // Close failed, abort it
-                    _proxyComm.Abort();
+                    _client.Shutdown(SocketShutdown.Send);
+                    _client.Close();
                 }
 
-                // Re-initialize the Proxy
-                _proxy = _channelFactory.CreateChannel();
-                _proxyComm = _proxy as ICommunicationObject;
+                // Create the TCP/IP socket
+                _client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                // Disable the Nagle algorithm
+                _client.NoDelay = true;
 
                 // Attempt the actual reconnection
                 try
                 {
-                    _proxyComm.Open();
+                    _client.Connect(_remoteEndPoint);
                 }
                 catch
                 {
@@ -878,6 +1102,81 @@ namespace Dache.Client
                 {
                     reconnected(this, EventArgs.Empty);
                 }
+            }
+        }
+
+        public static byte[] Combine(byte[] first, byte[] second)
+        {
+            byte[] ret = new byte[first.Length + second.Length];
+            Buffer.BlockCopy(first, 0, ret, 0, first.Length);
+            Buffer.BlockCopy(second, 0, ret, first.Length, second.Length);
+            return ret;
+        }
+
+        private byte[] Receive()
+        {
+            var buffer = new byte[512];
+            var result = new byte[0];
+            int totalBytesRead = 0;
+            int bytesRead = 0;
+
+            while ((bytesRead = _client.Receive(buffer)) > 0)
+            {
+                totalBytesRead += bytesRead;
+                result = Combine(result, buffer);
+            }
+
+            return result;
+        }
+
+        private List<byte[]> ReceiveDelimitedResult(int cacheKeysCount = 10)
+        {
+            var result = Receive();
+
+            // Split result by delimiter
+            var finalResult = new List<byte[]>(cacheKeysCount);
+            int lastDelimiterIndex = 0;
+            for (int i = 0; i < result.Length; i++)
+            {
+                // Check for delimiter
+                for (int d = 0; d < _communicationDelimiter.Length; ++d)
+                {
+                    if (i + d >= result.Length || result[i + d] != _communicationDelimiter[d])
+                    {
+                        // Leave loop
+                        break;
+                    }
+
+                    // Check if we found it
+                    if (d == _communicationDelimiter.Length - 1)
+                    {
+                        // Add current section to final result
+                        var finalResultItem = new byte[i - lastDelimiterIndex];
+                        Array.Copy(result, lastDelimiterIndex, finalResultItem, 0, i - lastDelimiterIndex);
+                        finalResult.Add(finalResultItem);
+                        // Now set last delimiter index and skip ahead a bit
+                        lastDelimiterIndex = i + d + 1;
+                        i += d;
+                    }
+                }
+
+            }
+            return finalResult;
+        }
+
+        private void SendAsyncCallback(IAsyncResult asyncResult)
+        {
+            try
+            {
+                // Retrieve the socket from the state object
+                Socket client = (Socket)asyncResult.AsyncState;
+
+                // Complete sending the data to the remote device
+                int bytesSent = client.EndSend(asyncResult);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
         }
     }

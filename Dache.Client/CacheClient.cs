@@ -52,14 +52,8 @@ namespace Dache.Client
             // Add the cache hosts to the cache client list
             foreach (CacheHostElement cacheHost in cacheHosts.Cast<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
-                // Build the endpoint address
-                var endpointAddressFormattedString = "net.tcp://{0}:{1}/Dache/CacheHost";
-                var endpointAddress = new EndpointAddress(string.Format(endpointAddressFormattedString, cacheHost.Address, cacheHost.Port));
-                // Build the net tcp binding
-                var netTcpBinding = CreateNetTcpBinding();
-
                 // Instantiate a cache host client container
-                var clientContainer = new CommunicationClient(netTcpBinding, endpointAddress, hostReconnectIntervalMilliseconds);
+                var clientContainer = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalMilliseconds);
 
                 // Hook up the disconnected and reconnected events
                 clientContainer.Disconnected += OnClientDisconnected;
@@ -1543,41 +1537,6 @@ namespace Dache.Client
             /// The maximum value of the range.
             /// </summary>
             public int MaxValue { get; set; }
-        }
-
-        /// <summary>
-        /// Creates a configured net tcp binding for communication.
-        /// </summary>
-        /// <returns>A configured net tcp binding.</returns>
-        private NetTcpBinding CreateNetTcpBinding()
-        {
-            var netTcpBinding = new NetTcpBinding(SecurityMode.None, false)
-            {
-                CloseTimeout = TimeSpan.FromSeconds(15),
-                OpenTimeout = TimeSpan.FromSeconds(15),
-                SendTimeout = TimeSpan.FromSeconds(15),
-                ReceiveTimeout = TimeSpan.MaxValue,
-                Namespace = "http://schemas.getdache.net/cachehost",
-                MaxBufferSize = int.MaxValue,
-                MaxBufferPoolSize = int.MaxValue,
-                MaxReceivedMessageSize = int.MaxValue,
-                MaxConnections = 100000,
-                ListenBacklog = 100000,
-                TransferMode = System.ServiceModel.TransferMode.Buffered,
-                ReliableSession = new OptionalReliableSession
-                {
-                    Enabled = false,
-                },
-            };
-
-            // Set reader quotas
-            netTcpBinding.ReaderQuotas.MaxDepth = 64;
-            netTcpBinding.ReaderQuotas.MaxStringContentLength = int.MaxValue;
-            netTcpBinding.ReaderQuotas.MaxArrayLength = int.MaxValue;
-            netTcpBinding.ReaderQuotas.MaxBytesPerRead = int.MaxValue;
-            netTcpBinding.ReaderQuotas.MaxNameTableCharCount = int.MaxValue;
-
-            return netTcpBinding;
         }
     }
 }
