@@ -35,10 +35,6 @@ namespace Dache.Client
         // The timer used to reconnect to the server
         private readonly Timer _reconnectTimer = null;
 
-        // The socket send and receive locks
-        private readonly object _clientSendLock = new object();
-        private readonly object _clientReceiveLock = new object();
-
         /// <summary>
         /// The constructor.
         /// </summary>
@@ -71,17 +67,14 @@ namespace Dache.Client
             // Disable the Nagle algorithm
             _client.NoDelay = true;
 
-            // Connect to the remote endpoint
-            _client.Connect(_remoteEndPoint);
-
             // Set the cache host reconnect interval
             _hostReconnectIntervalMilliseconds = hostReconnectIntervalMilliseconds;
 
             // Set connected before opening to avoid a race
             _isConnected = true;
 
-            // Initialize and configure the reconnect timer to never fire
-            _reconnectTimer = new Timer(ReconnectToServer, null, Timeout.Infinite, Timeout.Infinite); 
+            // Initialize and configure the reconnect timer to immediately fire on a different thread
+            _reconnectTimer = new Timer(ReconnectToServer, null, 0, _hostReconnectIntervalMilliseconds); 
         }
 
         /// <summary>
@@ -99,11 +92,14 @@ namespace Dache.Client
 
             try
             {
-                // Send
                 var command = _communicationEncoding.GetBytes(string.Format("get {0}", cacheKey));
-                _client.Send(command);
-                // Receive
-                return Receive();
+                lock (_client)
+                {
+                    // Send
+                    _client.Send(command);
+                    // Receive
+                    return Receive();
+                }
             }
             catch
             {
@@ -142,10 +138,13 @@ namespace Dache.Client
                     cacheKeysCount++;
                 }
                 var command = _communicationEncoding.GetBytes(sb.ToString());
-                // Send
-                _client.Send(command);
-                // Receive
-                return ReceiveDelimitedResult(cacheKeysCount);
+                lock (_client)
+                {
+                    // Send
+                    _client.Send(command);
+                    // Receive
+                    return ReceiveDelimitedResult(cacheKeysCount);
+                }
             }
             catch
             {
@@ -171,11 +170,14 @@ namespace Dache.Client
 
             try
             {
-                // Send
                 var command = _communicationEncoding.GetBytes(string.Format("get-tag {0}", tagName));
-                _client.Send(command);
-                // Receive
-                return ReceiveDelimitedResult();
+                lock (_client)
+                {
+                    // Send
+                    _client.Send(command);
+                    // Receive
+                    return ReceiveDelimitedResult();
+                }
             }
             catch
             {
@@ -1070,8 +1072,15 @@ namespace Dache.Client
                 catch
                 {
                     // Close failed, abort it
-                    _client.Shutdown(SocketShutdown.Send);
-                    _client.Close();
+                    try
+                    {
+                        _client.Shutdown(SocketShutdown.Send);
+                        _client.Close();
+                    }
+                    catch
+                    {
+                        // Still failed, ignore it
+                    }
                 }
 
                 // Create the TCP/IP socket
