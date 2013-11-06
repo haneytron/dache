@@ -1,5 +1,53 @@
 ﻿*Move to native low level TCP sockets for optimal performance and invent a syntax/grammar to allow non .NET clients
 
+DACHE TCP LOW LEVEL LANGUAGE SYNTAX:
+
+get cacheKey
+
+get cacheKey1 cacheKey2 cacheKey3 cacheKey4...
+
+get-tag tagName
+
+put cacheKey serializedObject
+
+put cacheKey serializedObject absoluteExpiration
+
+put cacheKey serializedObject slidingExpiration
+
+put-intern cacheKey serializedObject
+
+put cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
+put cacheKey1 serializedObject1 absoluteExpiration1 cacheKey2 serializedObject2 absoluteExpiration2
+
+put cacheKey1 serializedObject1 slidingExpiration1 cacheKey2 serializedObject2 slidingExpiration2
+
+put-intern cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
+put-tag cacheKey serializedObject tagName
+
+put-tag cacheKey serializedObject tagName absoluteExpiration
+
+put-tag cacheKey serializedObject tagName slidingExpiration
+
+put-tag-intern cacheKey serializedObject tagName
+
+put-tag cacheKey1 serializedObject1 tagName1 cacheKey2 serializedObject2 tagName2
+
+put-tag cacheKey1 serializedObject1 tagName1 absoluteExpiration1 cacheKey2 serializedObject2 tagName2 absoluteExpiration2
+
+put-tag cacheKey1 serializedObject1 tagName1 slidingExpiration1 cacheKey2 serializedObject2 tagName2 slidingExpiration2
+
+put-tag-intern cacheKey1 serializedObject1 tagName1 cacheKey2 serializedObject2 tagName2
+
+del cacheKey
+
+del cacheKey1 cacheKey2 cacheKey3 cacheKey4...
+
+del-tag tagName
+
+
+
 -Offer both IIS hosting and classic Service hosting
 -Better way to do static Container classes?
 -Clear tag from TagRoutingTable memory when removing all tagged items from host
