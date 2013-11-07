@@ -37,7 +37,6 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -46,8 +45,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Dache.Communication\IClientToCacheContract.cs">
-      <Link>Communication\IClientToCacheContract.cs</Link>
+    <Compile Include="..\Dache.CacheHost\Communication\ICacheHostContract.cs">
+      <Link>Communication\ICacheHostContract.cs</Link>
     </Compile>
     <Compile Include="..\Dache.Core\Logging\EventViewerLogger.cs">
       <Link>Logging\EventViewerLogger.cs</Link>

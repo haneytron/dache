@@ -1,5 +1,4 @@
-﻿using Dache.Communication;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +7,6 @@ namespace Dache.Client
 {
     /// <summary>
     /// Represents a cache client.
-    /// TODO: add exception/throws metadata
     /// </summary>
     public interface ICacheClient
     {

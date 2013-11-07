@@ -40,7 +40,6 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -53,7 +52,8 @@
     <Compile Include="CacheHostService.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Communication\ClientToCacheServer.cs" />
+    <Compile Include="Communication\CacheHostServer.cs" />
+    <Compile Include="Communication\ICacheHostContract.cs" />
     <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
     <Compile Include="Configuration\CustomLoggerElement.cs" />
     <Compile Include="Performance\CustomPerformanceCounterManagerContainer.cs" />
@@ -70,10 +70,6 @@
     <Compile Include="Storage\MemCacheContainer.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Dache.Communication\Dache.Communication.csproj">
-      <Project>{3f3041bd-deea-4c15-8ab4-305f8fd894f5}</Project>
-      <Name>Dache.Communication</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Dache.Core\Dache.Core.csproj">
       <Project>{e304662c-ac30-4427-9ca0-f63297f37694}</Project>
       <Name>Dache.Core</Name>

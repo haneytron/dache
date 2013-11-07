@@ -1,7 +1,5 @@
 ﻿using System;
-using System.ServiceModel;
 using Dache.CacheHost.Storage;
-using Dache.Communication;
 using Dache.Core.Interfaces;
 
 namespace Dache.CacheHost

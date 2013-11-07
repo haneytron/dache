@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Runtime.Serialization;
-using System.ServiceModel;
 using System.Threading;
 using Dache.Client.Exceptions;
 
@@ -170,10 +169,10 @@ namespace Dache.Client
                     {
                         if (rawResults == null)
                         {
-                            rawResults = routingDictionaryEntry.Key.GetMany(routingDictionaryEntry.Value);
+                            rawResults = routingDictionaryEntry.Key.Get(routingDictionaryEntry.Value);
                             continue;
                         }
-                        rawResults.AddRange(routingDictionaryEntry.Key.GetMany(routingDictionaryEntry.Value));
+                        rawResults.AddRange(routingDictionaryEntry.Key.Get(routingDictionaryEntry.Value));
                     }
 
                     // If we got here we did all of the work successfully
@@ -506,7 +505,7 @@ namespace Dache.Client
                 {
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.AddOrUpdateMany(routingDictionaryEntry.Value);
+                        routingDictionaryEntry.Key.AddOrUpdate(routingDictionaryEntry.Value);
                     }
 
                     // If we got here we did all of the work successfully
@@ -577,7 +576,7 @@ namespace Dache.Client
                 {
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.AddOrUpdateMany(routingDictionaryEntry.Value, absoluteExpiration);
+                        routingDictionaryEntry.Key.AddOrUpdate(routingDictionaryEntry.Value, absoluteExpiration);
                     }
 
                     // If we got here we did all of the work successfully
@@ -648,7 +647,7 @@ namespace Dache.Client
                 {
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.AddOrUpdateMany(routingDictionaryEntry.Value, slidingExpiration);
+                        routingDictionaryEntry.Key.AddOrUpdate(routingDictionaryEntry.Value, slidingExpiration);
                     }
 
                     // If we got here we did all of the work successfully
@@ -720,7 +719,7 @@ namespace Dache.Client
                 {
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.AddOrUpdateManyInterned(routingDictionaryEntry.Value);
+                        routingDictionaryEntry.Key.AddOrUpdateInterned(routingDictionaryEntry.Value);
                     }
 
                     // If we got here we did all of the work successfully
@@ -991,7 +990,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateManyTagged(list, tagName);
+                    client.AddOrUpdateTagged(list, tagName);
                     break;
                 }
                 catch
@@ -1056,7 +1055,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateManyTagged(list, tagName, absoluteExpiration);
+                    client.AddOrUpdateTagged(list, tagName, absoluteExpiration);
                     break;
                 }
                 catch
@@ -1121,7 +1120,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateManyTagged(list, tagName, slidingExpiration);
+                    client.AddOrUpdateTagged(list, tagName, slidingExpiration);
                     break;
                 }
                 catch
@@ -1187,7 +1186,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateManyTagged(list, tagName);
+                    client.AddOrUpdateTagged(list, tagName);
                     break;
                 }
                 catch
@@ -1264,7 +1263,7 @@ namespace Dache.Client
                     // Now we've batched them, do the work
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.RemoveMany(routingDictionaryEntry.Value);
+                        routingDictionaryEntry.Key.Remove(routingDictionaryEntry.Value);
                     }
 
                     // If we got here we did all of the work successfully

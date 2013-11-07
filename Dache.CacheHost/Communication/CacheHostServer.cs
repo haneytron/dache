@@ -7,7 +7,6 @@ using System.Runtime.Caching;
 using System.Text;
 using System.Threading;
 using Dache.CacheHost.Storage;
-using Dache.Communication;
 using Dache.Core.Interfaces;
 using Dache.Core.Routing;
 
@@ -16,7 +15,7 @@ namespace Dache.CacheHost.Communication
     /// <summary>
     /// The server for client to cache communication.
     /// </summary>
-    public class ClientToCacheServer : IClientToCacheContract, IRunnable
+    public class CacheHostServer : ICacheHostContract, IRunnable
     {
         // The cache server
         private readonly Socket _server = null;
@@ -41,7 +40,7 @@ namespace Dache.CacheHost.Communication
         /// The constructor.
         /// </summary>
         /// <param name="port">The port.</param>
-        public ClientToCacheServer(int port)
+        public CacheHostServer(int port)
         {
             // Establish the endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry("localhost");
@@ -316,7 +315,7 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
         /// <returns>A list of the serialized objects.</returns>
-        public List<byte[]> GetMany(IEnumerable<string> cacheKeys)
+        public List<byte[]> Get(IEnumerable<string> cacheKeys)
         {
             // Sanitize
             if (cacheKeys == null)
@@ -448,7 +447,7 @@ namespace Dache.CacheHost.Communication
         /// Adds or updates the serialized objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
+        public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -468,7 +467,7 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, DateTimeOffset absoluteExpiration)
+        public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, DateTimeOffset absoluteExpiration)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -488,7 +487,7 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, TimeSpan slidingExpiration)
+        public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, TimeSpan slidingExpiration)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -509,7 +508,7 @@ namespace Dache.CacheHost.Communication
         /// You must remove them manually when appropriate or else you may face a memory leak.
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        public void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
+        public void AddOrUpdateInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -633,7 +632,7 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
+        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -643,7 +642,7 @@ namespace Dache.CacheHost.Communication
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
-                AddOrUpdateMany(cacheKeysAndSerializedObjects);
+                AddOrUpdate(cacheKeysAndSerializedObjects);
                 return;
             }
 
@@ -660,7 +659,7 @@ namespace Dache.CacheHost.Communication
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, DateTimeOffset absoluteExpiration)
+        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, DateTimeOffset absoluteExpiration)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -670,7 +669,7 @@ namespace Dache.CacheHost.Communication
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
-                AddOrUpdateMany(cacheKeysAndSerializedObjects, absoluteExpiration);
+                AddOrUpdate(cacheKeysAndSerializedObjects, absoluteExpiration);
                 return;
             }
 
@@ -688,7 +687,7 @@ namespace Dache.CacheHost.Communication
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, TimeSpan slidingExpiration)
+        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, TimeSpan slidingExpiration)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -698,7 +697,7 @@ namespace Dache.CacheHost.Communication
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
-                AddOrUpdateMany(cacheKeysAndSerializedObjects, slidingExpiration);
+                AddOrUpdate(cacheKeysAndSerializedObjects, slidingExpiration);
                 return;
             }
 
@@ -716,7 +715,7 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
+        public void AddOrUpdateTaggedInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -726,7 +725,7 @@ namespace Dache.CacheHost.Communication
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
-                AddOrUpdateMany(cacheKeysAndSerializedObjects);
+                AddOrUpdate(cacheKeysAndSerializedObjects);
                 return;
             }
 
@@ -757,7 +756,7 @@ namespace Dache.CacheHost.Communication
         /// Removes the serialized objects at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
-        public void RemoveMany(IEnumerable<string> cacheKeys)
+        public void Remove(IEnumerable<string> cacheKeys)
         {
             // Sanitize
             if (cacheKeys == null)
