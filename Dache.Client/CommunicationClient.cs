@@ -1116,9 +1116,14 @@ namespace Dache.Client
 
         public static byte[] Combine(byte[] first, byte[] second)
         {
-            byte[] ret = new byte[first.Length + second.Length];
-            Buffer.BlockCopy(first, 0, ret, 0, first.Length);
-            Buffer.BlockCopy(second, 0, ret, first.Length, second.Length);
+            return Combine(first, first.Length, second, second.Length);
+        }
+
+        public static byte[] Combine(byte[] first, int firstLength, byte[] second, int secondLength)
+        {
+            byte[] ret = new byte[firstLength + secondLength];
+            Buffer.BlockCopy(first, 0, ret, 0, firstLength);
+            Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
             return ret;
         }
 
@@ -1126,13 +1131,31 @@ namespace Dache.Client
         {
             var buffer = new byte[512];
             var result = new byte[0];
-            int totalBytesRead = 0;
             int bytesRead = 0;
+            int totalBytesToRead = -1;
 
-            while ((bytesRead = _client.Receive(buffer)) > 0)
+            while ((bytesRead = _client.Receive(buffer, (totalBytesToRead < 0 ? buffer.Length : Math.Min(512, totalBytesToRead)), SocketFlags.None)) > 0 && totalBytesToRead != 0)
             {
-                totalBytesRead += bytesRead;
-                result = Combine(result, buffer);
+                // Check if we need to decode little endian
+                if (totalBytesToRead == -1)
+                {
+                    // We do
+                    var littleEndianBytes = new byte[4];
+                    Buffer.BlockCopy(buffer, 0, littleEndianBytes, 0, 4);
+                    // Set total bytes to read
+                    totalBytesToRead = LittleEndianToInt(littleEndianBytes);
+                    // Take endian bytes off
+                    bytesRead -= 4;
+                    // Remove the first 4 bytes from the buffer
+                    var strippedBuffer = new byte[512];
+                    Buffer.BlockCopy(buffer, 4, strippedBuffer, 0, bytesRead);
+                    buffer = strippedBuffer;
+                }
+
+                // Set total bytes read and buffer
+                totalBytesToRead -= bytesRead;
+                result = Combine(result, result.Length, buffer, bytesRead);
+                
             }
 
             return result;
@@ -1187,6 +1210,21 @@ namespace Dache.Client
             {
                 Console.WriteLine(e.ToString());
             }
+        }
+
+        int LittleEndianToInt(byte[] bytes)
+        {
+            return (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+        }
+
+        byte[] IntToLittleEndian(int value)
+        {
+            byte[] bytes = new byte[4];
+            bytes[0] = (byte)value;
+            bytes[1] = (byte)(((uint)value >> 8) & 0xFF);
+            bytes[2] = (byte)(((uint)value >> 16) & 0xFF);
+            bytes[3] = (byte)(((uint)value >> 24) & 0xFF);
+            return bytes;
         }
     }
 }
