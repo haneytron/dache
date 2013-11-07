@@ -1,21 +1,58 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.Caching;
-using System.ServiceModel;
-using Dache.Communication;
 using Dache.CacheHost.Storage;
+using Dache.Communication;
+using Dache.Core.Interfaces;
 using Dache.Core.Routing;
 
 namespace Dache.CacheHost.Communication
 {
     /// <summary>
-    /// The WCF server for client to cache communication.
+    /// The server for client to cache communication.
     /// </summary>
-    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single, ConcurrencyMode = ConcurrencyMode.Multiple, UseSynchronizationContext = false, MaxItemsInObjectGraph = int.MaxValue, Namespace = "http://schemas.getdache.net/cachehost")]
-    public class ClientToCacheServer : IClientToCacheContract
+    public class ClientToCacheServer : IClientToCacheContract, IRunnable
     {
+        // The cache server
+        private readonly Socket _server = null;
         // The default cache item policy
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
+
+        /// <summary>
+        /// The constructor.
+        /// </summary>
+        /// <param name="port">The port.</param>
+        public ClientToCacheServer(int port)
+        {
+            // Establish the endpoint for the socket
+            var ipHostInfo = Dns.GetHostEntry("localhost");
+            var ipAddress = ipHostInfo.AddressList.First(i => i.AddressFamily == AddressFamily.InterNetwork);
+            var localEndPoint = new IPEndPoint(ipAddress, port);
+
+            // Create the TCP/IP socket
+            _server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            // Disable the Nagle algorithm
+            _server.NoDelay = true;
+        }
+
+        /// <summary>
+        /// Starts the cache server.
+        /// </summary>
+        public void Start()
+        {
+            // TODO: server socket listen
+        }
+
+        /// <summary>
+        /// Stops the cache server.
+        /// </summary>
+        public void Stop()
+        {
+            // TODO: server socket shutdown
+        }
 
         /// <summary>
         /// Gets the serialized object stored at the given cache key from the cache.

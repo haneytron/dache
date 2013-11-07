@@ -70,9 +70,6 @@ namespace Dache.Client
             // Set the cache host reconnect interval
             _hostReconnectIntervalMilliseconds = hostReconnectIntervalMilliseconds;
 
-            // Set connected before opening to avoid a race
-            _isConnected = true;
-
             // Initialize and configure the reconnect timer to immediately fire on a different thread
             _reconnectTimer = new Timer(ReconnectToServer, null, 0, _hostReconnectIntervalMilliseconds); 
         }

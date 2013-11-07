@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ServiceModel;
 using Dache.CacheHost.Storage;
+using Dache.Communication;
 using Dache.Core.Interfaces;
 
 namespace Dache.CacheHost
@@ -10,8 +11,8 @@ namespace Dache.CacheHost
     /// </summary>
     public class CacheHostEngine : IRunnable
     {
-        // The WCF client to cache service host
-        private readonly ServiceHost _clientToCacheServiceHost = null;
+        // The cache server
+        private readonly IRunnable _cacheServer = null;
         // The cache host information poller
         private readonly IRunnable _cacheHostInformationPoller = null;
 
@@ -20,9 +21,8 @@ namespace Dache.CacheHost
         /// </summary>
         /// <param name="cacheHostInformationPoller">The cache host information poller.</param>
         /// <param name="memCache">The mem cache to use for storing objects.</param>
-        /// <param name="clientToCacheServiceHost">The client to cache service host.</param>
-        /// <param name="cacheManagerClient">The cache manager client.</param>
-        public CacheHostEngine(IRunnable cacheHostInformationPoller, MemCache memCache, ServiceHost clientToCacheServiceHost)
+        /// <param name="cacheServer">The cache server.</param>
+        public CacheHostEngine(IRunnable cacheHostInformationPoller, MemCache memCache, IRunnable cacheServer)
         {
             // Sanitize
             if (cacheHostInformationPoller == null)
@@ -33,9 +33,9 @@ namespace Dache.CacheHost
             {
                 throw new ArgumentNullException("memCache");
             }
-            if (clientToCacheServiceHost == null)
+            if (cacheServer == null)
             {
-                throw new ArgumentNullException("clientToCacheServiceHost");
+                throw new ArgumentNullException("cacheServer");
             }
 
             // Set the cache host information poller
@@ -44,8 +44,8 @@ namespace Dache.CacheHost
             // Set the mem cache container instance
             MemCacheContainer.Instance = memCache;
 
-            // Initialize the service hosts
-            _clientToCacheServiceHost = clientToCacheServiceHost;
+            // Initialize the serer
+            _cacheServer = cacheServer;
         }
 
         /// <summary>
@@ -53,8 +53,8 @@ namespace Dache.CacheHost
         /// </summary>
         public void Start()
         {
-            // Begin listening for WCF requests
-            _clientToCacheServiceHost.Open();
+            // Begin listening for requests
+            _cacheServer.Start();
 
             // Start the cache host information poller
             _cacheHostInformationPoller.Start();
@@ -68,8 +68,8 @@ namespace Dache.CacheHost
             // Dispose the MemCache guaranteed
             using (MemCacheContainer.Instance)
             {
-                // Stop listening for WCF requests
-                _clientToCacheServiceHost.Close();
+                // Stop listening for requests
+                _cacheServer.Stop();
 
                 // Stop the cache host information poller
                 _cacheHostInformationPoller.Stop();

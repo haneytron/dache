@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Specialized;
-using System.Linq;
-using System.ServiceModel;
-using System.ServiceModel.Description;
 using System.ServiceProcess;
 using System.Threading;
-using Dache.CacheHost;
 using Dache.CacheHost.Communication;
 using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Performance;
 using Dache.CacheHost.Polling;
 using Dache.CacheHost.Storage;
-using Dache.Communication;
 using Dache.Core.Interfaces;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
@@ -93,48 +88,23 @@ namespace Dache.CacheHost
             {
                 // Initialize the mem cache container instance
                 var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
-
                 var cacheConfig = new NameValueCollection();
                 cacheConfig.Add("pollingInterval", "00:00:15");
                 cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
-
                 var memCache = new MemCache("Dache", cacheConfig);
 
-                // Initialize the client to cache service host
-                var clientToCacheServiceHost = new ServiceHost(typeof(ClientToCacheServer));
-                // Configure the client to cache service host
-                var cacheHostAddress = CacheHostConfigurationSection.Settings.Address;
-                var cacheHostPort = CacheHostConfigurationSection.Settings.Port;
-                // Build the endpoint address
-                var endpointAddress = string.Format("net.tcp://{0}:{1}/Dache/CacheHost", cacheHostAddress, cacheHostPort);
-                // Build the net tcp binding
-                var netTcpBinding = CreateNetTcpBinding();
-                // Service throttling
-                var serviceThrottling = clientToCacheServiceHost.Description.Behaviors.Find<ServiceThrottlingBehavior>();
-                if (serviceThrottling == null)
-                {
-                    serviceThrottling = new ServiceThrottlingBehavior
-                    {
-                        MaxConcurrentCalls = int.MaxValue,
-                        MaxConcurrentInstances = int.MaxValue,
-                        MaxConcurrentSessions = int.MaxValue
-                    };
-
-                    clientToCacheServiceHost.Description.Behaviors.Add(serviceThrottling);
-                }
-
-                // Configure the service endpoint
-                clientToCacheServiceHost.AddServiceEndpoint(typeof(IClientToCacheContract), netTcpBinding, endpointAddress);
+                // Initialize the client to cache server
+                var port = CacheHostConfigurationSection.Settings.Port;
+                var clientToCacheServer = new ClientToCacheServer(port);
 
                 // Configure the custom performance counter manager
-                var serviceHostAddress = clientToCacheServiceHost.Description.Endpoints.First().Address.Uri;
-                CustomPerformanceCounterManagerContainer.Instance = new CustomPerformanceCounterManager(string.Format("{0}_{1}", serviceHostAddress.Host, serviceHostAddress.Port), false);
+                CustomPerformanceCounterManagerContainer.Instance = new CustomPerformanceCounterManager(string.Format("port:{0}", port), false);
 
                 // Initialize the cache host information poller
                 var cacheHostInformationPoller = new CacheHostInformationPoller(1000);
 
                 // Instantiate the cache host engine
-                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, memCache, clientToCacheServiceHost);
+                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, memCache, clientToCacheServer);
             }
             catch (Exception ex)
             {
@@ -165,76 +135,5 @@ namespace Dache.CacheHost
 
             _cacheHostEngine.Stop();
         }
-
-        /// <summary>
-        /// Creates a configured net tcp binding for communication.
-        /// </summary>
-        /// <returns>A configured net tcp binding.</returns>
-        private NetTcpBinding CreateNetTcpBinding()
-        {
-            var netTcpBinding = new NetTcpBinding(SecurityMode.None, false)
-            {
-                CloseTimeout = TimeSpan.FromSeconds(15),
-                OpenTimeout = TimeSpan.FromSeconds(15),
-                SendTimeout = TimeSpan.FromSeconds(15),
-                ReceiveTimeout = TimeSpan.MaxValue,
-                Namespace = "http://schemas.getdache.net/cachehost",
-                MaxBufferSize = int.MaxValue,
-                MaxBufferPoolSize = int.MaxValue,
-                MaxReceivedMessageSize = int.MaxValue,
-                MaxConnections = 100000,
-                ListenBacklog = 100000,
-                TransferMode = System.ServiceModel.TransferMode.Buffered,
-                ReliableSession = new OptionalReliableSession
-                {
-                    Enabled = false
-                }
-            };
-
-            // Set reader quotas
-            netTcpBinding.ReaderQuotas.MaxDepth = 64;
-            netTcpBinding.ReaderQuotas.MaxStringContentLength = int.MaxValue;
-            netTcpBinding.ReaderQuotas.MaxArrayLength = int.MaxValue;
-            netTcpBinding.ReaderQuotas.MaxBytesPerRead = int.MaxValue;
-            netTcpBinding.ReaderQuotas.MaxNameTableCharCount = int.MaxValue;
-
-            return netTcpBinding;
-        }
-
-        ///// <summary>
-        ///// Creates the unity container from the unity configuration section of the passed in name.
-        ///// </summary>
-        ///// <param name="configSectionName">The configuration section name.</param>
-        ///// <returns>An instantiated unity container, or null if the configuration was not able to be properly loaded.</returns>
-        //private IUnityContainer CreateUnityContainer(string configSectionName)
-        //{
-        //    // Sanitize
-        //    if (string.IsNullOrWhiteSpace(configSectionName))
-        //    {
-        //        return null;
-        //    }
-
-        //    var unityConfigurationSection = ConfigurationManager.GetSection(configSectionName) as UnityConfigurationSection;
-
-        //    if (unityConfigurationSection == null)
-        //    {
-        //        _eventLog.WriteEntry("The Unity Configuration Section named " + configSectionName + " was not able to be loaded", EventLogEntryType.Error);
-        //        return null;
-        //    }
-
-        //    var unityContainer = new UnityContainer();
-
-        //    try
-        //    {
-        //        unityContainer.LoadConfiguration(unityConfigurationSection);
-        //    }
-        //    catch
-        //    {
-        //        _eventLog.WriteEntry("The Unity Configuration Section named " + configSectionName + " was not able to be loaded", EventLogEntryType.Error);
-        //        return null;
-        //    }
-
-        //    return unityContainer;
-        //}
     }
 }

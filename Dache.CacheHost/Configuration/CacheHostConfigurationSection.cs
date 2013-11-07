@@ -34,23 +34,6 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The cache host address.
-        /// </summary>
-        [StringValidator(InvalidCharacters = @"\:")]
-        [ConfigurationProperty("address", IsRequired = true)]
-        public string Address
-        {
-            get
-            {
-                return (string)this["address"];
-            }
-            set
-            {
-                this["address"] = value;
-            }
-        }
-
-        /// <summary>
         /// The cache host port.
         /// </summary>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
