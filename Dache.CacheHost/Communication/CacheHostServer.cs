@@ -33,8 +33,10 @@ namespace Dache.CacheHost.Communication
         private static readonly byte[] _communicationDelimiter = new byte[] { 0, 0, 0, 0 };
         // The byte that represents a space
         private static readonly byte[] _spaceByte = _communicationEncoding.GetBytes(" ");
-        // The communication protocol control byte count - 4 little endian bytes + 1 control byte
-        private const int _controlByteCount = 5;
+        // The communication protocol control bytes default - 4 little endian bytes + 1 control byte
+        private static readonly byte[] _controlBytesDefault = new byte[] { 0, 0, 0, 0, 0 };
+        // The absolute expiration format
+        private const string _absoluteExpirationFormat = "yyMMddhhmmss";
 
         /// <summary>
         /// The constructor.
@@ -105,9 +107,9 @@ namespace Dache.CacheHost.Communication
                 if (state.TotalBytesToRead == -1)
                 {
                     // Parse out control bytes
-                    state.Buffer = RemoveControlByteValues(state.Buffer, out state.TotalBytesToRead, out state.DelimiterTypeId);
+                    state.Buffer = RemoveControlByteValues(state.Buffer, out state.TotalBytesToRead, out state.DelimiterType);
                     // Take control bytes off of bytes read
-                    bytesRead -= _controlByteCount;
+                    bytesRead -= _controlBytesDefault.Length;
                 }
 
                 // Set total bytes read and buffer
@@ -235,25 +237,23 @@ namespace Dache.CacheHost.Communication
             return result;
         }
 
-        byte[] RemoveControlByteValues(byte[] command, out int messageLength, out int delimiterTypeId)
+        byte[] RemoveControlByteValues(byte[] command, out int messageLength, out DelimiterType delimiterType)
         {
             messageLength = (command[3] << 24) | (command[2] << 16) | (command[1] << 8) | command[0];
-            delimiterTypeId = command[4];
-            var result = new byte[command.Length - _controlByteCount];
+            delimiterType = (DelimiterType)command[4];
+            var result = new byte[command.Length - _controlBytesDefault.Length];
             Buffer.BlockCopy(command, 5, result, 0, result.Length);
             return result;
         }
 
-        byte[] AddControlBytes(byte[] command, int delimiterTypeId)
+        void SetControlBytes(byte[] command, DelimiterType delimiterType)
         {
-            var length = command.Length;
-            byte[] bytes = new byte[5];
-            bytes[0] = (byte)length;
-            bytes[1] = (byte)((length >> 8) & 0xFF);
-            bytes[2] = (byte)((length >> 16) & 0xFF);
-            bytes[3] = (byte)((length >> 24) & 0xFF);
-            bytes[4] = Convert.ToByte(delimiterTypeId);
-            return Combine(bytes, command);
+            var length = command.Length - _controlBytesDefault.Length;
+            command[0] = (byte)length;
+            command[1] = (byte)((length >> 8) & 0xFF);
+            command[2] = (byte)((length >> 16) & 0xFF);
+            command[3] = (byte)((length >> 24) & 0xFF);
+            command[4] = Convert.ToByte((int)delimiterType);
         }
 
         public static byte[] Combine(byte[] first, byte[] second)
@@ -801,11 +801,31 @@ namespace Dache.CacheHost.Communication
             public byte[] Buffer = new byte[BufferSize];
             public byte[] Data = new byte[0];
 
-            /// <summary>
-            /// The delimiter type ID. 0 = no delimiters. 1 = repeating delimited cache keys, 2 = repeating delimited cache objects, 3 = repeating delimited cache keys and objects.
-            /// </summary>
-            public int DelimiterTypeId = 0;
+            public DelimiterType DelimiterType = DelimiterType.None;
             public int TotalBytesToRead = -1;
+        }
+
+        private enum DelimiterType
+        {
+            /// <summary>
+            /// No delimiters used.
+            /// </summary>
+            None = 0,
+
+            /// <summary>
+            /// Repeating cache keys are delimited.
+            /// </summary>
+            RepeatingCacheKeys,
+
+            /// <summary>
+            /// Repeating cache objects are delimited.
+            /// </summary>
+            RepeatingCacheObjects,
+
+            /// <summary>
+            /// Repeating cache keys and objects are delimited in pairs.
+            /// </summary>
+            RepeatingCacheKeysAndObjects
         }
     }
 }

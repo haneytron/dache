@@ -27,8 +27,10 @@ namespace Dache.Client
         private static readonly byte[] _communicationDelimiter = new byte[] { 0, 0, 0, 0 };
         // The byte that represents a space
         private static readonly byte[] _spaceByte = _communicationEncoding.GetBytes(" ");
-        // The communication protocol control byte count - 4 little endian bytes + 1 control byte
-        private const int _controlByteCount = 5;
+        // The communication protocol control bytes default - 4 little endian bytes + 1 control byte
+        private static readonly byte[] _controlBytesDefault = new byte[] { 0, 0, 0, 0, 0 };
+        // The absolute expiration format
+        private const string _absoluteExpirationFormat = "yyMMddhhmmss";
 
         // Whether or not the communication client is connected
         private volatile bool _isConnected = false;
@@ -83,34 +85,12 @@ namespace Dache.Client
         /// <returns>The serialized object.</returns>
         public byte[] Get(string cacheKey)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
+            var result = Get(new[] { cacheKey });
+            if (result.Count == 0)
             {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
+                return null;
             }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("get {0}", cacheKey));
-                // Add control bytes
-                command = AddControlBytes(command, 0);
-
-                lock (_client)
-                {
-                    // Send
-                    _client.Send(command);
-                    // Receive
-                    int controlByteValue = 0;
-                    return Receive(out controlByteValue);
-                }
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            return result[0];
         }
 
         /// <summary>
@@ -134,20 +114,34 @@ namespace Dache.Client
 
             try
             {
-                var sb = new StringBuilder("get ");
-                foreach (var cacheKey in cacheKeys)
+                byte[] command = null;
+                using (var memoryStream = new MemoryStream())
                 {
-                    sb.Append(cacheKey).Append(" ");
-                    cacheKeysCount++;
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
+                    {
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("get ");
+                        foreach (var cacheKey in cacheKeys)
+                        {
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKey);
+                            cacheKeysCount++;
+                        }
+                        command = memoryStream.ToArray();
+                    }
                 }
-                var command = _communicationEncoding.GetBytes(sb.ToString());
+
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeys);
+
                 lock (_client)
                 {
                     // Send
                     _client.Send(command);
                     // Receive
-                    int controlByteValue = 0;
-                    var response = Receive(out controlByteValue);
+                    DelimiterType delimiterType;
+                    var response = Receive(out delimiterType);
                     return ReceiveDelimitedCacheObjects(response, cacheKeysCount);
                 }
             }
@@ -175,14 +169,28 @@ namespace Dache.Client
 
             try
             {
-                var command = _communicationEncoding.GetBytes(string.Format("get-tag {0}", tagName));
+                byte[] command = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
+                    {
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("get-tag {0}", tagName);
+                        command = memoryStream.ToArray();
+                    }
+                }
+
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.None);
+
                 lock (_client)
                 {
                     // Send
                     _client.Send(command);
                     // Receive
-                    int controlByteValue = 0;
-                    var response = Receive(out controlByteValue);
+                    DelimiterType delimiterType;
+                    var response = Receive(out delimiterType);
                     return ReceiveDelimitedCacheObjects(response);
                 }
             }
@@ -202,30 +210,7 @@ namespace Dache.Client
         /// <param name="serializedObject">The serialized object.</param>
         public void AddOrUpdate(string cacheKey, byte[] serializedObject)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set {0} ", cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) });
         }
 
         /// <summary>
@@ -236,30 +221,7 @@ namespace Dache.Client
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdate(string cacheKey, byte[] serializedObject, DateTimeOffset absoluteExpiration)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set {0} {1} ", absoluteExpiration.ToString("yyMMddhhmmss"), cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, absoluteExpiration);
         }
         
         /// <summary>
@@ -270,30 +232,7 @@ namespace Dache.Client
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdate(string cacheKey, byte[] serializedObject, TimeSpan slidingExpiration)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set {0} {1} ", (int)slidingExpiration.TotalSeconds, cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, slidingExpiration);
         }
 
         /// <summary>
@@ -305,30 +244,7 @@ namespace Dache.Client
         /// <param name="serializedObject">The serialized object.</param>
         public void AddOrUpdateInterned(string cacheKey, byte[] serializedObject)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set-intern {0} ", cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdateInterned(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) });
         }
 
         /// <summary>
@@ -349,26 +265,30 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes("set"));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set ");
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
-
-                        bytes = memoryStream.ToArray();
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -398,26 +318,30 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set {0}", absoluteExpiration.ToString("yyMMddhhmmss"))));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set {0} ", absoluteExpiration.ToString(_absoluteExpirationFormat));
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
-
-                        bytes = memoryStream.ToArray();
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -447,26 +371,30 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set {0}", (int)slidingExpiration.TotalSeconds)));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set {0} ", (int)slidingExpiration.TotalSeconds);
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
-
-                        bytes = memoryStream.ToArray();
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -497,26 +425,30 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes("set-intern"));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set-intern ");
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
-
-                        bytes = memoryStream.ToArray();
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -535,34 +467,7 @@ namespace Dache.Client
         /// <param name="tagName">The tag name.</param>
         public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set-tag {0} {1} ", tagName, cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName);
         }
 
         /// <summary>
@@ -574,34 +479,7 @@ namespace Dache.Client
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, DateTimeOffset absoluteExpiration)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set-tag {0} {1} {2} ", tagName, absoluteExpiration.ToString("yyMMddhhmmss"), cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName, absoluteExpiration);
         }
 
         /// <summary>
@@ -613,34 +491,7 @@ namespace Dache.Client
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, TimeSpan slidingExpiration)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set-tag {0} {1} {2} ", tagName, (int)slidingExpiration.TotalSeconds, cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName, slidingExpiration);
         }
 
         /// <summary>
@@ -653,34 +504,7 @@ namespace Dache.Client
         /// <param name="tagName">The tag name.</param>
         public void AddOrUpdateTaggedInterned(string cacheKey, byte[] serializedObject, string tagName)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-            if (serializedObject == null)
-            {
-                throw new ArgumentNullException("serializedObject");
-            }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("set-tag-intern {0} {1} ", tagName, cacheKey));
-                command = Combine(command, serializedObject);
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            AddOrUpdateTaggedInterned(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName);
         }
 
         /// <summary>
@@ -706,26 +530,31 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag {0}", tagName)));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set-tag {0} ", tagName);
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
-
-                        bytes = memoryStream.ToArray();
+                        
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -760,26 +589,31 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag {0} {1}", tagName, absoluteExpiration.ToString("yyMMddhhmmss"))));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set-tag {0} {1} ", tagName, absoluteExpiration.ToString(_absoluteExpirationFormat));
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
 
-                        bytes = memoryStream.ToArray();
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -814,26 +648,31 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag {0} {1}", tagName, (int)slidingExpiration.TotalSeconds)));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set-tag {0} {1} ", tagName, (int)slidingExpiration.TotalSeconds);
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
 
-                        bytes = memoryStream.ToArray();
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -869,26 +708,31 @@ namespace Dache.Client
 
             try
             {
-                byte[] bytes = null;
+                byte[] command = null;
                 using (var memoryStream = new MemoryStream())
                 {
-                    using (var streamWriter = new StreamWriter(memoryStream))
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
                     {
-                        streamWriter.Write(_communicationEncoding.GetBytes(string.Format("set-tag-intern {0}", tagName)));
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("set-tag-intern {0} ", tagName);
                         foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                         {
-                            streamWriter.Write(_spaceByte);
-                            streamWriter.Write(_communicationEncoding.GetBytes(cacheKeyAndSerializedObjectKvp.Key));
-                            streamWriter.Write(_spaceByte);
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKeyAndSerializedObjectKvp.Key);
+                            streamWriter.Write(_communicationDelimiter);
                             streamWriter.Write(cacheKeyAndSerializedObjectKvp.Value);
                         }
 
-                        bytes = memoryStream.ToArray();
+                        command = memoryStream.ToArray();
                     }
                 }
 
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeysAndObjects);
+
                 // Send Async as we don't want to wait for it
-                _client.BeginSend(bytes, 0, bytes.Length, 0, SendAsyncCallback, _client);
+                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
             catch
             {
@@ -905,25 +749,7 @@ namespace Dache.Client
         /// <param name="cacheKey">The cache key.</param>
         public void Remove(string cacheKey)
         {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
-            }
-
-            try
-            {
-                var command = _communicationEncoding.GetBytes(string.Format("del {0}", cacheKey));
-                // Send Async as we don't want to wait for it
-                _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            Remove(new[] { cacheKey });
         }
 
         /// <summary>
@@ -944,12 +770,25 @@ namespace Dache.Client
 
             try
             {
-                var sb = new StringBuilder("del ");
-                foreach (var cacheKey in cacheKeys)
+                byte[] command = null;
+                using (var memoryStream = new MemoryStream())
                 {
-                    sb.Append(cacheKey).Append(" ");
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
+                    {
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("del ");
+                        foreach (var cacheKey in cacheKeys)
+                        {
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(cacheKey);
+                        }
+                        command = memoryStream.ToArray();
+                    }
                 }
-                var command = _communicationEncoding.GetBytes(sb.ToString());
+
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeys);
 
                 // Send Async as we don't want to wait for it
                 _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
@@ -969,15 +808,43 @@ namespace Dache.Client
         /// <param name="tagName">The tag name.</param>
         public void RemoveTagged(string tagName)
         {
+            RemoveTagged(new[] { tagName });
+        }
+
+        /// <summary>
+        /// Removes all serialized objects associated with the given tag names.
+        /// </summary>
+        /// <param name="tagNames">The tag names.</param>
+        public void RemoveTagged(IEnumerable<string> tagNames)
+        {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
+            if (tagNames == null)
             {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+                throw new ArgumentNullException("tagNames");
             }
 
             try
             {
-                var command = _communicationEncoding.GetBytes(string.Format("del-tag {0}", tagName));
+                byte[] command = null;
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
+                    {
+                        // Write default control bytes - will be replaced later
+                        memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                        streamWriter.Write("del-tag ");
+                        foreach (var tagName in tagNames)
+                        {
+                            streamWriter.Write(_communicationDelimiter);
+                            streamWriter.Write(tagName);
+                        }
+                        command = memoryStream.ToArray();
+                    }
+                }
+
+                // Set control bytes
+                SetControlBytes(command, DelimiterType.RepeatingCacheKeys);
+
                 // Send Async as we don't want to wait for it
                 _client.BeginSend(command, 0, command.Length, 0, SendAsyncCallback, _client);
             }
@@ -1121,9 +988,9 @@ namespace Dache.Client
             }
         }
 
-        private byte[] Receive(out int delimiterTypeId)
+        private byte[] Receive(out DelimiterType delimiterType)
         {
-            delimiterTypeId = 0;
+            delimiterType = DelimiterType.None;
 
             var buffer = new byte[512];
             var result = new byte[0];
@@ -1136,9 +1003,9 @@ namespace Dache.Client
                 if (totalBytesToRead == -1)
                 {
                     // Parse out control bytes
-                    buffer = RemoveControlByteValues(buffer, out totalBytesToRead, out delimiterTypeId);
+                    buffer = RemoveControlByteValues(buffer, out totalBytesToRead, out delimiterType);
                     // Take control bytes off of bytes read
-                    bytesRead -= _controlByteCount;
+                    bytesRead -= _controlBytesDefault.Length;
                 }
 
                 // Set total bytes read and buffer
@@ -1288,25 +1155,23 @@ namespace Dache.Client
             }
         }
 
-        byte[] RemoveControlByteValues(byte[] command, out int messageLength, out int delimiterTypeId)
+        byte[] RemoveControlByteValues(byte[] command, out int messageLength, out DelimiterType delimiterType)
         {
             messageLength = (command[3] << 24) | (command[2] << 16) | (command[1] << 8) | command[0];
-            delimiterTypeId = command[4];
-            var result = new byte[command.Length - _controlByteCount];
+            delimiterType = (DelimiterType)command[4];
+            var result = new byte[command.Length - _controlBytesDefault.Length];
             Buffer.BlockCopy(command, 5, result, 0, result.Length);
             return result;
         }
 
-        byte[] AddControlBytes(byte[] command, int delimiterTypeId)
+        void SetControlBytes(byte[] command, DelimiterType delimiterType)
         {
-            var length = command.Length;
-            byte[] bytes = new byte[5];
-            bytes[0] = (byte)length;
-            bytes[1] = (byte)((length >> 8) & 0xFF);
-            bytes[2] = (byte)((length >> 16) & 0xFF);
-            bytes[3] = (byte)((length >> 24) & 0xFF);
-            bytes[4] = Convert.ToByte(delimiterTypeId);
-            return Combine(bytes, command);
+            var length = command.Length - _controlBytesDefault.Length;
+            command[0] = (byte)length;
+            command[1] = (byte)((length >> 8) & 0xFF);
+            command[2] = (byte)((length >> 16) & 0xFF);
+            command[3] = (byte)((length >> 24) & 0xFF);
+            command[4] = Convert.ToByte((int)delimiterType);
         }
 
         public static byte[] Combine(byte[] first, byte[] second)
@@ -1320,6 +1185,29 @@ namespace Dache.Client
             Buffer.BlockCopy(first, 0, ret, 0, firstLength);
             Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
             return ret;
+        }
+
+        private enum DelimiterType
+        {
+            /// <summary>
+            /// No delimiters used.
+            /// </summary>
+            None = 0,
+
+            /// <summary>
+            /// Repeating cache keys are delimited.
+            /// </summary>
+            RepeatingCacheKeys,
+
+            /// <summary>
+            /// Repeating cache objects are delimited.
+            /// </summary>
+            RepeatingCacheObjects,
+
+            /// <summary>
+            /// Repeating cache keys and objects are delimited in pairs.
+            /// </summary>
+            RepeatingCacheKeysAndObjects
         }
     }
 }
