@@ -27,8 +27,8 @@ namespace Dache.Client
         private static readonly byte[] _communicationDelimiter = new byte[] { 0, 0, 0, 0 };
         // The byte that represents a space
         private static readonly byte[] _spaceByte = _communicationEncoding.GetBytes(" ");
-        // The communication protocol reserved byte count - 4 little endian bytes + 1 control byte
-        private const int _communicationProtocolReservedBytesCount = 5;
+        // The communication protocol control byte count - 4 little endian bytes + 1 control byte
+        private const int _controlByteCount = 5;
 
         // Whether or not the communication client is connected
         private volatile bool _isConnected = false;
@@ -92,6 +92,9 @@ namespace Dache.Client
             try
             {
                 var command = _communicationEncoding.GetBytes(string.Format("get {0}", cacheKey));
+                // Add control bytes
+                command = AddControlBytes(command, 0);
+
                 lock (_client)
                 {
                     // Send
@@ -1118,9 +1121,10 @@ namespace Dache.Client
             }
         }
 
-        private byte[] Receive(out int controlByteValue)
+        private byte[] Receive(out int delimiterTypeId)
         {
-            controlByteValue = 0;
+            delimiterTypeId = 0;
+
             var buffer = new byte[512];
             var result = new byte[0];
             int bytesRead = 0;
@@ -1131,19 +1135,10 @@ namespace Dache.Client
                 // Check if we need to decode little endian and control byte
                 if (totalBytesToRead == -1)
                 {
-                    // We do, get endian bytes
-                    var littleEndianBytes = new byte[4];
-                    Buffer.BlockCopy(buffer, 0, littleEndianBytes, 0, 4);
-                    // Set total bytes to read
-                    totalBytesToRead = LittleEndianToInt(littleEndianBytes);
-                    // Set control byte value
-                    controlByteValue = buffer[4];
-                    // Take endian bytes and control byte off
-                    bytesRead -= _communicationProtocolReservedBytesCount;
-                    // Remove the first 4 bytes from the buffer
-                    var strippedBuffer = new byte[512];
-                    Buffer.BlockCopy(buffer, _communicationProtocolReservedBytesCount, strippedBuffer, 0, bytesRead);
-                    buffer = strippedBuffer;
+                    // Parse out control bytes
+                    buffer = RemoveControlByteValues(buffer, out totalBytesToRead, out delimiterTypeId);
+                    // Take control bytes off of bytes read
+                    bytesRead -= _controlByteCount;
                 }
 
                 // Set total bytes read and buffer
@@ -1277,19 +1272,25 @@ namespace Dache.Client
             }
         }
 
-        int LittleEndianToInt(byte[] bytes)
+        byte[] RemoveControlByteValues(byte[] command, out int messageLength, out int delimiterTypeId)
         {
-            return (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+            messageLength = (command[3] << 24) | (command[2] << 16) | (command[1] << 8) | command[0];
+            delimiterTypeId = command[4];
+            var result = new byte[command.Length - _controlByteCount];
+            Buffer.BlockCopy(command, 5, result, 0, result.Length);
+            return result;
         }
 
-        byte[] IntToLittleEndian(int value)
+        byte[] AddControlBytes(byte[] command, int delimiterTypeId)
         {
-            byte[] bytes = new byte[4];
-            bytes[0] = (byte)value;
-            bytes[1] = (byte)(((uint)value >> 8) & 0xFF);
-            bytes[2] = (byte)(((uint)value >> 16) & 0xFF);
-            bytes[3] = (byte)(((uint)value >> 24) & 0xFF);
-            return bytes;
+            var length = command.Length;
+            byte[] bytes = new byte[5];
+            bytes[0] = (byte)length;
+            bytes[1] = (byte)((length >> 8) & 0xFF);
+            bytes[2] = (byte)((length >> 16) & 0xFF);
+            bytes[3] = (byte)((length >> 24) & 0xFF);
+            bytes[4] = Convert.ToByte(delimiterTypeId);
+            return Combine(bytes, command);
         }
 
         public static byte[] Combine(byte[] first, byte[] second)

@@ -21,7 +21,9 @@ namespace Dache.CacheHost.Communication
         // The cache server
         private readonly Socket _server = null;
         // The thread that accepts socket connections
-        private readonly Thread _connectionAccepterThread = null;
+        private readonly Thread _connectionReceiverThread = null;
+        // The connection receiver cancellation token source
+        private readonly CancellationTokenSource _connectionReceiverCancellationTokenSource = new CancellationTokenSource();
         // The default cache item policy
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
         // The manual reset event that indicates that a connection was received
@@ -32,8 +34,8 @@ namespace Dache.CacheHost.Communication
         private static readonly byte[] _communicationDelimiter = new byte[] { 0, 0, 0, 0 };
         // The byte that represents a space
         private static readonly byte[] _spaceByte = _communicationEncoding.GetBytes(" ");
-        // The communication protocol reserved byte count - 4 little endian bytes + 1 control byte
-        private const int _communicationProtocolReservedBytesCount = 5;
+        // The communication protocol control byte count - 4 little endian bytes + 1 control byte
+        private const int _controlByteCount = 5;
 
         /// <summary>
         /// The constructor.
@@ -53,16 +55,16 @@ namespace Dache.CacheHost.Communication
             // Bind to endpoint
             _server.Bind(localEndPoint);
 
-            // Define connection accepter thread
-            _connectionAccepterThread = new Thread(ConnectionAccepterThread);
+            // Define connection receiver thread
+            _connectionReceiverThread = new Thread(ConnectionReceiverThread);
         }
 
         /// <summary>
         /// The thread that accepts connections.
         /// </summary>
-        private void ConnectionAccepterThread()
+        private void ConnectionReceiverThread()
         {
-            while (true)
+            while (!_connectionReceiverCancellationTokenSource.IsCancellationRequested)
             {
                 _connectionReceived.Reset();
 
@@ -103,19 +105,10 @@ namespace Dache.CacheHost.Communication
                 // Check if we need to decode little endian
                 if (state.TotalBytesToRead == -1)
                 {
-                    // We do
-                    var littleEndianBytes = new byte[4];
-                    Buffer.BlockCopy(state.Buffer, 0, littleEndianBytes, 0, 4);
-                    // Set total bytes to read
-                    state.TotalBytesToRead = LittleEndianToInt(littleEndianBytes);
-                    // Set control byte value
-                    state.ControlByteValue = state.Buffer[4];
-                    // Take endian bytes and control byte off
-                    bytesRead -= _communicationProtocolReservedBytesCount;
-                    // Remove the first 4 bytes from the buffer
-                    var strippedBuffer = new byte[512];
-                    Buffer.BlockCopy(state.Buffer, _communicationProtocolReservedBytesCount, strippedBuffer, 0, bytesRead);
-                    state.Buffer = strippedBuffer;
+                    // Parse out control bytes
+                    state.Buffer = RemoveControlByteValues(state.Buffer, out state.TotalBytesToRead, out state.DelimiterTypeId);
+                    // Take control bytes off of bytes read
+                    bytesRead -= _controlByteCount;
                 }
 
                 // Set total bytes read and buffer
@@ -243,19 +236,25 @@ namespace Dache.CacheHost.Communication
             return result;
         }
 
-        int LittleEndianToInt(byte[] bytes)
+        byte[] RemoveControlByteValues(byte[] command, out int messageLength, out int delimiterTypeId)
         {
-            return (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+            messageLength = (command[3] << 24) | (command[2] << 16) | (command[1] << 8) | command[0];
+            delimiterTypeId = command[4];
+            var result = new byte[command.Length - _controlByteCount];
+            Buffer.BlockCopy(command, 5, result, 0, result.Length);
+            return result;
         }
 
-        byte[] IntToLittleEndian(int value)
+        byte[] AddControlBytes(byte[] command, int delimiterTypeId)
         {
-            byte[] bytes = new byte[4];
-            bytes[0] = (byte)value;
-            bytes[1] = (byte)(((uint)value >> 8) & 0xFF);
-            bytes[2] = (byte)(((uint)value >> 16) & 0xFF);
-            bytes[3] = (byte)(((uint)value >> 24) & 0xFF);
-            return bytes;
+            var length = command.Length;
+            byte[] bytes = new byte[5];
+            bytes[0] = (byte)length;
+            bytes[1] = (byte)((length >> 8) & 0xFF);
+            bytes[2] = (byte)((length >> 16) & 0xFF);
+            bytes[3] = (byte)((length >> 24) & 0xFF);
+            bytes[4] = Convert.ToByte(delimiterTypeId);
+            return Combine(bytes, command);
         }
 
         public static byte[] Combine(byte[] first, byte[] second)
@@ -278,8 +277,8 @@ namespace Dache.CacheHost.Communication
         {
             // Listen for connections with a backlog of 10000
             _server.Listen(10000);
-            // Start the connection accepter thread
-            _connectionAccepterThread.Start();
+            // Start the connection receiver thread
+            _connectionReceiverThread.Start();
         }
 
         /// <summary>
@@ -287,8 +286,9 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         public void Stop()
         {
-            // Abort the connection accepter thread
-            _connectionAccepterThread.Abort();
+            // Issue cancellation to connection receiver thread
+            _connectionReceiverCancellationTokenSource.Cancel();
+            
             // Shutdown and close the server socket
             _server.Shutdown(SocketShutdown.Both);
             _server.Close();
@@ -801,7 +801,11 @@ namespace Dache.CacheHost.Communication
             public const int BufferSize = 512;
             public byte[] Buffer = new byte[BufferSize];
             public byte[] Data = new byte[0];
-            public int ControlByteValue = 0;
+
+            /// <summary>
+            /// The delimiter type ID. 0 = no delimiters. 1 = repeating delimited cache keys, 2 = repeating delimited cache keys and values.
+            /// </summary>
+            public int DelimiterTypeId = 0;
             public int TotalBytesToRead = -1;
         }
     }
