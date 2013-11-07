@@ -27,6 +27,8 @@ namespace Dache.Client
         private static readonly byte[] _communicationDelimiter = new byte[] { 0, 0, 0, 0 };
         // The byte that represents a space
         private static readonly byte[] _spaceByte = _communicationEncoding.GetBytes(" ");
+        // The communication protocol reserved byte count - 4 little endian bytes + 1 control byte
+        private const int _communicationProtocolReservedBytesCount = 5;
 
         // Whether or not the communication client is connected
         private volatile bool _isConnected = false;
@@ -95,7 +97,8 @@ namespace Dache.Client
                     // Send
                     _client.Send(command);
                     // Receive
-                    return Receive();
+                    int controlByteValue = 0;
+                    return Receive(out controlByteValue);
                 }
             }
             catch
@@ -140,7 +143,9 @@ namespace Dache.Client
                     // Send
                     _client.Send(command);
                     // Receive
-                    return ReceiveDelimitedResult(cacheKeysCount);
+                    int controlByteValue = 0;
+                    var response = Receive(out controlByteValue);
+                    return ReceiveDelimitedCacheObjects(response, cacheKeysCount);
                 }
             }
             catch
@@ -173,7 +178,9 @@ namespace Dache.Client
                     // Send
                     _client.Send(command);
                     // Receive
-                    return ReceiveDelimitedResult();
+                    int controlByteValue = 0;
+                    var response = Receive(out controlByteValue);
+                    return ReceiveDelimitedCacheObjects(response);
                 }
             }
             catch
@@ -1111,8 +1118,9 @@ namespace Dache.Client
             }
         }
 
-        private byte[] Receive()
+        private byte[] Receive(out int controlByteValue)
         {
+            controlByteValue = 0;
             var buffer = new byte[512];
             var result = new byte[0];
             int bytesRead = 0;
@@ -1120,44 +1128,46 @@ namespace Dache.Client
 
             while ((bytesRead = _client.Receive(buffer, (totalBytesToRead < 0 ? buffer.Length : Math.Min(512, totalBytesToRead)), SocketFlags.None)) > 0 && totalBytesToRead != 0)
             {
-                // Check if we need to decode little endian
+                // Check if we need to decode little endian and control byte
                 if (totalBytesToRead == -1)
                 {
-                    // We do
+                    // We do, get endian bytes
                     var littleEndianBytes = new byte[4];
                     Buffer.BlockCopy(buffer, 0, littleEndianBytes, 0, 4);
                     // Set total bytes to read
                     totalBytesToRead = LittleEndianToInt(littleEndianBytes);
-                    // Take endian bytes off
-                    bytesRead -= 4;
+                    // Set control byte value
+                    controlByteValue = buffer[4];
+                    // Take endian bytes and control byte off
+                    bytesRead -= _communicationProtocolReservedBytesCount;
                     // Remove the first 4 bytes from the buffer
                     var strippedBuffer = new byte[512];
-                    Buffer.BlockCopy(buffer, 4, strippedBuffer, 0, bytesRead);
+                    Buffer.BlockCopy(buffer, _communicationProtocolReservedBytesCount, strippedBuffer, 0, bytesRead);
                     buffer = strippedBuffer;
                 }
 
                 // Set total bytes read and buffer
                 totalBytesToRead -= bytesRead;
                 result = Combine(result, result.Length, buffer, bytesRead);
-                
             }
 
             return result;
         }
 
-        private List<byte[]> ReceiveDelimitedResult(int cacheKeysCount = 10)
+        private List<byte[]> ReceiveDelimitedCacheObjects(byte[] response, int cacheKeysCount = 10)
         {
-            var result = Receive();
+            string commandPrefix = null;
 
-            // Split result by delimiter
-            var finalResult = new List<byte[]>(cacheKeysCount);
+            // Split response by delimiter
+            var result = new List<byte[]>(cacheKeysCount);
             int lastDelimiterIndex = 0;
-            for (int i = 0; i < result.Length; i++)
+
+            for (int i = 0; i < response.Length; i++)
             {
                 // Check for delimiter
-                for (int d = 0; d < _communicationDelimiter.Length; ++d)
+                for (int d = 0; d < _communicationDelimiter.Length; d++)
                 {
-                    if (i + d >= result.Length || result[i + d] != _communicationDelimiter[d])
+                    if (i + d >= response.Length || response[i + d] != _communicationDelimiter[d])
                     {
                         // Leave loop
                         break;
@@ -1166,18 +1176,89 @@ namespace Dache.Client
                     // Check if we found it
                     if (d == _communicationDelimiter.Length - 1)
                     {
-                        // Add current section to final result
-                        var finalResultItem = new byte[i - lastDelimiterIndex];
-                        Array.Copy(result, lastDelimiterIndex, finalResultItem, 0, i - lastDelimiterIndex);
-                        finalResult.Add(finalResultItem);
-                        // Now set last delimiter index and skip ahead a bit
+                        // Check if first delimeter
+                        if (lastDelimiterIndex == 0)
+                        {
+                            // Set command prefix
+                            commandPrefix = _communicationEncoding.GetString(response, 0, i - 1);
+                        }
+                        // Not first delimiter
+                        else
+                        {
+                            // Add current section to final result
+                            var resultItem = new byte[i - lastDelimiterIndex];
+                            Buffer.BlockCopy(response, lastDelimiterIndex, resultItem, 0, i - lastDelimiterIndex);
+                            result.Add(resultItem);
+                        }
+
+                        // Now set last delimiter index and skip ahead by the delimiter's size
                         lastDelimiterIndex = i + d + 1;
+                        // No need to iterate over the delimiter
                         i += d;
                     }
                 }
-
             }
-            return finalResult;
+            return result;
+        }
+
+        private IEnumerable<KeyValuePair<string, byte[]>> ReceiveDelimitedCacheKeysAndObjects(byte[] response, int cacheKeysCount = 10)
+        {
+            string commandPrefix = null;
+            // Split response by delimiter
+            var result = new List<KeyValuePair<string, byte[]>>(cacheKeysCount);
+            int lastDelimiterIndex = 0;
+            bool isEvenDelimiter = true;
+            string currentCacheKey = null;
+
+            for (int i = 0; i < response.Length; i++)
+            {
+                // Check for delimiter
+                for (int d = 0; d < _communicationDelimiter.Length; d++)
+                {
+                    if (i + d >= response.Length || response[i + d] != _communicationDelimiter[d])
+                    {
+                        // Leave loop
+                        break;
+                    }
+
+                    // Check if we found it
+                    if (d == _communicationDelimiter.Length - 1)
+                    {
+                        // Check if first delimeter
+                        if (lastDelimiterIndex == 0)
+                        {
+                            // Set command prefix
+                            commandPrefix = _communicationEncoding.GetString(response, 0, i - 1);
+                        }
+                        // Not first delimiter
+                        else
+                        {
+                            // Check if even delimiter
+                            if (isEvenDelimiter)
+                            {
+                                // Getting a cache key
+                                currentCacheKey = _communicationEncoding.GetString(response, lastDelimiterIndex, i - lastDelimiterIndex);
+                                isEvenDelimiter = false;
+                            }
+                            else
+                            {
+                                // Getting a cached object
+                                var resultItem = new byte[i - lastDelimiterIndex];
+                                Buffer.BlockCopy(response, lastDelimiterIndex, resultItem, 0, i - lastDelimiterIndex);
+                                result.Add(new KeyValuePair<string,byte[]>(currentCacheKey, resultItem));
+
+                                isEvenDelimiter = true;
+                            }
+                        }
+
+                        // Now set last delimiter index and skip ahead by the delimiter's size
+                        lastDelimiterIndex = i + d + 1;
+                        // No need to iterate over the delimiter
+                        i += d;
+                    }
+                }
+            }
+            return result;
         }
 
         private void SendAsyncCallback(IAsyncResult asyncResult)
