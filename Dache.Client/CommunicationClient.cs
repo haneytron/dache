@@ -1111,19 +1111,6 @@ namespace Dache.Client
             }
         }
 
-        public static byte[] Combine(byte[] first, byte[] second)
-        {
-            return Combine(first, first.Length, second, second.Length);
-        }
-
-        public static byte[] Combine(byte[] first, int firstLength, byte[] second, int secondLength)
-        {
-            byte[] ret = new byte[firstLength + secondLength];
-            Buffer.BlockCopy(first, 0, ret, 0, firstLength);
-            Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
-            return ret;
-        }
-
         private byte[] Receive()
         {
             var buffer = new byte[512];
@@ -1222,6 +1209,19 @@ namespace Dache.Client
             bytes[2] = (byte)(((uint)value >> 16) & 0xFF);
             bytes[3] = (byte)(((uint)value >> 24) & 0xFF);
             return bytes;
+        }
+
+        public static byte[] Combine(byte[] first, byte[] second)
+        {
+            return Combine(first, first.Length, second, second.Length);
+        }
+
+        public static byte[] Combine(byte[] first, int firstLength, byte[] second, int secondLength)
+        {
+            byte[] ret = new byte[firstLength + secondLength];
+            Buffer.BlockCopy(first, 0, ret, 0, firstLength);
+            Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
+            return ret;
         }
     }
 }

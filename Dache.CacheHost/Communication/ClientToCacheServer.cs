@@ -4,6 +4,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Caching;
+using System.Text;
+using System.Threading;
 using Dache.CacheHost.Storage;
 using Dache.Communication;
 using Dache.Core.Interfaces;
@@ -18,8 +20,18 @@ namespace Dache.CacheHost.Communication
     {
         // The cache server
         private readonly Socket _server = null;
+        // The thread that accepts socket connections
+        private readonly Thread _connectionAccepterThread = null;
         // The default cache item policy
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
+        // The manual reset event that indicates that a connection was received
+        private readonly ManualResetEvent _connectionReceived = new ManualResetEvent(false);
+        // The communication encoding
+        private static readonly Encoding _communicationEncoding = Encoding.ASCII;
+        // The communication delimiter - four 0 bytes in a row
+        private static readonly byte[] _communicationDelimiter = new byte[] { 0, 0, 0, 0 };
+        // The byte that represents a space
+        private static readonly byte[] _spaceByte = _communicationEncoding.GetBytes(" ");
 
         /// <summary>
         /// The constructor.
@@ -36,6 +48,113 @@ namespace Dache.CacheHost.Communication
             _server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             // Disable the Nagle algorithm
             _server.NoDelay = true;
+            // Bind to endpoint
+            _server.Bind(localEndPoint);
+
+            // Define connection accepter thread
+            _connectionAccepterThread = new Thread(ConnectionAccepterThread);
+        }
+
+        /// <summary>
+        /// The thread that accepts connections.
+        /// </summary>
+        private void ConnectionAccepterThread()
+        {
+            while (true)
+            {
+                _connectionReceived.Reset();
+
+                // Wait for a connection
+                _server.BeginAccept(AcceptCallback, null);
+
+                _connectionReceived.WaitOne();
+            }
+        }
+
+        private void AcceptCallback(IAsyncResult asyncResult)
+        {
+            // Get the socket that handles the client request
+            Socket handler = _server.EndAccept(asyncResult);
+
+            // Signal the main thread to continue
+            _connectionReceived.Set();
+
+            // Create the state object
+            StateObject state = new StateObject
+            {
+                WorkSocket = handler
+            };
+
+            handler.BeginReceive(state.Buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
+        }
+
+        private void ReceiveCallback(IAsyncResult asyncResult)
+        {
+            StateObject state = (StateObject)asyncResult.AsyncState;
+            Socket handler = state.WorkSocket;
+
+            int bytesRead = 0;
+
+            // Read data
+            if ((bytesRead = handler.EndReceive(asyncResult)) > 0 && state.TotalBytesToRead != 0)
+            {
+                // Check if we need to decode little endian
+                if (state.TotalBytesToRead == -1)
+                {
+                    // We do
+                    var littleEndianBytes = new byte[4];
+                    Buffer.BlockCopy(state.Buffer, 0, littleEndianBytes, 0, 4);
+                    // Set total bytes to read
+                    state.TotalBytesToRead = LittleEndianToInt(littleEndianBytes);
+                    // Take endian bytes off
+                    bytesRead -= 4;
+                    // Remove the first 4 bytes from the buffer
+                    var strippedBuffer = new byte[512];
+                    Buffer.BlockCopy(state.Buffer, 4, strippedBuffer, 0, bytesRead);
+                    state.Buffer = strippedBuffer;
+                }
+
+                // Set total bytes read and buffer
+                state.TotalBytesToRead -= bytesRead;
+                state.Data = Combine(state.Data, state.Data.Length, state.Buffer, bytesRead);
+
+                // Receive more data
+                handler.BeginReceive(state.Buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
+                return;
+            }
+
+            // Otherwise we're done, so close the handler and parse the command
+            handler.Close();
+            
+            // TODO: parse command here
+        }
+
+        int LittleEndianToInt(byte[] bytes)
+        {
+            return (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+        }
+
+        byte[] IntToLittleEndian(int value)
+        {
+            byte[] bytes = new byte[4];
+            bytes[0] = (byte)value;
+            bytes[1] = (byte)(((uint)value >> 8) & 0xFF);
+            bytes[2] = (byte)(((uint)value >> 16) & 0xFF);
+            bytes[3] = (byte)(((uint)value >> 24) & 0xFF);
+            return bytes;
+        }
+
+        public static byte[] Combine(byte[] first, byte[] second)
+        {
+            return Combine(first, first.Length, second, second.Length);
+        }
+
+        public static byte[] Combine(byte[] first, int firstLength, byte[] second, int secondLength)
+        {
+            byte[] ret = new byte[firstLength + secondLength];
+            Buffer.BlockCopy(first, 0, ret, 0, firstLength);
+            Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
+            return ret;
         }
 
         /// <summary>
@@ -43,7 +162,10 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         public void Start()
         {
-            // TODO: server socket listen
+            // Listen for connections with a backlog of 10000
+            _server.Listen(10000);
+            // Start the connection accepter thread
+            _connectionAccepterThread.Start();
         }
 
         /// <summary>
@@ -51,7 +173,11 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         public void Stop()
         {
-            // TODO: server socket shutdown
+            // Abort the connection accepter thread
+            _connectionAccepterThread.Abort();
+            // Shutdown and close the server socket
+            _server.Shutdown(SocketShutdown.Both);
+            _server.Close();
         }
 
         /// <summary>
@@ -553,6 +679,15 @@ namespace Dache.CacheHost.Communication
                     MemCacheContainer.Instance.Remove(cacheKey);
                 }
             }
+        }
+
+        private class StateObject
+        {
+            public Socket WorkSocket = null;
+            public const int BufferSize = 512;
+            public byte[] Buffer = new byte[BufferSize];
+            public byte[] Data = new byte[0];
+            public int TotalBytesToRead = -1;
         }
     }
 }
