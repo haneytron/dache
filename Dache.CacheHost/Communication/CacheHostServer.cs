@@ -802,7 +802,7 @@ namespace Dache.CacheHost.Communication
             public byte[] Data = new byte[0];
 
             /// <summary>
-            /// The delimiter type ID. 0 = no delimiters. 1 = repeating delimited cache keys, 2 = repeating delimited cache keys and values.
+            /// The delimiter type ID. 0 = no delimiters. 1 = repeating delimited cache keys, 2 = repeating delimited cache objects, 3 = repeating delimited cache keys and objects.
             /// </summary>
             public int DelimiterTypeId = 0;
             public int TotalBytesToRead = -1;

@@ -1180,7 +1180,7 @@ namespace Dache.Client
                         // Not first delimiter
                         else
                         {
-                            // Add current section to final result
+                            // Add current section to result
                             var resultItem = new byte[i - lastDelimiterIndex];
                             Buffer.BlockCopy(response, lastDelimiterIndex, resultItem, 0, i - lastDelimiterIndex);
                             result.Add(resultItem);
@@ -1191,6 +1191,14 @@ namespace Dache.Client
                         // No need to iterate over the delimiter
                         i += d;
                     }
+                }
+
+                // If we're at the end of the command, we need to add last section to the result
+                if (i == response.Length - 1)
+                {
+                    var finalResultItem = new byte[i - lastDelimiterIndex];
+                    Buffer.BlockCopy(response, lastDelimiterIndex, finalResultItem, 0, i - lastDelimiterIndex);
+                    result.Add(finalResultItem);
                 }
             }
             return result;
@@ -1251,6 +1259,14 @@ namespace Dache.Client
                         // No need to iterate over the delimiter
                         i += d;
                     }
+                }
+
+                // If we're at the end of the command, we need to add last section to the result
+                if (i == response.Length - 1)
+                {
+                    var finalResultItem = new byte[i - lastDelimiterIndex];
+                    Buffer.BlockCopy(response, lastDelimiterIndex, finalResultItem, 0, i - lastDelimiterIndex);
+                    result.Add(new KeyValuePair<string, byte[]>(currentCacheKey, finalResultItem));
                 }
             }
             return result;
