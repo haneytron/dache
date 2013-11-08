@@ -1018,12 +1018,11 @@ namespace Dache.Client
 
         private List<byte[]> ReceiveDelimitedCacheObjects(byte[] response, int cacheKeysCount = 10)
         {
-            string commandPrefix = null;
-
             // Split response by delimiter
             var result = new List<byte[]>(cacheKeysCount);
             int lastDelimiterIndex = 0;
 
+            // Start at index 1 to avoid the first delimiter
             for (int i = 0; i < response.Length; i++)
             {
                 // Check for delimiter
@@ -1038,16 +1037,9 @@ namespace Dache.Client
                     // Check if we found it
                     if (d == _communicationDelimiter.Length - 1)
                     {
-                        // Check if first delimeter
-                        if (lastDelimiterIndex == 0)
+                        // Add current section to result if it isn't the very first delimiter
+                        if (i != 0)
                         {
-                            // Set command prefix
-                            commandPrefix = _communicationEncoding.GetString(response, 0, i - 1);
-                        }
-                        // Not first delimiter
-                        else
-                        {
-                            // Add current section to result
                             var resultItem = new byte[i - lastDelimiterIndex];
                             Buffer.BlockCopy(response, lastDelimiterIndex, resultItem, 0, i - lastDelimiterIndex);
                             result.Add(resultItem);
@@ -1066,74 +1058,6 @@ namespace Dache.Client
                     var finalResultItem = new byte[i - lastDelimiterIndex];
                     Buffer.BlockCopy(response, lastDelimiterIndex, finalResultItem, 0, i - lastDelimiterIndex);
                     result.Add(finalResultItem);
-                }
-            }
-            return result;
-        }
-
-        private IEnumerable<KeyValuePair<string, byte[]>> ReceiveDelimitedCacheKeysAndObjects(byte[] response, int cacheKeysCount = 10)
-        {
-            string commandPrefix = null;
-            // Split response by delimiter
-            var result = new List<KeyValuePair<string, byte[]>>(cacheKeysCount);
-            int lastDelimiterIndex = 0;
-            bool isEvenDelimiter = true;
-            string currentCacheKey = null;
-
-            for (int i = 0; i < response.Length; i++)
-            {
-                // Check for delimiter
-                for (int d = 0; d < _communicationDelimiter.Length; d++)
-                {
-                    if (i + d >= response.Length || response[i + d] != _communicationDelimiter[d])
-                    {
-                        // Leave loop
-                        break;
-                    }
-
-                    // Check if we found it
-                    if (d == _communicationDelimiter.Length - 1)
-                    {
-                        // Check if first delimeter
-                        if (lastDelimiterIndex == 0)
-                        {
-                            // Set command prefix
-                            commandPrefix = _communicationEncoding.GetString(response, 0, i - 1);
-                        }
-                        // Not first delimiter
-                        else
-                        {
-                            // Check if even delimiter
-                            if (isEvenDelimiter)
-                            {
-                                // Getting a cache key
-                                currentCacheKey = _communicationEncoding.GetString(response, lastDelimiterIndex, i - lastDelimiterIndex);
-                                isEvenDelimiter = false;
-                            }
-                            else
-                            {
-                                // Getting a cached object
-                                var resultItem = new byte[i - lastDelimiterIndex];
-                                Buffer.BlockCopy(response, lastDelimiterIndex, resultItem, 0, i - lastDelimiterIndex);
-                                result.Add(new KeyValuePair<string,byte[]>(currentCacheKey, resultItem));
-
-                                isEvenDelimiter = true;
-                            }
-                        }
-
-                        // Now set last delimiter index and skip ahead by the delimiter's size
-                        lastDelimiterIndex = i + d + 1;
-                        // No need to iterate over the delimiter
-                        i += d;
-                    }
-                }
-
-                // If we're at the end of the command, we need to add last section to the result
-                if (i == response.Length - 1)
-                {
-                    var finalResultItem = new byte[i - lastDelimiterIndex];
-                    Buffer.BlockCopy(response, lastDelimiterIndex, finalResultItem, 0, i - lastDelimiterIndex);
-                    result.Add(new KeyValuePair<string, byte[]>(currentCacheKey, finalResultItem));
                 }
             }
             return result;

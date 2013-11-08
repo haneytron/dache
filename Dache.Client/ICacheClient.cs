@@ -25,7 +25,7 @@ namespace Dache.Client
         /// <param name="cacheKeys">The cache keys.</param>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        List<T> GetMany<T>(IEnumerable<string> cacheKeys);
+        List<T> Get<T>(IEnumerable<string> cacheKeys);
 
         /// <summary>
         /// Gets the objects stored at the given tag name from the cache.
@@ -71,21 +71,21 @@ namespace Dache.Client
         /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
-        void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects);
+        void AddOrUpdate(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects);
 
         /// <summary>
         /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration);
+        void AddOrUpdate(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration);
 
         /// <summary>
         /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration);
+        void AddOrUpdate(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration);
 
         /// <summary>
         /// Adds or updates the interned objects in the cache at the given cache keys.
@@ -93,7 +93,7 @@ namespace Dache.Client
         /// You must remove them manually when appropriate or else you may face a memory leak.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
-        void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects);
+        void AddOrUpdateInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects);
 
         /// <summary>
         /// Adds or updates an object in the cache at the given cache key with the associated tag name.
@@ -136,7 +136,7 @@ namespace Dache.Client
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
-        void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName);
+        void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName);
 
         /// <summary>
         /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
@@ -144,7 +144,7 @@ namespace Dache.Client
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration);
+        void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration);
 
         /// <summary>
         /// Adds or updates many objects in the cache at thr given cache keys with the associated tag name.
@@ -152,7 +152,7 @@ namespace Dache.Client
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration);
+        void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration);
 
         /// <summary>
         /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
@@ -161,7 +161,7 @@ namespace Dache.Client
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
-        void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName);
+        void AddOrUpdateTaggedInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName);
 
         /// <summary>
         /// Removes the object at the given cache key from the cache.
@@ -173,7 +173,7 @@ namespace Dache.Client
         /// Removes the objects at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
-        void RemoveMany(IEnumerable<string> cacheKeys);
+        void Remove(IEnumerable<string> cacheKeys);
 
         /// <summary>
         /// Removes the objects associated to the given tag name from the cache.

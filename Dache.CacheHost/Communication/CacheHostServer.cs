@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -121,20 +123,234 @@ namespace Dache.CacheHost.Communication
                 return;
             }
 
-            // Otherwise we're done, so close the handler and parse the command
-            handler.Close();
-
             // Get the command bytes
             var commandBytes = state.Data;
+
             // Parse command from bytes
+            string commandPrefix = null;
+            List<string> cacheKeys = null;
+            IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndObjects = null;
+            List<byte[]> results = null;
+            byte[] command = null;
+            var absoluteExpiration = DateTimeOffset.MinValue;
+            int slidingExpiration = 0;
+
+            switch (state.DelimiterType)
+            {
+                case DelimiterType.None:
+                {
+                    commandPrefix = _communicationEncoding.GetString(commandBytes);
+                    // The only command with no delimiter is get-tag so do that
+                    var tagName = commandPrefix.Substring(commandPrefix.LastIndexOf(' ') + 1);
+                    results = GetTagged(tagName);
+                    // Structure the results for sending
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
+                        {
+                            // Write default control bytes - will be replaced later
+                            memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                            foreach (var result in results)
+                            {
+                                streamWriter.Write(_communicationDelimiter);
+                                streamWriter.Write(result);
+                            }
+
+                            command = memoryStream.ToArray();
+                        }
+                    }
+
+                    // Set control bytes
+                    SetControlBytes(command, DelimiterType.RepeatingCacheObjects);
+                    // Send response
+                    Send(handler, command);
+
+                    break;
+                }
+                case DelimiterType.RepeatingCacheKeys:
+                {
+                    cacheKeys = ReceiveDelimitedCacheKeys(out commandPrefix, commandBytes);
+                    // Determine command
+                    if (string.Equals(commandPrefix, "get "))
+                    {
+                        results = Get(cacheKeys);
+                        // Structure the results for sending
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            using (var streamWriter = new StreamWriter(memoryStream, _communicationEncoding))
+                            {
+                                // Write default control bytes - will be replaced later
+                                memoryStream.Write(_controlBytesDefault, 0, _controlBytesDefault.Length);
+                                foreach (var result in results)
+                                {
+                                    streamWriter.Write(_communicationDelimiter);
+                                    streamWriter.Write(result);
+                                }
+
+                                command = memoryStream.ToArray();
+                            }
+                        }
+
+                        // Set control bytes
+                        SetControlBytes(command, DelimiterType.RepeatingCacheObjects);
+                        // Send response
+                        Send(handler, command);
+                    }
+                    else if (string.Equals(commandPrefix, "del "))
+                    {
+                        Remove(cacheKeys);
+                        // Done, so close the handler
+                        handler.Shutdown(SocketShutdown.Both);
+                        handler.Close();
+                    }
+                    else if (string.Equals(commandPrefix, "del-tag "))
+                    {
+                        foreach (var cacheKey in cacheKeys)
+                        {
+                            RemoveTagged(cacheKey);
+                        }
+
+                        // Done, so close the handler
+                        handler.Shutdown(SocketShutdown.Both);
+                        handler.Close();
+                    }
+
+                    break;
+                }
+                case DelimiterType.RepeatingCacheKeysAndObjects:
+                {
+                    cacheKeysAndObjects = ReceiveDelimitedCacheKeysAndObjects(out commandPrefix, commandBytes);
+                    // Determine command
+                    if (string.Equals(commandPrefix, "set "))
+                    {
+                        // Check if we have an absolute or sliding expiration
+                        var commandParts = commandPrefix.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (commandParts.Length == 1)
+                        {
+                            // Regular set
+                            AddOrUpdate(cacheKeysAndObjects);
+
+                            // Done, so close the handler
+                            handler.Shutdown(SocketShutdown.Both);
+                            handler.Close();
+                        }
+                        else if (commandParts.Length == 2)
+                        {
+                            if (DateTimeOffset.TryParseExact(commandParts[1], _absoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                            {
+                                // absolute expiration
+                                AddOrUpdate(cacheKeysAndObjects, absoluteExpiration);
+
+                                // Done, so close the handler
+                                handler.Shutdown(SocketShutdown.Both);
+                                handler.Close();
+                            }
+                            else if (int.TryParse(commandParts[1], out slidingExpiration))
+                            {
+                                // sliding expiration
+                                AddOrUpdate(cacheKeysAndObjects, TimeSpan.FromSeconds(slidingExpiration));
+
+                                // Done, so close the handler
+                                handler.Shutdown(SocketShutdown.Both);
+                                handler.Close();
+                            }
+                        }
+                    }
+                    else if (string.Equals(commandPrefix, "set-intern "))
+                    {
+                        // Only one method, so call it
+                        AddOrUpdateInterned(cacheKeysAndObjects);
+                        
+                        // Done, so close the handler
+                        handler.Shutdown(SocketShutdown.Both);
+                        handler.Close();
+                    }
+                    else if (string.Equals(commandPrefix, "set-tag "))
+                    {
+                        // Check if we have an absolute or sliding expiration
+                        var commandParts = commandPrefix.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (commandParts.Length == 2)
+                        {
+                            // Regular set
+                            AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1]);
+
+                            // Done, so close the handler
+                            handler.Shutdown(SocketShutdown.Both);
+                            handler.Close();
+                        }
+                        else if (commandParts.Length == 3)
+                        {
+                            if (DateTimeOffset.TryParseExact(commandParts[2], _absoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                            {
+                                // absolute expiration
+                                AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], absoluteExpiration);
+
+                                // Done, so close the handler
+                                handler.Shutdown(SocketShutdown.Both);
+                                handler.Close();
+                            }
+                            else if (int.TryParse(commandParts[2], out slidingExpiration))
+                            {
+                                // sliding expiration
+                                AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], TimeSpan.FromSeconds(slidingExpiration));
+
+                                // Done, so close the handler
+                                handler.Shutdown(SocketShutdown.Both);
+                                handler.Close();
+                            }
+                        }
+                    }
+                    else if (string.Equals(commandPrefix, "set-tag-intern "))
+                    {
+                        // Only one method, so call it
+                        var commandParts = commandPrefix.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (commandParts.Length == 2)
+                        {
+                            AddOrUpdateTaggedInterned(cacheKeysAndObjects, commandParts[1]);
+                        }
+                        
+                        // Done, so close the handler
+                        handler.Shutdown(SocketShutdown.Both);
+                        handler.Close();
+                    }
+
+                    break;
+                }
+            }
         }
 
-        private List<byte[]> ReceiveDelimitedCacheObjects(out string commandPrefix, byte[] response, int cacheKeysCount = 10)
+        private static void Send(Socket handler, byte[] response)
+        {
+            // Begin sending the response data to the client
+            handler.BeginSend(response, 0, response.Length, 0, SendCallback, handler);
+        }
+
+        private static void SendCallback(IAsyncResult asyncResult)
+        {
+            try
+            {
+                // Retrieve the socket from the state object
+                Socket handler = (Socket)asyncResult.AsyncState;
+
+                // Complete sending the response data to the client
+                int bytesSent = handler.EndSend(asyncResult);
+
+                handler.Shutdown(SocketShutdown.Both);
+                handler.Close();
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        private List<string> ReceiveDelimitedCacheKeys(out string commandPrefix, byte[] response)
         {
             commandPrefix = null;
 
             // Split response by delimiter
-            var result = new List<byte[]>(cacheKeysCount);
+            var result = new List<string>();
             int lastDelimiterIndex = 0;
 
             for (int i = 0; i < response.Length; i++)
@@ -161,8 +377,7 @@ namespace Dache.CacheHost.Communication
                         else
                         {
                             // Add current section to final result
-                            var resultItem = new byte[i - lastDelimiterIndex];
-                            Buffer.BlockCopy(response, lastDelimiterIndex, resultItem, 0, i - lastDelimiterIndex);
+                            var resultItem = _communicationEncoding.GetString(response, lastDelimiterIndex, i - lastDelimiterIndex);
                             result.Add(resultItem);
                         }
 
@@ -176,12 +391,12 @@ namespace Dache.CacheHost.Communication
             return result;
         }
 
-        private IEnumerable<KeyValuePair<string, byte[]>> ReceiveDelimitedCacheKeysAndObjects(out string commandPrefix, byte[] response, int cacheKeysCount = 10)
+        private IEnumerable<KeyValuePair<string, byte[]>> ReceiveDelimitedCacheKeysAndObjects(out string commandPrefix, byte[] response)
         {
             commandPrefix = null;
 
             // Split response by delimiter
-            var result = new List<KeyValuePair<string, byte[]>>(cacheKeysCount);
+            var result = new List<KeyValuePair<string, byte[]>>();
             int lastDelimiterIndex = 0;
             bool isEvenDelimiter = true;
             string currentCacheKey = null;

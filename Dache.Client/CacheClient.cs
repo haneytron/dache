@@ -130,7 +130,7 @@ namespace Dache.Client
         /// <param name="cacheKeys">The cache keys.</param>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        public List<T> GetMany<T>(IEnumerable<string> cacheKeys)
+        public List<T> Get<T>(IEnumerable<string> cacheKeys)
         {
             // Sanitize
             if (cacheKeys == null)
@@ -203,7 +203,7 @@ namespace Dache.Client
                 {
                     results.Add(default(T));
                     // Log serialization error
-                    _logger.Error("Serialization Error", "The object returned in a GetMany call at index " + i + " could not be deserialized to type " + typeof(T));
+                    _logger.Error("Serialization Error", "The object returned in a Get call at index " + i + " could not be deserialized to type " + typeof(T));
                 }
             }
 
@@ -452,7 +452,7 @@ namespace Dache.Client
         /// Adds or updates many objects in the cache at the given cache keys.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
-        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects)
+        public void AddOrUpdate(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -523,7 +523,7 @@ namespace Dache.Client
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration)
+        public void AddOrUpdate(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, DateTimeOffset absoluteExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -594,7 +594,7 @@ namespace Dache.Client
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateMany(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration)
+        public void AddOrUpdate(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, TimeSpan slidingExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -666,7 +666,7 @@ namespace Dache.Client
         /// You must remove them manually when appropriate or else you may face a memory leak.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
-        public void AddOrUpdateManyInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects)
+        public void AddOrUpdateInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -941,7 +941,7 @@ namespace Dache.Client
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName)
+        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -1006,7 +1006,7 @@ namespace Dache.Client
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration)
+        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -1071,7 +1071,7 @@ namespace Dache.Client
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
         /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateManyTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration)
+        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, TimeSpan slidingExpiration)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -1137,7 +1137,7 @@ namespace Dache.Client
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateManyTaggedInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName)
+        public void AddOrUpdateTaggedInterned(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName)
         {
             // Sanitize
             if (cacheKeysAndObjects == null)
@@ -1228,7 +1228,7 @@ namespace Dache.Client
         /// Removes the objects at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
-        public void RemoveMany(IEnumerable<string> cacheKeys)
+        public void Remove(IEnumerable<string> cacheKeys)
         {
             // Sanitize
             if (cacheKeys == null)
