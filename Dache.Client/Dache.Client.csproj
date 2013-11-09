@@ -58,6 +58,7 @@
     <Compile Include="Configuration\CacheHostElement.cs" />
     <Compile Include="Configuration\CacheHostsCollection.cs" />
     <Compile Include="Exceptions\NoCacheHostsAvailableException.cs" />
+    <Compile Include="Extensions\MemoryStreamExtensions.cs" />
     <Compile Include="Plugins\OutputCache\DacheMvcChildActionCache.cs" />
     <Compile Include="Plugins\OutputCache\DacheOutputCacheProvider.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionState.cs" />

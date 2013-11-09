@@ -1,5 +1,8 @@
 ﻿*Move to native low level TCP sockets for optimal performance and invent a syntax/grammar to allow non .NET clients
 
+-have 2 sockets per client: 1 async for one way, one sync for gets
+-must recode server since on accept it will receive perpetually - need to account for overlapping messages received at both server and client (past the bounds of a single message). Multiplex?
+
 DACHE TCP LOW LEVEL LANGUAGE SYNTAX:
 
 get cacheKey1 cacheKey2 cacheKey3 cacheKey4...
