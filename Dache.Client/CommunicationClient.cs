@@ -1001,14 +1001,14 @@ namespace Dache.Client
 
         private void Send(byte[] command, bool registerForResponse)
         {
-            _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
-
             // Check if we need to register with the multiplexer
             if (registerForResponse)
             {
                 var threadId = GetCurrentThreadId();
                 EnrollMultiplexer(threadId);
             }
+
+            _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
         }
 
         private void SendCallback(IAsyncResult asyncResult)
