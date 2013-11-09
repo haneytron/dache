@@ -9,7 +9,6 @@ using System.Runtime.Caching;
 using System.ServiceModel.Channels;
 using System.Text;
 using System.Threading;
-using Dache.CacheHost.Extensions;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 using Dache.Core.Routing;
@@ -44,8 +43,8 @@ namespace Dache.CacheHost.Communication
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
         // The communication encoding
         public static readonly Encoding CommunicationEncoding = Encoding.UTF8;
-        // The communication protocol control bytes default - 4 little endian bytes + 1 control byte
-        private static readonly byte[] _controlBytesDefault = new byte[] { 0, 0, 0, 0, 0 };
+        // The communication protocol control bytes default - 4 little endian bytes for message length + 4 little endian bytes for thread id + 1 control byte for message type
+        private static readonly byte[] _controlBytesDefault = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         // The byte that represents a space
         private static readonly byte _spaceByte = CommunicationEncoding.GetBytes(" ")[0];
         // The absolute expiration format
@@ -65,7 +64,7 @@ namespace Dache.CacheHost.Communication
             _receiveBufferSize = receiveBufferSize;
 
             // Initialize the socket async event args pool
-            _socketAsyncEventArgsPool = new Pool<SocketAsyncEventArgs>(maximumConnections);
+            _socketAsyncEventArgsPool = new Pool<SocketAsyncEventArgs>(maximumConnections, () => new SocketAsyncEventArgs());
 
             // Allocate buffers such that the maximum number of sockets can have one outstanding read and write posted to the socket simultaneously
             _bufferManager = BufferManager.CreateBufferManager(receiveBufferSize * maximumConnections * _opsToPreAllocate, receiveBufferSize);
@@ -77,7 +76,7 @@ namespace Dache.CacheHost.Communication
                 // Pre-allocate a set of reusable SocketAsyncEventArgs
                 readWriteEventArg = new SocketAsyncEventArgs();
                 readWriteEventArg.Completed += IO_Completed;
-                readWriteEventArg.UserToken = new StateObject();
+                readWriteEventArg.UserToken = new DacheProtocolHelper.StateObject(_receiveBufferSize);
 
                 // Assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
                 readWriteEventArg.SetBuffer(_bufferManager.TakeBuffer(_receiveBufferSize), 0, _receiveBufferSize);
@@ -138,7 +137,7 @@ namespace Dache.CacheHost.Communication
 
             // Get the socket for the accepted client connection and put it into the ReadEventArg object user token
             var readEventArgs = _socketAsyncEventArgsPool.Pop();
-            ((StateObject)readEventArgs.UserToken).WorkSocket = e.AcceptSocket;
+            ((DacheProtocolHelper.StateObject)readEventArgs.UserToken).WorkSocket = e.AcceptSocket;
             // Turn off Nagle algorithm
             e.AcceptSocket.NoDelay = true;
 
@@ -180,7 +179,7 @@ namespace Dache.CacheHost.Communication
         private void ProcessReceive(SocketAsyncEventArgs e)
         {
             // check if the remote host closed the connection
-            var state = (StateObject)e.UserToken;
+            var state = (DacheProtocolHelper.StateObject)e.UserToken;
 
             // Increment the count of the total bytes received by the server
             // Interlocked.Add(ref _totalBytesRead, e.BytesTransferred);
@@ -204,16 +203,16 @@ namespace Dache.CacheHost.Communication
                 if (state.TotalBytesToRead == -1)
                 {
                     // Parse out control bytes
-                    var strippedBuffer = RemoveControlByteValues(e.Buffer, out state.TotalBytesToRead, out state.MessageType);
+                    var strippedBuffer = e.Buffer.RemoveControlByteValues(out state.TotalBytesToRead, out state.ThreadId, out state.MessageType);
                     // Take control bytes off of bytes read
                     bytesRead -= _controlBytesDefault.Length;
 
                     // Set data
-                    state.Data = Combine(state.Data, state.Data.Length, strippedBuffer, bytesRead);
+                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, strippedBuffer, bytesRead);
                 }
                 else
                 {
-                    state.Data = Combine(state.Data, state.Data.Length, state.Buffer, bytesRead);
+                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, state.Buffer, bytesRead);
                 }
 
                 // Set total bytes read
@@ -237,7 +236,7 @@ namespace Dache.CacheHost.Communication
             var command = CommunicationEncoding.GetString(commandBytes);
             // Process the command
             byte[] commandResult = null;
-            ProcessCommand(command, state.MessageType, handler, out commandResult);
+            ProcessCommand(command, state.ThreadId, state.MessageType, handler, out commandResult);
 
             if (commandResult != null)
             {
@@ -267,7 +266,7 @@ namespace Dache.CacheHost.Communication
 
         private void CloseClientSocket(SocketAsyncEventArgs e)
         {
-            var state = (StateObject)e.UserToken;
+            var state = (DacheProtocolHelper.StateObject)e.UserToken;
 
             // Close the socket associated with the client 
             try
@@ -290,7 +289,7 @@ namespace Dache.CacheHost.Communication
             _socketAsyncEventArgsPool.Push(e);
         }
          
-        private void ProcessCommand(string command, MessageType messageType, Socket handler, out byte[] commandResult)
+        private void ProcessCommand(string command, int threadId, DacheProtocolHelper.MessageType messageType, Socket handler, out byte[] commandResult)
         {
             string[] commandParts = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             List<string> cacheKeys = null;
@@ -302,7 +301,7 @@ namespace Dache.CacheHost.Communication
 
             switch (messageType)
             {
-                case MessageType.Literal:
+                case DacheProtocolHelper.MessageType.Literal:
                 {
                     // Sanitize the command
                     if (commandParts.Length != 2)
@@ -327,11 +326,11 @@ namespace Dache.CacheHost.Communication
                     }
 
                     // Set control bytes
-                    SetControlBytes(commandResult, MessageType.RepeatingCacheObjects);
+                    commandResult.SetControlBytes(threadId, DacheProtocolHelper.MessageType.RepeatingCacheObjects);
 
                     break;
                 }
-                case MessageType.RepeatingCacheKeys:
+                case DacheProtocolHelper.MessageType.RepeatingCacheKeys:
                 {
                     // Determine command
                     if (command.StartsWith("get", StringComparison.OrdinalIgnoreCase))
@@ -358,7 +357,7 @@ namespace Dache.CacheHost.Communication
                         }
 
                         // Set control bytes
-                        SetControlBytes(commandResult, MessageType.RepeatingCacheObjects);
+                        commandResult.SetControlBytes(threadId, DacheProtocolHelper.MessageType.RepeatingCacheObjects);
                     }
                     else if (command.StartsWith("del-tag", StringComparison.OrdinalIgnoreCase))
                     {
@@ -389,7 +388,7 @@ namespace Dache.CacheHost.Communication
 
                     break;
                 }
-                case MessageType.RepeatingCacheKeysAndObjects:
+                case DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects:
                 {
                     // Determine command
                     if (command.StartsWith("set-tag-intern", StringComparison.OrdinalIgnoreCase))
@@ -484,38 +483,6 @@ namespace Dache.CacheHost.Communication
                 cacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(commandParts[i], Convert.FromBase64String(commandParts[i + 1])));
             }
             return cacheKeysAndObjects;
-        }
-
-        private byte[] RemoveControlByteValues(byte[] command, out int messageLength, out MessageType delimiterType)
-        {
-            messageLength = (command[3] << 24) | (command[2] << 16) | (command[1] << 8) | command[0];
-            delimiterType = (MessageType)command[4];
-            var result = new byte[command.Length - _controlBytesDefault.Length];
-            Buffer.BlockCopy(command, 5, result, 0, result.Length);
-            return result;
-        }
-
-        private void SetControlBytes(byte[] command, MessageType delimiterType)
-        {
-            var length = command.Length - _controlBytesDefault.Length;
-            command[0] = (byte)length;
-            command[1] = (byte)((length >> 8) & 0xFF);
-            command[2] = (byte)((length >> 16) & 0xFF);
-            command[3] = (byte)((length >> 24) & 0xFF);
-            command[4] = Convert.ToByte((int)delimiterType);
-        }
-
-        private static byte[] Combine(byte[] first, byte[] second)
-        {
-            return Combine(first, first.Length, second, second.Length);
-        }
-
-        private static byte[] Combine(byte[] first, int firstLength, byte[] second, int secondLength)
-        {
-            byte[] ret = new byte[firstLength + secondLength];
-            Buffer.BlockCopy(first, 0, ret, 0, firstLength);
-            Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
-            return ret;
         }
 
         /// <summary>
@@ -1056,39 +1023,6 @@ namespace Dache.CacheHost.Communication
                     MemCacheContainer.Instance.Remove(cacheKey);
                 }
             }
-        }
-
-        private class StateObject
-        {
-            public Socket WorkSocket = null;
-            public const int BufferSize = 8192;
-            public byte[] Buffer = new byte[BufferSize];
-            public byte[] Data = new byte[0];
-            public MessageType MessageType = MessageType.Literal;
-            public int TotalBytesToRead = -1;
-        }
-
-        private enum MessageType
-        {
-            /// <summary>
-            /// No repeated items.
-            /// </summary>
-            Literal = 0,
-
-            /// <summary>
-            /// Repeating cache keys.
-            /// </summary>
-            RepeatingCacheKeys,
-
-            /// <summary>
-            /// Repeating cache objects.
-            /// </summary>
-            RepeatingCacheObjects,
-
-            /// <summary>
-            /// Repeating cache keys and objects in pairs.
-            /// </summary>
-            RepeatingCacheKeysAndObjects
         }
     }
 }

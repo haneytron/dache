@@ -5,15 +5,17 @@ using System.Text;
 
 namespace Dache.CacheHost.Communication
 {
-    internal sealed class Pool<T> where T : class, new()
+    internal sealed class Pool<T> where T : class
     {
         private readonly Queue<T> _queue = null;
         private readonly int _initialPoolCount = 0;
+        private readonly Func<T> _newItemMethod = null;
 
-        public Pool(int poolCount)
+        public Pool(int poolCount, Func<T> newItemMethod)
         {
             _queue = new Queue<T>(poolCount);
             _initialPoolCount = poolCount;
+            _newItemMethod = newItemMethod;
         }
 
         public void Push(T item)
@@ -34,14 +36,14 @@ namespace Dache.CacheHost.Communication
         {
             if (_queue.Count == 0)
             {
-                return new T();
+                return _newItemMethod();
             }
 
             lock (_queue)
             {
                 if (_queue.Count == 0)
                 {
-                    return new T();
+                    return _newItemMethod();
                 }
 
                 return _queue.Dequeue();

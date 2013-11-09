@@ -54,11 +54,11 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Communication\CacheHostServer.cs" />
+    <Compile Include="Communication\DacheProtocolHelper.cs" />
     <Compile Include="Communication\ICacheHostContract.cs" />
     <Compile Include="Communication\Pool.cs" />
     <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
     <Compile Include="Configuration\CustomLoggerElement.cs" />
-    <Compile Include="Extensions\MemoryStreamExtensions.cs" />
     <Compile Include="Performance\CustomPerformanceCounterManagerContainer.cs" />
     <Compile Include="Polling\CacheHostInformationPoller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

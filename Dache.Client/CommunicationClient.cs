@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using Dache.CacheHost.Communication;
-using Dache.Client.Extensions;
 
 namespace Dache.Client
 {
@@ -16,29 +15,29 @@ namespace Dache.Client
     /// </summary>
     internal class CommunicationClient : ICacheHostContract
     {
-        // The client socket
+        // The synchronous client socket
         private Socket _client = null;
+        // The client multiplexer
+        private readonly Dictionary<int, KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent>> _clientMultiplexer = null;
+        // The client multiplexer reader writer lock
+        private readonly ReaderWriterLockSlim _clientMultiplexerLock = new ReaderWriterLockSlim();
+        // The pool of manual reset events
+        private readonly Pool<ManualResetEvent> _manualResetEventPool = null;
+        // The pool of state objects
+        private readonly Pool<DacheProtocolHelper.StateObject> _stateObjectPool = null;
 
         // The remote endpoint
         private readonly IPEndPoint _remoteEndPoint = null;
-        // The send buffer
-        private readonly byte[] _sendBuffer = null;
         // The receive buffer
         private readonly byte[] _receiveBuffer = null;
+        // The maximum number of simultaneous connections
+        private readonly int _maximumConnections = 0;
+        // The semaphore that enforces the maximum numbers of simultaneous connections
+        private readonly Semaphore _maxConnectionsSemaphore;
         // The receive buffer size
         private readonly int _receiveBufferSize = 0;
         // The cache host reconnect interval, in milliseconds
         private readonly int _hostReconnectIntervalMilliseconds = 0;
-        // The communication encoding
-        public static readonly Encoding CommunicationEncoding = Encoding.UTF8;
-        // The communication protocol control bytes default - 4 little endian bytes + 1 control byte
-        private static readonly byte[] _controlBytesDefault = new byte[] { 0, 0, 0, 0, 0 };
-        // The byte that represents a space
-        private static readonly byte _spaceByte = CommunicationEncoding.GetBytes(" ")[0];
-        // The absolute expiration format
-        private const string _absoluteExpirationFormat = "yyMMddhhmmss";
-        // The client lock
-        private readonly ManualResetEvent _clientLock = new ManualResetEvent(true);
 
         // Whether or not the communication client is connected
         private volatile bool _isConnected = true;
@@ -52,9 +51,10 @@ namespace Dache.Client
         /// </summary>
         /// <param name="address">The address.</param>
         /// <param name="port">The port.</param>
+        /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="receiveBufferSize">The buffer size to use for receiving data.</param>
         /// <param name="hostReconnectIntervalMilliseconds">The cache host reconnect interval, in milliseconds.</param>
-        public CommunicationClient(string address, int port, int hostReconnectIntervalMilliseconds, int receiveBufferSize)
+        public CommunicationClient(string address, int port, int hostReconnectIntervalMilliseconds, int maximumConnections, int receiveBufferSize)
         {
             // Sanitize
             if (String.IsNullOrWhiteSpace(address))
@@ -69,16 +69,33 @@ namespace Dache.Client
             {
                 throw new ArgumentException("must be greater than 0", "hostReconnectIntervalMilliseconds");
             }
+            if (maximumConnections <= 0)
+            {
+                throw new ArgumentException("must be greater than 0", "maximumConnections");
+            }
             if (receiveBufferSize <= 512)
             {
                 throw new ArgumentException("cannot be less than 512", "receiveBufferSize");
             }
 
-            // Set receive buffer size
+            // Set maximum connections and receive buffer size
+            _maximumConnections = maximumConnections;
+            _maxConnectionsSemaphore = new Semaphore(maximumConnections, maximumConnections);
             _receiveBufferSize = receiveBufferSize;
 
-            // Initialize buffers
-            _sendBuffer = new byte[_receiveBufferSize];
+            // Define the client multiplexer
+            _clientMultiplexer = new Dictionary<int, KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent>>(_maximumConnections);
+
+            // Initialize and populate the pools
+            _manualResetEventPool = new Pool<ManualResetEvent>(_maximumConnections, () => new ManualResetEvent(false));
+            _stateObjectPool = new Pool<DacheProtocolHelper.StateObject>(_maximumConnections, () => new DacheProtocolHelper.StateObject(_receiveBufferSize));
+            for (int i = 0; i < _maximumConnections; i++)
+            {
+                _manualResetEventPool.Push(new ManualResetEvent(false));
+                _stateObjectPool.Push(new DacheProtocolHelper.StateObject(_receiveBufferSize));
+            }
+
+            // Initialize buffer
             _receiveBuffer = new byte[_receiveBufferSize];
 
             // Establish the remote endpoint for the socket
@@ -103,6 +120,9 @@ namespace Dache.Client
             try
             {
                 _client.Connect(_remoteEndPoint);
+
+                // Perpetually receive
+                _client.BeginReceive(_receiveBuffer, 0, _receiveBuffer.Length, 0, ReceiveCallback, null);
             }
             catch
             {
@@ -111,56 +131,6 @@ namespace Dache.Client
                 // Rethrow
                 throw;
             }
-        }
-
-        private void Receive()
-        {
-            _data = new byte[0];
-            _client.BeginReceive( _receiveBuffer, 0, _receiveBuffer.Length, 0, ReceiveCallback, null);
-        }
-
-        private byte[] _data = null;
-        private string _commandResult = null;
-
-        private void ReceiveCallback(IAsyncResult asyncResult)
-        {
-            int bytesRead = 0;
-            int totalBytesToRead = -1;
-            MessageType messageType = MessageType.Literal;
-
-            bytesRead = _client.EndReceive(asyncResult);
-
-            // Read data
-            if (totalBytesToRead != 0 && bytesRead > 0)
-            {
-                // Check if we need to decode little endian
-                if (totalBytesToRead == -1)
-                {
-                    // Parse out control bytes
-                    var strippedBuffer = RemoveControlByteValues(_receiveBuffer, out totalBytesToRead, out messageType);
-                    // Take control bytes off of bytes read
-                    bytesRead -= _controlBytesDefault.Length;
-
-                    // Set data
-                    _data = Combine(_data, _data.Length, strippedBuffer, bytesRead);
-                }
-                else
-                {
-                    _data = Combine(_data, _data.Length, _receiveBuffer, bytesRead);
-                }
-
-                // Set total bytes read
-                totalBytesToRead -= bytesRead;
-
-                if (totalBytesToRead > 0)
-                {
-                    // Read more
-                    _client.BeginReceive(_receiveBuffer, 0, _receiveBuffer.Length, 0, ReceiveCallback, null);
-                }
-            }
-
-            // Parse command from bytes
-            _commandResult = CommunicationEncoding.GetString(_data);
         }
 
         /// <summary>
@@ -203,7 +173,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("get");
                     foreach (var cacheKey in cacheKeys)
                     {
@@ -215,17 +185,14 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeys);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeys);
 
-                _clientLock.WaitOne();
                 // Send
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
-                _clientLock.WaitOne();
+                Send(command, true);
                 // Receive
-                Receive();
-                var commandResult = _commandResult;
-                _clientLock.Set();
-                
+                var commandResult = Receive();
+
+                // Verify that we got something
                 if (commandResult == null)
                 {
                     return null;
@@ -263,23 +230,20 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("get-tag {0}", tagName);
                     command = memoryStream.ToArray();
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.Literal);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.Literal);
 
-                _clientLock.WaitOne();
                 // Send
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
-                _clientLock.WaitOne();
+                Send(command, true);
                 // Receive
-                Receive();
-                var commandResult = _commandResult;
-                _clientLock.Set();
+                var commandResult = Receive();
 
+                // Verify that we got something
                 if (commandResult == null)
                 {
                     return null;
@@ -364,7 +328,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("set");
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
@@ -377,11 +341,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -390,14 +353,6 @@ namespace Dache.Client
                 // Rethrow
                 throw;
             }
-        }
-
-        private void SendCallback(IAsyncResult asyncResult)
-        {
-            // End the send
-            _client.EndSend(asyncResult);
-            // All done
-            _clientLock.Set();
         }
 
         /// <summary>
@@ -423,8 +378,8 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
-                    memoryStream.Write("set {0}", absoluteExpiration.ToString(_absoluteExpirationFormat));
+                    memoryStream.WriteControlBytesDefault();
+                    memoryStream.Write("set {0}", absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
                         memoryStream.WriteSpace();
@@ -436,11 +391,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -474,7 +428,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("set {0}", (int)slidingExpiration.TotalSeconds);
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
@@ -487,11 +441,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -526,7 +479,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("set-intern");
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
@@ -539,11 +492,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -629,7 +581,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("set-tag {0}", tagName);
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
@@ -642,11 +594,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -685,8 +636,8 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
-                    memoryStream.Write("set-tag {0} {1}", tagName, absoluteExpiration.ToString(_absoluteExpirationFormat));
+                    memoryStream.WriteControlBytesDefault();
+                    memoryStream.Write("set-tag {0} {1}", tagName, absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
                         memoryStream.WriteSpace();
@@ -698,11 +649,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -741,7 +691,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("set-tag {0} {1}", tagName, (int)slidingExpiration.TotalSeconds);
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
@@ -754,11 +704,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -798,7 +747,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("set-tag-intern {0}", tagName);
                     foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                     {
@@ -809,13 +758,11 @@ namespace Dache.Client
                     }
                     command = memoryStream.ToArray();
                 }
-
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeysAndObjects);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -857,7 +804,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("del");
                     foreach (var cacheKey in cacheKeys)
                     {
@@ -868,11 +815,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeys);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeys);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -910,7 +856,7 @@ namespace Dache.Client
                 using (var memoryStream = new MemoryStream())
                 {
                     // Write default control bytes - will be replaced later
-                    memoryStream.Write(_controlBytesDefault);
+                    memoryStream.WriteControlBytesDefault();
                     memoryStream.Write("del-tag");
                     foreach (var tagName in tagNames)
                     {
@@ -921,11 +867,10 @@ namespace Dache.Client
                 }
 
                 // Set control bytes
-                SetControlBytes(command, MessageType.RepeatingCacheKeys);
+                command.SetControlBytes(GetCurrentThreadId(), DacheProtocolHelper.MessageType.RepeatingCacheKeys);
 
                 // Send
-                _clientLock.WaitOne();
-                _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+                Send(command, false);
             }
             catch
             {
@@ -1024,7 +969,7 @@ namespace Dache.Client
                 {
                     // Ignore
                 }
-                
+
                 // Close the client
                 _client.Close();
 
@@ -1054,6 +999,213 @@ namespace Dache.Client
             }
         }
 
+        private void Send(byte[] command, bool registerForResponse)
+        {
+            _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+
+            // Check if we need to register with the multiplexer
+            if (registerForResponse)
+            {
+                var threadId = GetCurrentThreadId();
+                EnrollMultiplexer(threadId);
+            }
+        }
+
+        private void SendCallback(IAsyncResult asyncResult)
+        {
+            // End the send
+            _client.EndSend(asyncResult);
+        }
+
+        private string Receive()
+        {
+            // Get this thread's state object and manual reset event
+            var threadId = GetCurrentThreadId();
+            var stateAndManualResetEvent = GetMultiplexerValue(threadId);
+
+            // Wait for our message to go ahead from the receive callback
+            stateAndManualResetEvent.Value.WaitOne();
+
+            // Now get the command string
+            var result = DacheProtocolHelper.CommunicationEncoding.GetString(stateAndManualResetEvent.Key.Data);
+
+            // Finally remove the thread from the multiplexer
+            UnenrollMultiplexer(threadId);
+
+            return result;
+        }
+
+        private void ReceiveCallback(IAsyncResult asyncResult)
+        {
+            // If this is the first receive call for message frame, the state will be null
+            var state = asyncResult as DacheProtocolHelper.StateObject;
+
+            int bytesRead = _client.EndReceive(asyncResult);
+
+            ProcessMessage(_receiveBuffer, state, bytesRead);
+        }
+
+        private KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> GetMultiplexerValue(int threadId)
+        {
+            KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> stateAndManualResetEvent;
+            _clientMultiplexerLock.EnterReadLock();
+            try
+            {
+                // Get from multiplexer by thread ID
+                if (!_clientMultiplexer.TryGetValue(threadId, out stateAndManualResetEvent))
+                {
+                    throw new Exception("FATAL: multiplexer was missing entry for Thread ID " + threadId);
+                }
+
+                return stateAndManualResetEvent;
+            }
+            finally
+            {
+                _clientMultiplexerLock.ExitReadLock();
+            }
+        }
+
+        private void EnrollMultiplexer(int threadId)
+        {
+            _clientMultiplexerLock.EnterWriteLock();
+            try
+            {
+                // Add manual reset event for current thread
+                _clientMultiplexer.Add(threadId, new KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent>(_stateObjectPool.Pop(), _manualResetEventPool.Pop()));
+            }
+            catch
+            {
+                throw new Exception("FATAL: multiplexer tried to add duplicate entry for Thread ID " + threadId);
+            }
+            finally
+            {
+                _clientMultiplexerLock.ExitWriteLock();
+            }
+        }
+
+        private void UnenrollMultiplexer(int threadId)
+        {
+            KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> stateAndManualResetEvent;
+            _clientMultiplexerLock.EnterUpgradeableReadLock();
+            try
+            {
+                // Get from multiplexer by thread ID
+                if (!_clientMultiplexer.TryGetValue(threadId, out stateAndManualResetEvent))
+                {
+                    throw new Exception("FATAL: multiplexer was missing entry for Thread ID " + threadId);
+                }
+
+                _clientMultiplexerLock.EnterWriteLock();
+                try
+                {
+                    // Remove entry
+                    _clientMultiplexer.Remove(threadId);
+                }
+                finally
+                {
+                    _clientMultiplexerLock.ExitWriteLock();
+                }
+            }
+            finally
+            {
+                _clientMultiplexerLock.ExitUpgradeableReadLock();
+            }
+
+            // Now return objects to pools
+            _stateObjectPool.Push(stateAndManualResetEvent.Key);
+            _manualResetEventPool.Push(stateAndManualResetEvent.Value);
+        }
+
+        private void SignalMultiplexer(int threadId)
+        {
+            KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> stateAndManualResetEvent;
+            _clientMultiplexerLock.EnterReadLock();
+            try
+            {
+                // Get from multiplexer by thread ID
+                if (!_clientMultiplexer.TryGetValue(threadId, out stateAndManualResetEvent))
+                {
+                    throw new Exception("FATAL: multiplexer was missing entry for Thread ID " + threadId);
+                }
+
+                stateAndManualResetEvent.Value.Set();
+            }
+            finally
+            {
+                _clientMultiplexerLock.ExitReadLock();
+            }
+        }
+
+        private void ProcessMessage(byte[] buffer, DacheProtocolHelper.StateObject state, int bytesRead)
+        {
+            int totalBytesToRead = state == null ? -1 : state.TotalBytesToRead;
+            DacheProtocolHelper.MessageType messageType = state == null ? DacheProtocolHelper.MessageType.Literal : state.MessageType;
+
+            // Read data
+            if (totalBytesToRead != 0 && bytesRead > 0)
+            {
+                int numberOfBytesToSet = 0;
+
+                // Check if we need to get our control byte values
+                if (totalBytesToRead == -1)
+                {
+                    // Parse out control bytes
+                    int threadId = 0;
+                    var strippedBuffer = _receiveBuffer.RemoveControlByteValues(out totalBytesToRead, out threadId, out messageType);
+
+                    // Check if we need to get this new state from the multiplexer
+                    if (state == null)
+                    {
+                        // We do, so get state
+                        state = GetMultiplexerValue(threadId).Key;
+                    }
+
+                    // Set values to state
+                    state.TotalBytesToRead = totalBytesToRead;
+                    state.ThreadId = threadId;
+                    state.MessageType = messageType;
+
+                    // Take control bytes off of bytes read
+                    bytesRead -= DacheProtocolHelper.ControlBytesDefault.Length;
+
+                    // Set data
+                    numberOfBytesToSet = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
+                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, strippedBuffer, numberOfBytesToSet);
+                }
+                else
+                {
+                    numberOfBytesToSet = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
+                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, _receiveBuffer, numberOfBytesToSet);
+                }
+
+                // Set total bytes read
+                var originalTotalBytesToRead = state.TotalBytesToRead;
+                state.TotalBytesToRead -= bytesRead;
+
+                // Check if we have part of another message in our received bytes
+                if (state.TotalBytesToRead < 0)
+                {
+                    // We do, so parse it out
+                    var nextMessageFrameBytes = new byte[bytesRead - originalTotalBytesToRead];
+                    Buffer.BlockCopy(_receiveBuffer, originalTotalBytesToRead, nextMessageFrameBytes, 0, nextMessageFrameBytes.Length);
+                    // Set total bytes to read to 0
+                    state.TotalBytesToRead = 0;
+                    // Now we have the next message, so recursively process it
+                    ProcessMessage(nextMessageFrameBytes, null, nextMessageFrameBytes.Length);
+                }
+
+                // Check if we're done with this message frame
+                if (state.TotalBytesToRead == 0)
+                {
+                    // All done, so signal the event for this thread
+                    SignalMultiplexer(state.ThreadId);
+                }
+
+                // Read more
+                _client.BeginReceive(_receiveBuffer, 0, _receiveBuffer.Length, 0, ReceiveCallback, state);
+            }
+        }
+
         private static List<byte[]> ParseCacheObjects(string[] commandParts)
         {
             // Regular set
@@ -1065,69 +1217,9 @@ namespace Dache.Client
             return cacheObjects;
         }
 
-        private byte[] RemoveControlByteValues(byte[] command, out int messageLength, out MessageType delimiterType)
+        private static int GetCurrentThreadId()
         {
-            messageLength = (command[3] << 24) | (command[2] << 16) | (command[1] << 8) | command[0];
-            delimiterType = (MessageType)command[4];
-            var result = new byte[command.Length - _controlBytesDefault.Length];
-            Buffer.BlockCopy(command, 5, result, 0, result.Length);
-            return result;
-        }
-
-        private void SetControlBytes(byte[] command, MessageType delimiterType)
-        {
-            var length = command.Length - _controlBytesDefault.Length;
-            command[0] = (byte)length;
-            command[1] = (byte)((length >> 8) & 0xFF);
-            command[2] = (byte)((length >> 16) & 0xFF);
-            command[3] = (byte)((length >> 24) & 0xFF);
-            command[4] = Convert.ToByte((int)delimiterType);
-        }
-
-        private static byte[] Combine(byte[] first, byte[] second)
-        {
-            return Combine(first, first.Length, second, second.Length);
-        }
-
-        private static byte[] Combine(byte[] first, int firstLength, byte[] second, int secondLength)
-        {
-            byte[] ret = new byte[firstLength + secondLength];
-            Buffer.BlockCopy(first, 0, ret, 0, firstLength);
-            Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
-            return ret;
-        }
-
-        private class StateObject
-        {
-            public Socket WorkSocket = null;
-            public const int BufferSize = 8192;
-            public byte[] Buffer = new byte[BufferSize];
-            public byte[] Data = new byte[0];
-            public MessageType MessageType = MessageType.Literal;
-            public int TotalBytesToRead = -1;
-        }
-
-        private enum MessageType
-        {
-            /// <summary>
-            /// No repeated items.
-            /// </summary>
-            Literal = 0,
-
-            /// <summary>
-            /// Repeating cache keys.
-            /// </summary>
-            RepeatingCacheKeys,
-
-            /// <summary>
-            /// Repeating cache objects.
-            /// </summary>
-            RepeatingCacheObjects,
-
-            /// <summary>
-            /// Repeating cache keys and objects in pairs.
-            /// </summary>
-            RepeatingCacheKeysAndObjects
+            return Thread.CurrentThread.ManagedThreadId;
         }
     }
 }
