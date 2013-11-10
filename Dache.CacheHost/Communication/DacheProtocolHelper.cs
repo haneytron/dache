@@ -19,16 +19,11 @@ namespace Dache.CacheHost.Communication
         // The absolute expiration format
         public const string AbsoluteExpirationFormat = "yyMMddhhmmss";
 
-        public static byte[] Combine(byte[] first, byte[] second)
+        public static byte[] Combine(byte[] first, byte[] second, int secondOffset, int secondLength)
         {
-            return Combine(first, first.Length, second, second.Length);
-        }
-
-        public static byte[] Combine(byte[] first, int firstLength, byte[] second, int secondLength)
-        {
-            byte[] ret = new byte[firstLength + secondLength];
-            Buffer.BlockCopy(first, 0, ret, 0, firstLength);
-            Buffer.BlockCopy(second, 0, ret, firstLength, secondLength);
+            byte[] ret = new byte[first.Length + secondLength];
+            Buffer.BlockCopy(first, 0, ret, 0, first.Length);
+            Buffer.BlockCopy(second, secondOffset, ret, first.Length, secondLength);
             return ret;
         }
 
@@ -132,14 +127,11 @@ namespace Dache.CacheHost.Communication
             command[8] = Convert.ToByte((int)delimiterType);
         }
 
-        public static byte[] RemoveControlByteValues(this byte[] command, out int messageLength, out int threadId, out MessageType delimiterType)
+        public static void ExtractControlByteValues(this byte[] command, int offset, out int messageLength, out int threadId, out MessageType delimiterType)
         {
-            messageLength = (command[3] << 24) | (command[2] << 16) | (command[1] << 8) | command[0];
-            threadId = (command[7] << 24) | (command[6] << 16) | (command[5] << 8) | command[4];
-            delimiterType = (MessageType)command[8];
-            var result = new byte[command.Length - ControlBytesDefault.Length];
-            Buffer.BlockCopy(command, 9, result, 0, result.Length);
-            return result;
+            messageLength = (command[offset + 3] << 24) | (command[offset + 2] << 16) | (command[offset + 1] << 8) | command[offset + 0];
+            threadId = (command[offset + 7] << 24) | (command[offset + 6] << 16) | (command[offset + 5] << 8) | command[offset + 4];
+            delimiterType = (MessageType)command[offset + 8];
         }
     }
 }

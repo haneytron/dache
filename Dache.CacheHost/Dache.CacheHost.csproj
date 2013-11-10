@@ -57,6 +57,7 @@
     <Compile Include="Communication\DacheProtocolHelper.cs" />
     <Compile Include="Communication\ICacheHostContract.cs" />
     <Compile Include="Communication\Pool.cs" />
+    <Compile Include="Communication\SocketRocker.cs" />
     <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
     <Compile Include="Configuration\CustomLoggerElement.cs" />
     <Compile Include="Performance\CustomPerformanceCounterManagerContainer.cs" />

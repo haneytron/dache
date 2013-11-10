@@ -1008,10 +1008,7 @@ namespace Dache.Client
                 EnrollMultiplexer(threadId);
             }
 
-            for (int i = 0; i < command.Length; i = i + _receiveBufferSize)
-            {
-                _client.BeginSend(command, i, Math.Min(_receiveBufferSize, command.Length - i), 0, SendCallback, null);
-            }
+            _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
         }
 
         private void SendCallback(IAsyncResult asyncResult)
@@ -1045,7 +1042,7 @@ namespace Dache.Client
 
             int bytesRead = _client.EndReceive(asyncResult);
 
-            ProcessMessage(_receiveBuffer, state, bytesRead);
+            ProcessMessage(_receiveBuffer, 0, state, bytesRead);
         }
 
         private KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent> GetMultiplexerValue(int threadId)
@@ -1139,7 +1136,7 @@ namespace Dache.Client
             }
         }
 
-        private void ProcessMessage(byte[] buffer, DacheProtocolHelper.ClientStateObject state, int bytesRead)
+        private void ProcessMessage(byte[] buffer, int bufferOffset, DacheProtocolHelper.ClientStateObject state, int bytesRead)
         {
             int totalBytesToRead = state == null ? -1 : state.TotalBytesToRead;
             DacheProtocolHelper.MessageType messageType = state == null ? DacheProtocolHelper.MessageType.Literal : state.MessageType;
@@ -1147,14 +1144,15 @@ namespace Dache.Client
             // Read data
             if (totalBytesToRead != 0 && bytesRead > 0)
             {
-                byte[] currentBuffer = null;
+                int currentIndexOffset = bufferOffset;
 
                 // Check if we need to get our control byte values
                 if (totalBytesToRead == -1)
                 {
                     // Parse out control bytes
                     int threadId = 0;
-                    var strippedBuffer = _receiveBuffer.RemoveControlByteValues(out totalBytesToRead, out threadId, out messageType);
+                    _receiveBuffer.ExtractControlByteValues(currentIndexOffset, out totalBytesToRead, out threadId, out messageType);
+                    currentIndexOffset += DacheProtocolHelper.ControlBytesDefault.Length;
 
                     // Check if we need to get this new state from the multiplexer
                     if (state == null)
@@ -1170,16 +1168,10 @@ namespace Dache.Client
 
                     // Take control bytes off of bytes read
                     bytesRead -= DacheProtocolHelper.ControlBytesDefault.Length;
-
-                    currentBuffer = strippedBuffer;
-                }
-                else
-                {
-                    currentBuffer = _receiveBuffer;
                 }
 
                 int numberOfBytesToRead = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
-                state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, currentBuffer, numberOfBytesToRead);
+                state.Data = DacheProtocolHelper.Combine(state.Data, _receiveBuffer,currentIndexOffset, numberOfBytesToRead);
 
                 // Set total bytes read
                 var originalTotalBytesToRead = state.TotalBytesToRead;
@@ -1194,7 +1186,7 @@ namespace Dache.Client
                     // Set total bytes to read to 0
                     state.TotalBytesToRead = 0;
                     // Now we have the next message, so recursively process it
-                    ProcessMessage(nextMessageFrameBytes, null, nextMessageFrameBytes.Length);
+                    ProcessMessage(nextMessageFrameBytes, originalTotalBytesToRead, null, nextMessageFrameBytes.Length);
                 }
 
                 // Check if we're done with this message frame

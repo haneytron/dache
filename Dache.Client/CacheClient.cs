@@ -52,7 +52,7 @@ namespace Dache.Client
             foreach (CacheHostElement cacheHost in cacheHosts.Cast<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
                 // Instantiate a cache host client container
-                var clientContainer = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalMilliseconds, 1000, 1024);
+                var clientContainer = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalMilliseconds, 1000, 4096);
 
                 // Hook up the disconnected and reconnected events
                 clientContainer.Disconnected += OnClientDisconnected;

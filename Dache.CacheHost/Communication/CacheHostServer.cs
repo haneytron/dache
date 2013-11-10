@@ -173,7 +173,6 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         private void ProcessReceive(SocketAsyncEventArgs e)
         {
-            // check if the remote host closed the connection
             var state = (DacheProtocolHelper.HostStateObject)e.UserToken;
 
             // Increment the count of the total bytes received by the server
@@ -190,58 +189,59 @@ namespace Dache.CacheHost.Communication
             // Read data
             if (state.TotalBytesToRead != 0 && (bytesRead = e.BytesTransferred) > 0 && e.SocketError == SocketError.Success)
             {
-                byte[] currentBuffer = null;
-
-                // Check if we need to decode little endian
-                if (state.TotalBytesToRead == -1)
-                {
-                    // Parse out control bytes
-                    var strippedBuffer = e.Buffer.RemoveControlByteValues(out state.TotalBytesToRead, out state.ThreadId, out state.MessageType);
-                    // Take control bytes off of bytes read
-                    bytesRead -= DacheProtocolHelper.ControlBytesDefault.Length;
-
-                    currentBuffer = strippedBuffer;
-                }
-                else
-                {
-                    currentBuffer = e.Buffer;
-                }
-
-                int numberOfBytesToRead = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
-                state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, currentBuffer, numberOfBytesToRead);
-
-                // Set total bytes read
-                var originalTotalBytesToRead = state.TotalBytesToRead;
-                state.TotalBytesToRead -= bytesRead;
-
-                // Check if we have part of another message in our received bytes
-                if (state.TotalBytesToRead < 0)
-                {
-                    // We do, so parse it out
-                    var nextMessageFrameBytes = new byte[bytesRead - originalTotalBytesToRead];
-                    Buffer.BlockCopy(currentBuffer, originalTotalBytesToRead, nextMessageFrameBytes, 0, nextMessageFrameBytes.Length);
-                    // Set total bytes to read to 0
-                    state.TotalBytesToRead = 0;
-                    state.TotalBytesToRead = -1;
-                    // Now we have the next message, so recursively process it
-                    ProcessReceive(e);
-                    return;
-                }
-
-                if (state.TotalBytesToRead > 0)
-                {
-                    // Read the next block of data send from the client 
-                    bool willRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
-                    if (!willRaiseEvent)
-                    {
-                        ProcessReceive(e);
-                    }
-                    return;
-                }
+                ProcessReceiveData(e, 0, bytesRead);
             }
+        }
+
+        private void ProcessReceiveData(SocketAsyncEventArgs e, int bufferOffset, int bytesRead)
+        {
+            var state = (DacheProtocolHelper.HostStateObject)e.UserToken;
+
+            int currentIndexOffset = bufferOffset;
+
+            // Check if we need to get our control byte values
+            if (state.TotalBytesToRead == -1)
+            {
+                // Parse out control bytes
+                e.Buffer.ExtractControlByteValues(currentIndexOffset, out state.TotalBytesToRead, out state.ThreadId, out state.MessageType);
+                currentIndexOffset += DacheProtocolHelper.ControlBytesDefault.Length;
+                // Take control bytes off of bytes read
+                bytesRead -= DacheProtocolHelper.ControlBytesDefault.Length;
+            }
+
+            int numberOfBytesToRead = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
+            state.Data = DacheProtocolHelper.Combine(state.Data, e.Buffer, currentIndexOffset, numberOfBytesToRead);
+
+            // Set total bytes read
+            var originalTotalBytesToRead = state.TotalBytesToRead + currentIndexOffset;
+            state.TotalBytesToRead -= bytesRead;
 
             // Get the command bytes
             var commandBytes = state.Data;
+
+            bool isRecursive = false;
+
+            // Check if we have part of another message in our received bytes
+            if (state.TotalBytesToRead < 0)
+            {
+                // Set total bytes to read to -1
+                state.TotalBytesToRead = -1;
+                state.Data = new byte[0];
+                // Now we have the next message, so recursively process it
+                ProcessReceiveData(e, originalTotalBytesToRead, bytesRead + currentIndexOffset - originalTotalBytesToRead);
+                isRecursive = true;
+            }
+            else if (state.TotalBytesToRead > 0)
+            {
+                // Read the next block of data send from the client 
+                bool willRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
+                if (!willRaiseEvent)
+                {
+                    ProcessReceive(e);
+                }
+                return;
+            }
+
             // Parse command from bytes
             var command = CommunicationEncoding.GetString(commandBytes);
             // Process the command
@@ -260,17 +260,32 @@ namespace Dache.CacheHost.Communication
                 }
             }
 
-            // Read the next block of data send from the client
-            if (e.SocketError != SocketError.Success)
+            if (isRecursive)
             {
-                CloseClientSocket(e);
                 return;
             }
 
-            bool willReceiveRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
-            if (!willReceiveRaiseEvent)
+            // Reset state
+            if (state.TotalBytesToRead == 0)
             {
-                ProcessReceive(e);
+                state.TotalBytesToRead = -1;
+                state.Data = new byte[0];
+                state.ThreadId = -1;
+                state.WorkSocket = null;
+            }
+
+            // Read the next block of data sent from the client
+            try
+            {
+                bool willReceiveRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
+                if (!willReceiveRaiseEvent)
+                {
+                    ProcessReceive(e);
+                }
+            }
+            catch
+            {
+                CloseClientSocket(e);
             }
         }
 
@@ -280,17 +295,16 @@ namespace Dache.CacheHost.Communication
         private void ProcessSend(SocketAsyncEventArgs e)
         {
             // Free the SocketAsyncEventArg so they can be reused by another client
+            e.SetBuffer(0, _receiveBufferSize);
             _socketAsyncEventArgsPool.Push(e);
         }
 
         private void CloseClientSocket(SocketAsyncEventArgs e)
         {
-            var state = (DacheProtocolHelper.HostStateObject)e.UserToken;
-
             // Close the socket associated with the client 
             try
             {
-                state.WorkSocket.Shutdown(SocketShutdown.Send);
+                e.AcceptSocket.Shutdown(SocketShutdown.Send);
             }
             // Throws if client process has already closed 
             catch
@@ -298,7 +312,7 @@ namespace Dache.CacheHost.Communication
                 // ignore
             }
 
-            state.WorkSocket.Close();
+            e.AcceptSocket.Close();
 
             // Decrement the counter keeping track of the total number of clients connected to the server
             Interlocked.Decrement(ref _currentlyConnectedClients);
