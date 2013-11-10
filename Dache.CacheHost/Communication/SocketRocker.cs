@@ -80,6 +80,9 @@ namespace Dache.CacheHost.Communication
 
             _receivedMessages = new Queue<KeyValuePair<int, byte[]>>(maximumConnections);
 
+            // Initialize the client multiplexer
+            _clientMultiplexer = new Dictionary<int, KeyValuePair<MessageState, ManualResetEvent>>(maximumConnections);
+
             // Create the pools
             _messageStatePool = new Pool<MessageState>(maximumConnections, () => new MessageState(), messageState =>
             {
@@ -247,18 +250,14 @@ namespace Dache.CacheHost.Communication
 
         private void ProcessReceivedMessage(MessageState messageState, int currentOffset, int bytesRead)
         {
-            bool isFirstPartOfFrame = false;
-
             // Check if we need to get our control byte values
             if (messageState.TotalBytesToRead == -1)
             {
-                isFirstPartOfFrame = true;
-
                 // We do, see if we have enough bytes received to get them
-                if (currentOffset + _controlBytesPlaceholder.Length >= bytesRead)
+                if (currentOffset + _controlBytesPlaceholder.Length >= currentOffset + bytesRead)
                 {
                     // We don't yet have enough bytes to read the control bytes, so get more bytes
-                    int bytesOfControlReceived = bytesRead - currentOffset;
+                    int bytesOfControlReceived = bytesRead;
                     int neededBytes = _controlBytesPlaceholder.Length - bytesOfControlReceived;
                     byte[] controlBytesBuffer = new byte[_controlBytesPlaceholder.Length];
                     // Populate received control bytes
@@ -292,53 +291,48 @@ namespace Dache.CacheHost.Communication
             messageState.Data.Write(messageState.Buffer, currentOffset, numberOfBytesToRead);
 
             // Set total bytes read
-            int originalTotalBytesToRead = messageState.TotalBytesToRead + (isFirstPartOfFrame ? _controlBytesPlaceholder.Length : 0);
-            messageState.TotalBytesToRead -= bytesRead;
+            int originalTotalBytesToRead = messageState.TotalBytesToRead;
+            messageState.TotalBytesToRead -= numberOfBytesToRead;
 
             // Check if we're done
             if (messageState.TotalBytesToRead == 0)
             {
                 // Done, add to complete received messages
                 CompleteMessage(messageState.ThreadId, messageState.Data.ToArray());
-                // Get new state for the next message but transfer over handler
-                Socket handler = messageState.Handler;
-                _messageStatePool.Push(messageState);
-                messageState = _messageStatePool.Pop();
-                messageState.Data = new MemoryStream();
-                messageState.Handler = handler;
-
-                // Receive more data
-                messageState.Handler.BeginReceive(messageState.Buffer, 0, messageState.Buffer.Length, 0, ReceiveCallback, messageState);
-                return;
-            }
-
-            // Not done, see if we need to get more data
-            if (messageState.TotalBytesToRead > 0)
-            {
-                // Receive more data
-                messageState.Handler.BeginReceive(messageState.Buffer, 0, messageState.Buffer.Length, 0, ReceiveCallback, messageState);
-                return;
             }
 
             // Check if we have an overlapping message frame in our message AKA if the bytesRead was larger than the total bytes to read
-            if (bytesRead > messageState.TotalBytesToRead)
+            if (bytesRead > originalTotalBytesToRead)
             {
-                // This message is completed, add to complete received messages
-                CompleteMessage(messageState.ThreadId, messageState.Data.ToArray());
+                // Get the number of bytes remaining to be read
+                int bytesRemaining = bytesRead - numberOfBytesToRead;
+
+                // Set total bytes to read to default
+                messageState.TotalBytesToRead = -1;
+                // Dispose and reinitialize data stream
+                messageState.Data.Dispose();
+                messageState.Data = new MemoryStream();
+
+                // Now we have the next message, so recursively process it
+                ProcessReceivedMessage(messageState, currentOffset + numberOfBytesToRead, bytesRemaining);
+                return;
+            }
+
+            // Only create a new message state if we are done with this message
+            if (!(bytesRead < originalTotalBytesToRead))
+            {
                 // Get new state for the next message but transfer over handler
                 Socket handler = messageState.Handler;
                 _messageStatePool.Push(messageState);
                 messageState = _messageStatePool.Pop();
                 messageState.Data = new MemoryStream();
                 messageState.Handler = handler;
-
-                // Get the number of bytes remaining to be read
-                int bytesRemaining = bytesRead - originalTotalBytesToRead;
-
-                // Now we have the next message, so recursively process it
-                ProcessReceivedMessage(messageState, originalTotalBytesToRead, bytesRemaining);
-                return;
             }
+
+            // Receive more data
+            // TODO: error raising
+            messageState.Handler.BeginReceive(messageState.Buffer, 0, messageState.Buffer.Length, 0, ReceiveCallback, messageState);
+            return;
         }
 
         /// <summary>
@@ -432,7 +426,7 @@ namespace Dache.CacheHost.Communication
         /// <param name="threadId">The thread ID obtained from ServerReceive.</param>
         public void ServerSend(byte[] message, int threadId)
         {
-            if (!_useClientMultiplexer)
+            if (_useClientMultiplexer)
             {
                 throw new InvalidOperationException("Cannot call ServerSend when connected to a remote server");
             }
@@ -449,7 +443,7 @@ namespace Dache.CacheHost.Communication
             // Set the control bytes on the message
             SetControlBytes(messageWithControlBytes, threadId);
 
-            // Do the send
+            // Do the send to the appropriate client
             _socket.BeginSend(messageWithControlBytes, 0, messageWithControlBytes.Length, 0, SendCallback, null);
         }
 
@@ -467,6 +461,12 @@ namespace Dache.CacheHost.Communication
             lock (_receivedMessages)
             {
                 _receivedMessages.Enqueue(new KeyValuePair<int, byte[]>(threadId, message));
+            }
+
+            // See if we need to signal the multiplexer
+            if (_useClientMultiplexer)
+            {
+                SignalMultiplexer(threadId);
             }
         }
 

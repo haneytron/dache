@@ -61,7 +61,7 @@ namespace Dache.CacheHost.Communication
 
         private void ReceiveThread()
         {
-            while (true)
+            while (!_connectionReceiverCancellationTokenSource.IsCancellationRequested)
             {
                 int threadId = 0;
                 // Get a message - will block
@@ -72,8 +72,11 @@ namespace Dache.CacheHost.Communication
                 // Get the command string skipping our control byte
                 var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command, 1, command.Length - 1);
                 var commandResult = ProcessCommand(commandString, messageType);
-                // Send the result
-                _server.ServerSend(commandResult, threadId);
+                if (commandResult != null)
+                {
+                    // Send the result if there is one
+                    _server.ServerSend(commandResult, threadId);
+                }
             }
         }
          
@@ -281,6 +284,9 @@ namespace Dache.CacheHost.Communication
         {
             // Listen for connections
             _server.Listen(_localEndPoint);
+
+            // Perpetually receive
+            _receiveThread.Start();
         }
 
         /// <summary>
@@ -290,7 +296,7 @@ namespace Dache.CacheHost.Communication
         {
             // Issue cancellation to connection receiver thread
             _connectionReceiverCancellationTokenSource.Cancel();
-            
+
             // Shutdown and close the server socket
             _server.Close();
         }
