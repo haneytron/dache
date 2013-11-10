@@ -43,12 +43,6 @@ namespace Dache.CacheHost.Communication
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
         // The communication encoding
         public static readonly Encoding CommunicationEncoding = Encoding.UTF8;
-        // The communication protocol control bytes default - 4 little endian bytes for message length + 4 little endian bytes for thread id + 1 control byte for message type
-        private static readonly byte[] _controlBytesDefault = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-        // The byte that represents a space
-        private static readonly byte _spaceByte = CommunicationEncoding.GetBytes(" ")[0];
-        // The absolute expiration format
-        private const string _absoluteExpirationFormat = "yyMMddhhmmss";
 
         /// <summary>
         /// The constructor.
@@ -76,7 +70,7 @@ namespace Dache.CacheHost.Communication
                 // Pre-allocate a set of reusable SocketAsyncEventArgs
                 readWriteEventArg = new SocketAsyncEventArgs();
                 readWriteEventArg.Completed += IO_Completed;
-                readWriteEventArg.UserToken = new DacheProtocolHelper.StateObject(_receiveBufferSize);
+                readWriteEventArg.UserToken = new DacheProtocolHelper.HostStateObject();
 
                 // Assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
                 readWriteEventArg.SetBuffer(_bufferManager.TakeBuffer(_receiveBufferSize), 0, _receiveBufferSize);
@@ -137,7 +131,8 @@ namespace Dache.CacheHost.Communication
 
             // Get the socket for the accepted client connection and put it into the ReadEventArg object user token
             var readEventArgs = _socketAsyncEventArgsPool.Pop();
-            ((DacheProtocolHelper.StateObject)readEventArgs.UserToken).WorkSocket = e.AcceptSocket;
+            readEventArgs.AcceptSocket = e.AcceptSocket;
+            ((DacheProtocolHelper.HostStateObject)readEventArgs.UserToken).WorkSocket = e.AcceptSocket;
             // Turn off Nagle algorithm
             e.AcceptSocket.NoDelay = true;
 
@@ -179,7 +174,7 @@ namespace Dache.CacheHost.Communication
         private void ProcessReceive(SocketAsyncEventArgs e)
         {
             // check if the remote host closed the connection
-            var state = (DacheProtocolHelper.StateObject)e.UserToken;
+            var state = (DacheProtocolHelper.HostStateObject)e.UserToken;
 
             // Increment the count of the total bytes received by the server
             // Interlocked.Add(ref _totalBytesRead, e.BytesTransferred);
@@ -190,14 +185,12 @@ namespace Dache.CacheHost.Communication
                 CloseClientSocket(e);
             }
 
-            var handler = state.WorkSocket;
             int bytesRead = 0;
 
             // Read data
             if (state.TotalBytesToRead != 0 && (bytesRead = e.BytesTransferred) > 0 && e.SocketError == SocketError.Success)
             {
-                // Append to buffer
-                e.SetBuffer(e.Offset, e.BytesTransferred);
+                byte[] currentBuffer = null;
 
                 // Check if we need to decode little endian
                 if (state.TotalBytesToRead == -1)
@@ -205,23 +198,40 @@ namespace Dache.CacheHost.Communication
                     // Parse out control bytes
                     var strippedBuffer = e.Buffer.RemoveControlByteValues(out state.TotalBytesToRead, out state.ThreadId, out state.MessageType);
                     // Take control bytes off of bytes read
-                    bytesRead -= _controlBytesDefault.Length;
+                    bytesRead -= DacheProtocolHelper.ControlBytesDefault.Length;
 
-                    // Set data
-                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, strippedBuffer, bytesRead);
+                    currentBuffer = strippedBuffer;
                 }
                 else
                 {
-                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, state.Buffer, bytesRead);
+                    currentBuffer = e.Buffer;
                 }
 
+                int numberOfBytesToRead = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
+                state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, currentBuffer, numberOfBytesToRead);
+
                 // Set total bytes read
+                var originalTotalBytesToRead = state.TotalBytesToRead;
                 state.TotalBytesToRead -= bytesRead;
+
+                // Check if we have part of another message in our received bytes
+                if (state.TotalBytesToRead < 0)
+                {
+                    // We do, so parse it out
+                    var nextMessageFrameBytes = new byte[bytesRead - originalTotalBytesToRead];
+                    Buffer.BlockCopy(currentBuffer, originalTotalBytesToRead, nextMessageFrameBytes, 0, nextMessageFrameBytes.Length);
+                    // Set total bytes to read to 0
+                    state.TotalBytesToRead = 0;
+                    state.TotalBytesToRead = -1;
+                    // Now we have the next message, so recursively process it
+                    ProcessReceive(e);
+                    return;
+                }
 
                 if (state.TotalBytesToRead > 0)
                 {
                     // Read the next block of data send from the client 
-                    bool willRaiseEvent = handler.ReceiveAsync(e);
+                    bool willRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
                     if (!willRaiseEvent)
                     {
                         ProcessReceive(e);
@@ -236,22 +246,31 @@ namespace Dache.CacheHost.Communication
             var command = CommunicationEncoding.GetString(commandBytes);
             // Process the command
             byte[] commandResult = null;
-            ProcessCommand(command, state.ThreadId, state.MessageType, handler, out commandResult);
+            ProcessCommand(command, state.ThreadId, state.MessageType, e.AcceptSocket, out commandResult);
 
             if (commandResult != null)
             {
-                // Send response
-                e.SetBuffer(commandResult, 0, commandResult.Length);
-                bool willRaiseEvent = handler.SendAsync(e);
+                // Send response after copying command to buffer
+                Buffer.BlockCopy(commandResult, 0, e.Buffer, 0, Math.Min(commandResult.Length, _receiveBufferSize));
+                e.SetBuffer(0, commandResult.Length);
+                bool willRaiseEvent = e.AcceptSocket.SendAsync(e);
                 if (!willRaiseEvent)
                 {
                     ProcessSend(e);
                 }
             }
-            else
+
+            // Read the next block of data send from the client
+            if (e.SocketError != SocketError.Success)
             {
-                // Free the SocketAsyncEventArg so they can be reused by another client
-                _socketAsyncEventArgsPool.Push(e);
+                CloseClientSocket(e);
+                return;
+            }
+
+            bool willReceiveRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
+            if (!willReceiveRaiseEvent)
+            {
+                ProcessReceive(e);
             }
         }
 
@@ -266,7 +285,7 @@ namespace Dache.CacheHost.Communication
 
         private void CloseClientSocket(SocketAsyncEventArgs e)
         {
-            var state = (DacheProtocolHelper.StateObject)e.UserToken;
+            var state = (DacheProtocolHelper.HostStateObject)e.UserToken;
 
             // Close the socket associated with the client 
             try
@@ -316,7 +335,7 @@ namespace Dache.CacheHost.Communication
                     using (var memoryStream = new MemoryStream())
                     {
                         // Write default control bytes - will be replaced later
-                        memoryStream.Write(_controlBytesDefault);
+                        memoryStream.WriteControlBytesDefault();
                         foreach (var result in results)
                         {
                             memoryStream.WriteSpace();
@@ -347,7 +366,7 @@ namespace Dache.CacheHost.Communication
                         using (var memoryStream = new MemoryStream())
                         {
                             // Write default control bytes - will be replaced later
-                            memoryStream.Write(_controlBytesDefault);
+                            memoryStream.WriteControlBytesDefault();
                             foreach (var result in results)
                             {
                                 memoryStream.WriteSpace();
@@ -418,7 +437,7 @@ namespace Dache.CacheHost.Communication
                         else
                         {
                             // Get absolute or sliding expiration
-                            if (DateTimeOffset.TryParseExact(commandParts[2], _absoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                            if (DateTimeOffset.TryParseExact(commandParts[2], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
                             {
                                 // absolute expiration
                                 cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
@@ -449,7 +468,7 @@ namespace Dache.CacheHost.Communication
                         else
                         {
                             // Get absolute or sliding expiration
-                            if (DateTimeOffset.TryParseExact(commandParts[1], _absoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                            if (DateTimeOffset.TryParseExact(commandParts[1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
                             {
                                 // absolute expiration
                                 cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);

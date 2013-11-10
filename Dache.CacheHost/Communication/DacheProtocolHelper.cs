@@ -32,15 +32,24 @@ namespace Dache.CacheHost.Communication
             return ret;
         }
 
-        public class StateObject
+        public class ClientStateObject
         {
-            public StateObject(int bufferSize)
+            public ClientStateObject(int bufferSize)
             {
                 Buffer = new byte[bufferSize];
             }
 
             public readonly byte[] Buffer = null;
 
+            public Socket WorkSocket = null;
+            public byte[] Data = new byte[0];
+            public MessageType MessageType = MessageType.Literal;
+            public int ThreadId = -1;
+            public int TotalBytesToRead = -1;
+        }
+
+        public class HostStateObject
+        {
             public Socket WorkSocket = null;
             public byte[] Data = new byte[0];
             public MessageType MessageType = MessageType.Literal;
@@ -129,7 +138,7 @@ namespace Dache.CacheHost.Communication
             threadId = (command[7] << 24) | (command[6] << 16) | (command[5] << 8) | command[4];
             delimiterType = (MessageType)command[8];
             var result = new byte[command.Length - ControlBytesDefault.Length];
-            Buffer.BlockCopy(command, 5, result, 0, result.Length);
+            Buffer.BlockCopy(command, 9, result, 0, result.Length);
             return result;
         }
     }

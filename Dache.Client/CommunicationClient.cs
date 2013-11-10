@@ -18,13 +18,13 @@ namespace Dache.Client
         // The synchronous client socket
         private Socket _client = null;
         // The client multiplexer
-        private readonly Dictionary<int, KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent>> _clientMultiplexer = null;
+        private readonly Dictionary<int, KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent>> _clientMultiplexer = null;
         // The client multiplexer reader writer lock
         private readonly ReaderWriterLockSlim _clientMultiplexerLock = new ReaderWriterLockSlim();
         // The pool of manual reset events
         private readonly Pool<ManualResetEvent> _manualResetEventPool = null;
         // The pool of state objects
-        private readonly Pool<DacheProtocolHelper.StateObject> _stateObjectPool = null;
+        private readonly Pool<DacheProtocolHelper.ClientStateObject> _stateObjectPool = null;
 
         // The remote endpoint
         private readonly IPEndPoint _remoteEndPoint = null;
@@ -84,15 +84,15 @@ namespace Dache.Client
             _receiveBufferSize = receiveBufferSize;
 
             // Define the client multiplexer
-            _clientMultiplexer = new Dictionary<int, KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent>>(_maximumConnections);
+            _clientMultiplexer = new Dictionary<int, KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent>>(_maximumConnections);
 
             // Initialize and populate the pools
             _manualResetEventPool = new Pool<ManualResetEvent>(_maximumConnections, () => new ManualResetEvent(false));
-            _stateObjectPool = new Pool<DacheProtocolHelper.StateObject>(_maximumConnections, () => new DacheProtocolHelper.StateObject(_receiveBufferSize));
+            _stateObjectPool = new Pool<DacheProtocolHelper.ClientStateObject>(_maximumConnections, () => new DacheProtocolHelper.ClientStateObject(_receiveBufferSize));
             for (int i = 0; i < _maximumConnections; i++)
             {
                 _manualResetEventPool.Push(new ManualResetEvent(false));
-                _stateObjectPool.Push(new DacheProtocolHelper.StateObject(_receiveBufferSize));
+                _stateObjectPool.Push(new DacheProtocolHelper.ClientStateObject(_receiveBufferSize));
             }
 
             // Initialize buffer
@@ -1008,7 +1008,10 @@ namespace Dache.Client
                 EnrollMultiplexer(threadId);
             }
 
-            _client.BeginSend(command, 0, command.Length, 0, SendCallback, null);
+            for (int i = 0; i < command.Length; i = i + _receiveBufferSize)
+            {
+                _client.BeginSend(command, i, Math.Min(_receiveBufferSize, command.Length - i), 0, SendCallback, null);
+            }
         }
 
         private void SendCallback(IAsyncResult asyncResult)
@@ -1038,16 +1041,16 @@ namespace Dache.Client
         private void ReceiveCallback(IAsyncResult asyncResult)
         {
             // If this is the first receive call for message frame, the state will be null
-            var state = asyncResult as DacheProtocolHelper.StateObject;
+            var state = asyncResult as DacheProtocolHelper.ClientStateObject;
 
             int bytesRead = _client.EndReceive(asyncResult);
 
             ProcessMessage(_receiveBuffer, state, bytesRead);
         }
 
-        private KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> GetMultiplexerValue(int threadId)
+        private KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent> GetMultiplexerValue(int threadId)
         {
-            KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> stateAndManualResetEvent;
+            KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent> stateAndManualResetEvent;
             _clientMultiplexerLock.EnterReadLock();
             try
             {
@@ -1071,7 +1074,7 @@ namespace Dache.Client
             try
             {
                 // Add manual reset event for current thread
-                _clientMultiplexer.Add(threadId, new KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent>(_stateObjectPool.Pop(), _manualResetEventPool.Pop()));
+                _clientMultiplexer.Add(threadId, new KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent>(_stateObjectPool.Pop(), _manualResetEventPool.Pop()));
             }
             catch
             {
@@ -1085,7 +1088,7 @@ namespace Dache.Client
 
         private void UnenrollMultiplexer(int threadId)
         {
-            KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> stateAndManualResetEvent;
+            KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent> stateAndManualResetEvent;
             _clientMultiplexerLock.EnterUpgradeableReadLock();
             try
             {
@@ -1118,7 +1121,7 @@ namespace Dache.Client
 
         private void SignalMultiplexer(int threadId)
         {
-            KeyValuePair<DacheProtocolHelper.StateObject, ManualResetEvent> stateAndManualResetEvent;
+            KeyValuePair<DacheProtocolHelper.ClientStateObject, ManualResetEvent> stateAndManualResetEvent;
             _clientMultiplexerLock.EnterReadLock();
             try
             {
@@ -1136,7 +1139,7 @@ namespace Dache.Client
             }
         }
 
-        private void ProcessMessage(byte[] buffer, DacheProtocolHelper.StateObject state, int bytesRead)
+        private void ProcessMessage(byte[] buffer, DacheProtocolHelper.ClientStateObject state, int bytesRead)
         {
             int totalBytesToRead = state == null ? -1 : state.TotalBytesToRead;
             DacheProtocolHelper.MessageType messageType = state == null ? DacheProtocolHelper.MessageType.Literal : state.MessageType;
@@ -1144,7 +1147,7 @@ namespace Dache.Client
             // Read data
             if (totalBytesToRead != 0 && bytesRead > 0)
             {
-                int numberOfBytesToSet = 0;
+                byte[] currentBuffer = null;
 
                 // Check if we need to get our control byte values
                 if (totalBytesToRead == -1)
@@ -1168,15 +1171,15 @@ namespace Dache.Client
                     // Take control bytes off of bytes read
                     bytesRead -= DacheProtocolHelper.ControlBytesDefault.Length;
 
-                    // Set data
-                    numberOfBytesToSet = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
-                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, strippedBuffer, numberOfBytesToSet);
+                    currentBuffer = strippedBuffer;
                 }
                 else
                 {
-                    numberOfBytesToSet = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
-                    state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, _receiveBuffer, numberOfBytesToSet);
+                    currentBuffer = _receiveBuffer;
                 }
+
+                int numberOfBytesToRead = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
+                state.Data = DacheProtocolHelper.Combine(state.Data, state.Data.Length, currentBuffer, numberOfBytesToRead);
 
                 // Set total bytes read
                 var originalTotalBytesToRead = state.TotalBytesToRead;
@@ -1195,14 +1198,15 @@ namespace Dache.Client
                 }
 
                 // Check if we're done with this message frame
-                if (state.TotalBytesToRead == 0)
+                if (state.TotalBytesToRead > 0)
                 {
-                    // All done, so signal the event for this thread
-                    SignalMultiplexer(state.ThreadId);
+                    // Read more
+                    _client.BeginReceive(_receiveBuffer, 0, _receiveBuffer.Length, 0, ReceiveCallback, state);
+                    return;
                 }
 
-                // Read more
-                _client.BeginReceive(_receiveBuffer, 0, _receiveBuffer.Length, 0, ReceiveCallback, state);
+                // All done, so signal the event for this thread
+                SignalMultiplexer(state.ThreadId);
             }
         }
 
