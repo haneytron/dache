@@ -21,308 +21,63 @@ namespace Dache.CacheHost.Communication
     public class CacheHostServer : ICacheHostContract, IRunnable
     {
         // The cache server
-        private readonly Socket _server = null;
-        // The socket async event args pool
-        private readonly Pool<SocketAsyncEventArgs> _socketAsyncEventArgsPool = null;
-        // The buffer manager
-        private readonly BufferManager _bufferManager = null;
-        // Read, write (don't alloc buffer space for accepts)
-        const int _opsToPreAllocate = 2;
-        // The total number of clients connected to the server 
-        private int _currentlyConnectedClients = 0;
+        private readonly SocketRocker _server = null;
+        // The local end point
+        private readonly IPEndPoint _localEndPoint = null;
         // The maximum number of simultaneous connections
         private readonly int _maximumConnections = 0;
-        // The semaphore that enforces the maximum numbers of simultaneous connections
-        private readonly Semaphore _maxConnectionsSemaphore;
-        // The receive buffer size
-        private readonly int _receiveBufferSize = 0;
+        // The message buffer size
+        private readonly int _messageBufferSize = 0;
+        // The thread used to receive messages
+        private readonly Thread _receiveThread = null;
 
         // The connection receiver cancellation token source
         private readonly CancellationTokenSource _connectionReceiverCancellationTokenSource = new CancellationTokenSource();
         // The default cache item policy
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
-        // The communication encoding
-        public static readonly Encoding CommunicationEncoding = Encoding.UTF8;
 
         /// <summary>
         /// The constructor.
         /// </summary>
         /// <param name="port">The port.</param>
         /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
-        /// <param name="receiveBufferSize">The buffer size to use for each socket I/O operation.</param>
-        public CacheHostServer(int port, int maximumConnections, int receiveBufferSize)
+        /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
+        public CacheHostServer(int port, int maximumConnections, int messageBufferSize)
         {
-            // Set maximum connections and receive buffer size
+            // Set maximum connections and message buffer size
             _maximumConnections = maximumConnections;
-            _maxConnectionsSemaphore = new Semaphore(maximumConnections, maximumConnections);
-            _receiveBufferSize = receiveBufferSize;
-
-            // Initialize the socket async event args pool
-            _socketAsyncEventArgsPool = new Pool<SocketAsyncEventArgs>(maximumConnections, () => new SocketAsyncEventArgs());
-
-            // Allocate buffers such that the maximum number of sockets can have one outstanding read and write posted to the socket simultaneously
-            _bufferManager = BufferManager.CreateBufferManager(receiveBufferSize * maximumConnections * _opsToPreAllocate, receiveBufferSize);
-
-            // Preallocate pool of SocketAsyncEventArgs objects
-            SocketAsyncEventArgs readWriteEventArg = null;
-            for (int i = 0; i < maximumConnections; i++)
-            {
-                // Pre-allocate a set of reusable SocketAsyncEventArgs
-                readWriteEventArg = new SocketAsyncEventArgs();
-                readWriteEventArg.Completed += IO_Completed;
-                readWriteEventArg.UserToken = new DacheProtocolHelper.HostStateObject();
-
-                // Assign a byte buffer from the buffer pool to the SocketAsyncEventArg object
-                readWriteEventArg.SetBuffer(_bufferManager.TakeBuffer(_receiveBufferSize), 0, _receiveBufferSize);
-
-                // add SocketAsyncEventArg to the pool
-                _socketAsyncEventArgsPool.Push(readWriteEventArg);
-            }
+            _messageBufferSize = messageBufferSize;
 
             // Establish the endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry("localhost");
             var ipAddress = ipHostInfo.AddressList.First(i => i.AddressFamily == AddressFamily.InterNetwork);
-            var localEndPoint = new IPEndPoint(ipAddress, port);
+            _localEndPoint = new IPEndPoint(ipAddress, port);
 
-            // Create the TCP/IP socket
-            _server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            // Disable the Nagle algorithm
-            _server.NoDelay = true;
-            // Bind to endpoint
-            _server.Bind(localEndPoint);
+            // Define the socket rocker
+            _server = new SocketRocker(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
+            // Define the receive thread
+            _receiveThread = new Thread(ReceiveThread);
         }
 
-        /// <summary>
-        /// Begins an operation to accept a connection request from the client  
-        /// </summary> 
-        /// <param name="acceptEventArg">The context object to use when issuing the accept operation on the server's listening socket.</param> 
-        public void StartAccept(SocketAsyncEventArgs acceptEventArg)
+        private void ReceiveThread()
         {
-            if (acceptEventArg == null)
+            while (true)
             {
-                acceptEventArg = new SocketAsyncEventArgs();
-                acceptEventArg.Completed += AcceptEventArg_Completed;
+                int threadId = 0;
+                // Get a message - will block
+                var command = _server.ServerReceive(out threadId);
+                // Parse out the command byte
+                DacheProtocolHelper.MessageType messageType = DacheProtocolHelper.MessageType.Literal;
+                DacheProtocolHelper.ExtractControlByte(command, out messageType);
+                // Get the command string skipping our control byte
+                var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command, 1, command.Length - 1);
+                var commandResult = ProcessCommand(commandString, messageType);
+                // Send the result
+                _server.ServerSend(commandResult, threadId);
             }
-            else
-            {
-                // Socket must be cleared since the context object is being reused
-                acceptEventArg.AcceptSocket = null;
-            }
-
-            _maxConnectionsSemaphore.WaitOne();
-            bool willRaiseEvent = _server.AcceptAsync(acceptEventArg);
-            if (!willRaiseEvent)
-            {
-                ProcessAccept(acceptEventArg);
-            }
-        }
-
-        /// <summary>
-        /// This method is the callback method associated with Socket.AcceptAsync operations and is invoked when an accept operation is complete.
-        /// </summary>
-        private void AcceptEventArg_Completed(object sender, SocketAsyncEventArgs e)
-        {
-            ProcessAccept(e);
-        }
-
-        private void ProcessAccept(SocketAsyncEventArgs e)
-        {
-            Interlocked.Increment(ref _currentlyConnectedClients);
-
-            // Get the socket for the accepted client connection and put it into the ReadEventArg object user token
-            var readEventArgs = _socketAsyncEventArgsPool.Pop();
-            readEventArgs.AcceptSocket = e.AcceptSocket;
-            ((DacheProtocolHelper.HostStateObject)readEventArgs.UserToken).WorkSocket = e.AcceptSocket;
-            // Turn off Nagle algorithm
-            e.AcceptSocket.NoDelay = true;
-
-            // As soon as the client is connected, post a receive to the connection
-            bool willRaiseEvent = e.AcceptSocket.ReceiveAsync(readEventArgs);
-            if (!willRaiseEvent)
-            {
-                ProcessReceive(readEventArgs);
-            }
-
-            // Accept the next connection request
-            StartAccept(e);
-        }
-
-        /// <summary>
-        /// This method is called whenever a receive or send operation is completed on a socket.
-        /// </summary>
-        /// <param name="e">SocketAsyncEventArg associated with the completed operation.</param>
-        private void IO_Completed(object sender, SocketAsyncEventArgs e)
-        {
-            // determine which type of operation just completed and call the associated handler 
-            switch (e.LastOperation)
-            {
-                case SocketAsyncOperation.Receive:
-                    ProcessReceive(e);
-                    break;
-                case SocketAsyncOperation.Send:
-                    ProcessSend(e);
-                    break;
-                default:
-                    throw new ArgumentException("The last operation completed on the socket was not a receive or send");
-            }
-        }
-
-        /// <summary>
-        /// This method is invoked when an asynchronous receive operation completes. If the remote host closed the connection, then the socket is closed.
-        /// If data was received then the data is processed.
-        /// </summary>
-        private void ProcessReceive(SocketAsyncEventArgs e)
-        {
-            var state = (DacheProtocolHelper.HostStateObject)e.UserToken;
-
-            // Increment the count of the total bytes received by the server
-            // Interlocked.Add(ref _totalBytesRead, e.BytesTransferred);
-
-            // Check for errors
-            if (e.SocketError != SocketError.Success)
-            {
-                CloseClientSocket(e);
-            }
-
-            int bytesRead = 0;
-
-            // Read data
-            if (state.TotalBytesToRead != 0 && (bytesRead = e.BytesTransferred) > 0 && e.SocketError == SocketError.Success)
-            {
-                ProcessReceiveData(e, 0, bytesRead);
-            }
-        }
-
-        private void ProcessReceiveData(SocketAsyncEventArgs e, int bufferOffset, int bytesRead)
-        {
-            var state = (DacheProtocolHelper.HostStateObject)e.UserToken;
-
-            int currentIndexOffset = bufferOffset;
-
-            // Check if we need to get our control byte values
-            if (state.TotalBytesToRead == -1)
-            {
-                // Parse out control bytes
-                e.Buffer.ExtractControlByteValues(currentIndexOffset, out state.TotalBytesToRead, out state.ThreadId, out state.MessageType);
-                currentIndexOffset += DacheProtocolHelper.ControlBytesDefault.Length;
-                // Take control bytes off of bytes read
-                bytesRead -= DacheProtocolHelper.ControlBytesDefault.Length;
-            }
-
-            int numberOfBytesToRead = bytesRead > state.TotalBytesToRead ? state.TotalBytesToRead : bytesRead;
-            state.Data = DacheProtocolHelper.Combine(state.Data, e.Buffer, currentIndexOffset, numberOfBytesToRead);
-
-            // Set total bytes read
-            var originalTotalBytesToRead = state.TotalBytesToRead + currentIndexOffset;
-            state.TotalBytesToRead -= bytesRead;
-
-            // Get the command bytes
-            var commandBytes = state.Data;
-
-            bool isRecursive = false;
-
-            // Check if we have part of another message in our received bytes
-            if (state.TotalBytesToRead < 0)
-            {
-                // Set total bytes to read to -1
-                state.TotalBytesToRead = -1;
-                state.Data = new byte[0];
-                // Now we have the next message, so recursively process it
-                ProcessReceiveData(e, originalTotalBytesToRead, bytesRead + currentIndexOffset - originalTotalBytesToRead);
-                isRecursive = true;
-            }
-            else if (state.TotalBytesToRead > 0)
-            {
-                // Read the next block of data send from the client 
-                bool willRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
-                if (!willRaiseEvent)
-                {
-                    ProcessReceive(e);
-                }
-                return;
-            }
-
-            // Parse command from bytes
-            var command = CommunicationEncoding.GetString(commandBytes);
-            // Process the command
-            byte[] commandResult = null;
-            ProcessCommand(command, state.ThreadId, state.MessageType, e.AcceptSocket, out commandResult);
-
-            if (commandResult != null)
-            {
-                // Send response after copying command to buffer
-                Buffer.BlockCopy(commandResult, 0, e.Buffer, 0, Math.Min(commandResult.Length, _receiveBufferSize));
-                e.SetBuffer(0, commandResult.Length);
-                bool willRaiseEvent = e.AcceptSocket.SendAsync(e);
-                if (!willRaiseEvent)
-                {
-                    ProcessSend(e);
-                }
-            }
-
-            if (isRecursive)
-            {
-                return;
-            }
-
-            // Reset state
-            if (state.TotalBytesToRead == 0)
-            {
-                state.TotalBytesToRead = -1;
-                state.Data = new byte[0];
-                state.ThreadId = -1;
-                state.WorkSocket = null;
-            }
-
-            // Read the next block of data sent from the client
-            try
-            {
-                bool willReceiveRaiseEvent = e.AcceptSocket.ReceiveAsync(e);
-                if (!willReceiveRaiseEvent)
-                {
-                    ProcessReceive(e);
-                }
-            }
-            catch
-            {
-                CloseClientSocket(e);
-            }
-        }
-
-        /// <summary>
-        /// This method is invoked when an asynchronous send operation completes. The method issues another receive on the socket to read any additional data sent from the client.
-        /// </summary>
-        private void ProcessSend(SocketAsyncEventArgs e)
-        {
-            // Free the SocketAsyncEventArg so they can be reused by another client
-            e.SetBuffer(0, _receiveBufferSize);
-            _socketAsyncEventArgsPool.Push(e);
-        }
-
-        private void CloseClientSocket(SocketAsyncEventArgs e)
-        {
-            // Close the socket associated with the client 
-            try
-            {
-                e.AcceptSocket.Shutdown(SocketShutdown.Send);
-            }
-            // Throws if client process has already closed 
-            catch
-            {
-                // ignore
-            }
-
-            e.AcceptSocket.Close();
-
-            // Decrement the counter keeping track of the total number of clients connected to the server
-            Interlocked.Decrement(ref _currentlyConnectedClients);
-            _maxConnectionsSemaphore.Release();
-
-            // Free the SocketAsyncEventArg so they can be reused by another client
-            _socketAsyncEventArgsPool.Push(e);
         }
          
-        private void ProcessCommand(string command, int threadId, DacheProtocolHelper.MessageType messageType, Socket handler, out byte[] commandResult)
+        private byte[] ProcessCommand(string command, DacheProtocolHelper.MessageType messageType)
         {
             string[] commandParts = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             List<string> cacheKeys = null;
@@ -330,7 +85,7 @@ namespace Dache.CacheHost.Communication
             List<byte[]> results = null;
             var absoluteExpiration = DateTimeOffset.MinValue;
             int slidingExpiration = 0;
-            commandResult = null;
+            byte[] commandResult = null;
 
             switch (messageType)
             {
@@ -339,7 +94,7 @@ namespace Dache.CacheHost.Communication
                     // Sanitize the command
                     if (commandParts.Length != 2)
                     {
-                        return;
+                        return null;
                     }
 
                     // The only command with no delimiter is get-tag so do that
@@ -348,8 +103,7 @@ namespace Dache.CacheHost.Communication
                     // Structure the results for sending
                     using (var memoryStream = new MemoryStream())
                     {
-                        // Write default control bytes - will be replaced later
-                        memoryStream.WriteControlBytesDefault();
+                        memoryStream.WriteControlBytePlaceHolder();
                         foreach (var result in results)
                         {
                             memoryStream.WriteSpace();
@@ -358,8 +112,8 @@ namespace Dache.CacheHost.Communication
                         commandResult = memoryStream.ToArray();
                     }
 
-                    // Set control bytes
-                    commandResult.SetControlBytes(threadId, DacheProtocolHelper.MessageType.RepeatingCacheObjects);
+                    // Set control byte
+                    commandResult.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheObjects);
 
                     break;
                 }
@@ -371,7 +125,7 @@ namespace Dache.CacheHost.Communication
                         // Sanitize the command
                         if (commandParts.Length < 2)
                         {
-                            return;
+                            return null;
                         }
 
                         cacheKeys = commandParts.Skip(1).ToList();
@@ -379,8 +133,7 @@ namespace Dache.CacheHost.Communication
                         // Structure the results for sending
                         using (var memoryStream = new MemoryStream())
                         {
-                            // Write default control bytes - will be replaced later
-                            memoryStream.WriteControlBytesDefault();
+                            memoryStream.WriteControlBytePlaceHolder();
                             foreach (var result in results)
                             {
                                 memoryStream.WriteSpace();
@@ -389,15 +142,15 @@ namespace Dache.CacheHost.Communication
                             commandResult = memoryStream.ToArray();
                         }
 
-                        // Set control bytes
-                        commandResult.SetControlBytes(threadId, DacheProtocolHelper.MessageType.RepeatingCacheObjects);
+                        // Set control byte
+                        commandResult.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheObjects);
                     }
                     else if (command.StartsWith("del-tag", StringComparison.OrdinalIgnoreCase))
                     {
                         // Sanitize the command
                         if (commandParts.Length < 2)
                         {
-                            return;
+                            return null;
                         }
 
                         cacheKeys = commandParts.Skip(1).ToList();
@@ -412,7 +165,7 @@ namespace Dache.CacheHost.Communication
                         // Sanitize the command
                         if (commandParts.Length < 2)
                         {
-                            return;
+                            return null;
                         }
 
                         cacheKeys = commandParts.Skip(1).ToList();
@@ -466,7 +219,7 @@ namespace Dache.CacheHost.Communication
                             else
                             {
                                 // Neither worked, so it's a bad message
-                                return;
+                                return null;
                             }
                         }
                     }
@@ -497,7 +250,7 @@ namespace Dache.CacheHost.Communication
                             else
                             {
                                 // Neither worked, so it's a bad message
-                                return;
+                                return null;
                             }
                         }
                     }
@@ -505,6 +258,9 @@ namespace Dache.CacheHost.Communication
                     break;
                 }
             }
+            
+            // Return the result
+            return commandResult;
         }
 
         private static IEnumerable<KeyValuePair<string, byte[]>> ParseCacheKeysAndObjects(string[] commandParts, int startIndex)
@@ -523,11 +279,8 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         public void Start()
         {
-            // Listen for connections with a backlog of 100
-            _server.Listen(100);
-            
-            // Post accept on the listening socket
-            StartAccept(null);
+            // Listen for connections
+            _server.Listen(_localEndPoint);
         }
 
         /// <summary>
@@ -539,22 +292,7 @@ namespace Dache.CacheHost.Communication
             _connectionReceiverCancellationTokenSource.Cancel();
             
             // Shutdown and close the server socket
-            try
-            {
-                _server.Shutdown(SocketShutdown.Both);
-                _server.Close();
-            }
-            catch
-            {
-                try
-                {
-                    _server.Close();
-                }
-                catch
-                {
-
-                }
-            }
+            _server.Close();
         }
 
         /// <summary>

@@ -12,45 +12,12 @@ namespace Dache.CacheHost.Communication
     {
         // The communication encoding
         public static readonly Encoding CommunicationEncoding = Encoding.UTF8;
-        // The communication protocol control bytes default - 4 little endian bytes for message length + 4 little endian bytes for thread id + 1 control byte for message type
-        public static readonly byte[] ControlBytesDefault = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        // The communication protocol control byte default - 1 control byte for message type
+        public static readonly byte[] ControlByteDefault = new byte[] { 0 };
         // The byte that represents a space
         public static readonly byte[] SpaceByte = CommunicationEncoding.GetBytes(" ");
         // The absolute expiration format
         public const string AbsoluteExpirationFormat = "yyMMddhhmmss";
-
-        public static byte[] Combine(byte[] first, byte[] second, int secondOffset, int secondLength)
-        {
-            byte[] ret = new byte[first.Length + secondLength];
-            Buffer.BlockCopy(first, 0, ret, 0, first.Length);
-            Buffer.BlockCopy(second, secondOffset, ret, first.Length, secondLength);
-            return ret;
-        }
-
-        public class ClientStateObject
-        {
-            public ClientStateObject(int bufferSize)
-            {
-                Buffer = new byte[bufferSize];
-            }
-
-            public readonly byte[] Buffer = null;
-
-            public Socket WorkSocket = null;
-            public byte[] Data = new byte[0];
-            public MessageType MessageType = MessageType.Literal;
-            public int ThreadId = -1;
-            public int TotalBytesToRead = -1;
-        }
-
-        public class HostStateObject
-        {
-            public Socket WorkSocket = null;
-            public byte[] Data = new byte[0];
-            public MessageType MessageType = MessageType.Literal;
-            public int ThreadId = -1;
-            public int TotalBytesToRead = -1;
-        }
 
         public enum MessageType
         {
@@ -92,15 +59,15 @@ namespace Dache.CacheHost.Communication
             memoryStream.Write(bytes, 0, bytes.Length);
         }
 
-        public static void WriteControlBytesDefault(this MemoryStream memoryStream)
-        {
-            memoryStream.Write(ControlBytesDefault, 0, ControlBytesDefault.Length);
-        }
-
         public static void WriteBase64(this MemoryStream memoryStream, byte[] value)
         {
             var bytes = CommunicationEncoding.GetBytes(Convert.ToBase64String(value));
             memoryStream.Write(bytes, 0, bytes.Length);
+        }
+
+        public static void WriteControlBytePlaceHolder(this MemoryStream memoryStream)
+        {
+            memoryStream.Write(ControlByteDefault, 0, ControlByteDefault.Length);
         }
 
         public static void WriteSpace(this MemoryStream memoryStream)
@@ -108,30 +75,15 @@ namespace Dache.CacheHost.Communication
             memoryStream.Write(SpaceByte, 0, SpaceByte.Length);
         }
 
-        public static void SetControlBytes(this byte[] command, int threadId, MessageType delimiterType)
+        public static void SetControlByte(this byte[] command, MessageType messageType)
         {
-            var length = command.Length - ControlBytesDefault.Length;
-            // Set little endian message length
-            command[0] = (byte)length;
-            command[1] = (byte)((length >> 8) & 0xFF);
-            command[2] = (byte)((length >> 16) & 0xFF);
-            command[3] = (byte)((length >> 24) & 0xFF);
-
-            // Set little endian thread id
-            command[4] = (byte)threadId;
-            command[5] = (byte)((threadId >> 8) & 0xFF);
-            command[6] = (byte)((threadId >> 16) & 0xFF);
-            command[7] = (byte)((threadId >> 24) & 0xFF);
-
             // Set message type
-            command[8] = Convert.ToByte((int)delimiterType);
+            command[0] = Convert.ToByte((int)messageType);
         }
 
-        public static void ExtractControlByteValues(this byte[] command, int offset, out int messageLength, out int threadId, out MessageType delimiterType)
+        public static void ExtractControlByte(this byte[] command, out MessageType messageType)
         {
-            messageLength = (command[offset + 3] << 24) | (command[offset + 2] << 16) | (command[offset + 1] << 8) | command[offset + 0];
-            threadId = (command[offset + 7] << 24) | (command[offset + 6] << 16) | (command[offset + 5] << 8) | command[offset + 4];
-            delimiterType = (MessageType)command[offset + 8];
+            messageType = (MessageType)command[0];
         }
     }
 }

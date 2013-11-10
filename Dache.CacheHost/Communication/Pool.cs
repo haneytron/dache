@@ -10,12 +10,14 @@ namespace Dache.CacheHost.Communication
         private readonly Queue<T> _queue = null;
         private readonly int _initialPoolCount = 0;
         private readonly Func<T> _newItemMethod = null;
+        private readonly Action<T> _resetItemMethod = null;
 
-        public Pool(int poolCount, Func<T> newItemMethod)
+        public Pool(int poolCount, Func<T> newItemMethod, Action<T> resetItemMethod)
         {
             _queue = new Queue<T>(poolCount);
             _initialPoolCount = poolCount;
             _newItemMethod = newItemMethod;
+            _resetItemMethod = resetItemMethod;
         }
 
         public void Push(T item)
@@ -34,9 +36,13 @@ namespace Dache.CacheHost.Communication
 
         public T Pop()
         {
+            T result = null;
+
             if (_queue.Count == 0)
             {
-                return _newItemMethod();
+                result = _newItemMethod();
+                _resetItemMethod(result);
+                return result;
             }
 
             lock (_queue)
@@ -46,7 +52,9 @@ namespace Dache.CacheHost.Communication
                     return _newItemMethod();
                 }
 
-                return _queue.Dequeue();
+                result = _queue.Dequeue();
+                _resetItemMethod(result);
+                return result;
             }
         }
     }

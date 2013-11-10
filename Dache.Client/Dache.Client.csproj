@@ -54,6 +54,9 @@
     <Compile Include="..\Dache.CacheHost\Communication\Pool.cs">
       <Link>Communication\Pool.cs</Link>
     </Compile>
+      <Compile Include="..\Dache.CacheHost\Communication\SocketRocker.cs">
+          <Link>Communication\SocketRocker.cs</Link>
+      </Compile>
     <Compile Include="..\Dache.Core\Logging\EventViewerLogger.cs">
       <Link>Logging\EventViewerLogger.cs</Link>
     </Compile>
