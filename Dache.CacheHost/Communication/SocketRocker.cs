@@ -28,7 +28,9 @@ namespace Dache.CacheHost.Communication
         private readonly Semaphore _maxConnectionsSemaphore;
 
         // The receive buffer queue
-        private readonly BlockingQueue<KeyValuePair<byte[], int>> _receiveBufferQueue = null;
+        private readonly Dictionary<int, BlockingQueue<KeyValuePair<byte[], int>>> _receiveBufferQueue = null;
+        // The receive buffer queue lock
+        private readonly ReaderWriterLockSlim _receiveBufferQueueLock = new ReaderWriterLockSlim();
 
         // The function that handles received messages
         private Action<ReceivedMessage> _receivedMessageFunc = null;
@@ -82,7 +84,7 @@ namespace Dache.CacheHost.Communication
             _maximumConnections = maximumConnections;
             _maxConnectionsSemaphore = new Semaphore(maximumConnections, maximumConnections);
 
-            _receiveBufferQueue = new BlockingQueue<KeyValuePair<byte[], int>>(maximumConnections * 10);
+            _receiveBufferQueue = new Dictionary<int, BlockingQueue<KeyValuePair<byte[], int>>>(maximumConnections);
 
             // Initialize the client multiplexer
             _clientMultiplexer = new Dictionary<int, MultiplexerData>(maximumConnections);
@@ -156,6 +158,17 @@ namespace Dache.CacheHost.Communication
             messageState.Handler = _socket;
             // Get a buffer from the buffer pool
             var buffer = _bufferPool.Pop();
+
+            // Create receive queue for this client
+            _receiveBufferQueueLock.EnterWriteLock();
+            try
+            {
+                _receiveBufferQueue[messageState.Handler.GetHashCode()] = new BlockingQueue<KeyValuePair<byte[], int>>(_maximumConnections * 10);
+            }
+            finally
+            {
+                _receiveBufferQueueLock.ExitWriteLock();
+            }
 
             // Post a receive to the socket as the client will be continuously receiving messages to be pushed to the queue
             _socket.BeginReceive(buffer, 0, buffer.Length, 0, ReceiveCallback, new KeyValuePair<MessageState, byte[]>(messageState, buffer));
@@ -256,6 +269,17 @@ namespace Dache.CacheHost.Communication
             var buffer = _bufferPool.Pop();
             handler.BeginReceive(buffer, 0, buffer.Length, 0, ReceiveCallback, new KeyValuePair<MessageState, byte[]>(messageState, buffer));
 
+            // Create receive queue for this client
+            _receiveBufferQueueLock.EnterWriteLock();
+            try
+            {
+                _receiveBufferQueue[messageState.Handler.GetHashCode()] = new BlockingQueue<KeyValuePair<byte[], int>>(_maximumConnections * 10);
+            }
+            finally
+            {
+                _receiveBufferQueueLock.ExitWriteLock();
+            }
+
             // Process all incoming messages
             ProcessReceivedMessage(messageState);
         }
@@ -274,7 +298,21 @@ namespace Dache.CacheHost.Communication
             if (bytesRead > 0)
             {
                 // Add buffer to queue
-                _receiveBufferQueue.Enqueue(new KeyValuePair<byte[], int>(buffer, bytesRead));
+                BlockingQueue<KeyValuePair<byte[], int>> queue = null;
+                _receiveBufferQueueLock.EnterReadLock();
+                try
+                {
+                    if (!_receiveBufferQueue.TryGetValue(messageState.Handler.GetHashCode(), out queue))
+                    {
+                        throw new Exception("FATAL: No receive queue created for current socket");
+                    }
+                }
+                finally
+                {
+                    _receiveBufferQueueLock.ExitReadLock();
+                }
+
+                queue.Enqueue(new KeyValuePair<byte[], int>(buffer, bytesRead));
                 
                 // Post receive on the handler socket
                 buffer = _bufferPool.Pop();
@@ -293,7 +331,21 @@ namespace Dache.CacheHost.Communication
                 if (messageState.Buffer == null)
                 {
                     // Get the next buffer
-                    var receiveBufferEntry = _receiveBufferQueue.Dequeue();
+                    BlockingQueue<KeyValuePair<byte[], int>> queue = null;
+                    _receiveBufferQueueLock.EnterReadLock();
+                    try
+                    {
+                        if (!_receiveBufferQueue.TryGetValue(messageState.Handler.GetHashCode(), out queue))
+                        {
+                            throw new Exception("FATAL: No receive queue created for current socket");
+                        }
+                    }
+                    finally
+                    {
+                        _receiveBufferQueueLock.ExitReadLock();
+                    }
+
+                    var receiveBufferEntry = queue.Dequeue();
                     messageState.Buffer = receiveBufferEntry.Key;
                     currentOffset = 0;
                     bytesRead = receiveBufferEntry.Value;
@@ -310,7 +362,21 @@ namespace Dache.CacheHost.Communication
                         // TODO: loop until we have all data
 
                         // Combine the buffers
-                        var nextBufferEntry = _receiveBufferQueue.Dequeue();
+                        BlockingQueue<KeyValuePair<byte[], int>> queue = null;
+                        _receiveBufferQueueLock.EnterReadLock();
+                        try
+                        {
+                            if (!_receiveBufferQueue.TryGetValue(messageState.Handler.GetHashCode(), out queue))
+                            {
+                                throw new Exception("FATAL: No receive queue created for current socket");
+                            }
+                        }
+                        finally
+                        {
+                            _receiveBufferQueueLock.ExitReadLock();
+                        }
+
+                        var nextBufferEntry = queue.Dequeue();
                         var combinedBuffer = new byte[bytesRead + nextBufferEntry.Value];
                         Buffer.BlockCopy(messageState.Buffer, currentOffset, combinedBuffer, 0, bytesRead);
                         Buffer.BlockCopy(nextBufferEntry.Key, 0, combinedBuffer, bytesRead, nextBufferEntry.Value);
@@ -366,9 +432,7 @@ namespace Dache.CacheHost.Communication
                 {
                     // Get new state for the next message but transfer over handler
                     Socket handler = messageState.Handler;
-                    _messageStatePool.Push(messageState);
-                    _bufferPool.Push(messageState.Buffer);
-                    messageState = _messageStatePool.Pop();
+                    messageState.Data.Dispose();
                     messageState.Data = new MemoryStream();
                     messageState.Handler = handler;
                     messageState.TotalBytesToRead = -1;
@@ -376,6 +440,7 @@ namespace Dache.CacheHost.Communication
                 }
 
                 // Reset buffer for next message
+                _bufferPool.Push(messageState.Buffer);
                 messageState.Buffer = null;
             }
         }
