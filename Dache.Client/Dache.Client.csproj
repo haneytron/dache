@@ -45,6 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Dache.CacheHost\Communication\BlockingQueue.cs">
+        <Link>Communication\BlockingQueue.cs</Link>
+    </Compile>
     <Compile Include="..\Dache.CacheHost\Communication\DacheProtocolHelper.cs">
       <Link>Communication\DacheProtocolHelper.cs</Link>
     </Compile>

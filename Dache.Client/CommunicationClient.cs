@@ -85,7 +85,7 @@ namespace Dache.Client
         public void Connect()
         {
             // Define the socket rocker
-            _client = new SocketRocker(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), _messageBufferSize, _maximumConnections, false);
+            _client = new SocketRocker(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), _messageBufferSize, _maximumConnections);
 
             try
             {
@@ -307,7 +307,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }
@@ -355,7 +355,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }
@@ -403,7 +403,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }
@@ -452,7 +452,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }
@@ -552,7 +552,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }
@@ -605,7 +605,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }
@@ -658,7 +658,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }
@@ -712,7 +712,7 @@ namespace Dache.Client
                 }
 
                 // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
                 // Send
                 _client.ClientSend(command, false);
             }

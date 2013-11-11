@@ -6,9 +6,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Caching;
-using System.ServiceModel.Channels;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 using Dache.Core.Routing;
@@ -28,8 +28,6 @@ namespace Dache.CacheHost.Communication
         private readonly int _maximumConnections = 0;
         // The message buffer size
         private readonly int _messageBufferSize = 0;
-        // The thread used to receive messages
-        private readonly Thread _receiveThread = null;
 
         // The connection receiver cancellation token source
         private readonly CancellationTokenSource _connectionReceiverCancellationTokenSource = new CancellationTokenSource();
@@ -54,29 +52,22 @@ namespace Dache.CacheHost.Communication
             _localEndPoint = new IPEndPoint(ipAddress, port);
 
             // Define the socket rocker
-            _server = new SocketRocker(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
-            // Define the receive thread
-            _receiveThread = new Thread(ReceiveThread);
+            _server = new SocketRocker(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections);
         }
 
-        private void ReceiveThread()
+        private void ReceiveMessage(SocketRocker.ReceivedMessage receivedMessage)
         {
-            while (!_connectionReceiverCancellationTokenSource.IsCancellationRequested)
+            var command = receivedMessage.Message;
+            // Parse out the command byte
+            DacheProtocolHelper.MessageType messageType = DacheProtocolHelper.MessageType.Literal;
+            DacheProtocolHelper.ExtractControlByte(command, out messageType);
+            // Get the command string skipping our control byte
+            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command, 1, command.Length - 1);
+            var commandResult = ProcessCommand(commandString, messageType);
+            if (commandResult != null)
             {
-                int threadId = 0;
-                // Get a message - will block
-                var command = _server.ServerReceive(out threadId);
-                // Parse out the command byte
-                DacheProtocolHelper.MessageType messageType = DacheProtocolHelper.MessageType.Literal;
-                DacheProtocolHelper.ExtractControlByte(command, out messageType);
-                // Get the command string skipping our control byte
-                var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command, 1, command.Length - 1);
-                var commandResult = ProcessCommand(commandString, messageType);
-                if (commandResult != null)
-                {
-                    // Send the result if there is one
-                    _server.ServerSend(commandResult, threadId);
-                }
+                // Send the result if there is one
+                _server.ServerSend(commandResult, receivedMessage);
             }
         }
          
@@ -106,17 +97,16 @@ namespace Dache.CacheHost.Communication
                     // Structure the results for sending
                     using (var memoryStream = new MemoryStream())
                     {
-                        memoryStream.WriteControlBytePlaceHolder();
-                        foreach (var result in results)
+                        for (int i = 0; i < results.Count; i++)
                         {
-                            memoryStream.WriteSpace();
-                            memoryStream.WriteBase64(result);
+                            if (i != 0)
+                            {
+                                memoryStream.WriteSpace();
+                            }
+                            memoryStream.WriteBase64(results[i]);
                         }
                         commandResult = memoryStream.ToArray();
                     }
-
-                    // Set control byte
-                    commandResult.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheObjects);
 
                     break;
                 }
@@ -136,17 +126,16 @@ namespace Dache.CacheHost.Communication
                         // Structure the results for sending
                         using (var memoryStream = new MemoryStream())
                         {
-                            memoryStream.WriteControlBytePlaceHolder();
-                            foreach (var result in results)
+                            for (int i = 0; i < results.Count; i++)
                             {
-                                memoryStream.WriteSpace();
-                                memoryStream.WriteBase64(result);
+                                if (i != 0)
+                                {
+                                    memoryStream.WriteSpace();
+                                }
+                                memoryStream.WriteBase64(results[i]);
                             }
                             commandResult = memoryStream.ToArray();
                         }
-
-                        // Set control byte
-                        commandResult.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheObjects);
                     }
                     else if (command.StartsWith("del-tag", StringComparison.OrdinalIgnoreCase))
                     {
@@ -283,10 +272,7 @@ namespace Dache.CacheHost.Communication
         public void Start()
         {
             // Listen for connections
-            _server.Listen(_localEndPoint);
-
-            // Perpetually receive
-            _receiveThread.Start();
+            _server.Listen(_localEndPoint, ReceiveMessage);
         }
 
         /// <summary>

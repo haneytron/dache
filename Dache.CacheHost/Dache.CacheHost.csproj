@@ -40,7 +40,6 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -53,6 +52,7 @@
     <Compile Include="CacheHostService.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Communication\BlockingQueue.cs" />
     <Compile Include="Communication\CacheHostServer.cs" />
     <Compile Include="Communication\DacheProtocolHelper.cs" />
     <Compile Include="Communication\ICacheHostContract.cs" />

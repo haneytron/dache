@@ -41,7 +41,10 @@ namespace Dache.CacheHost.Communication
             if (_queue.Count == 0)
             {
                 result = _newItemMethod();
-                _resetItemMethod(result);
+                if (_resetItemMethod != null)
+                {
+                    _resetItemMethod(result);
+                }
                 return result;
             }
 
@@ -53,7 +56,10 @@ namespace Dache.CacheHost.Communication
                 }
 
                 result = _queue.Dequeue();
-                _resetItemMethod(result);
+                if (_resetItemMethod != null)
+                {
+                    _resetItemMethod(result);
+                }
                 return result;
             }
         }
