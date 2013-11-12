@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Dache.CacheHost.Communication
+namespace SimplSockets
 {
     internal sealed class Pool<T> where T : class
     {

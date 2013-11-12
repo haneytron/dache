@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using Dache.CacheHost.Communication;
+using SimplSockets;
 
 namespace Dache.Client
 {
@@ -16,14 +17,10 @@ namespace Dache.Client
     internal class CommunicationClient : ICacheHostContract
     {
         // The client socket
-        private SocketRocker _client = null;
+        private ISimplSocketClient _client = null;
 
         // The remote endpoint
         private readonly IPEndPoint _remoteEndPoint = null;
-        // The maximum number of simultaneous connections
-        private readonly int _maximumConnections = 0;
-        // The message buffer size
-        private readonly int _messageBufferSize = 0;
         // The cache host reconnect interval, in milliseconds
         private readonly int _hostReconnectIntervalMilliseconds = 0;
 
@@ -66,9 +63,8 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be less than 512", "messageBufferSize");
             }
 
-            // Set maximum connections and message buffer size
-            _maximumConnections = maximumConnections;
-            _messageBufferSize = messageBufferSize;
+            // Define the client
+            _client = SimplSocket.CreateClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
 
             // Establish the remote endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry(address);
@@ -84,9 +80,6 @@ namespace Dache.Client
 
         public void Connect()
         {
-            // Define the socket rocker
-            _client = new SocketRocker(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), _messageBufferSize, _maximumConnections);
-
             try
             {
                 _client.Connect(_remoteEndPoint);
@@ -134,48 +127,36 @@ namespace Dache.Client
 
             int cacheKeysCount = 0;
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("get");
+                foreach (var cacheKey in cacheKeys)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("get");
-                    foreach (var cacheKey in cacheKeys)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKey);
-                        cacheKeysCount++;
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKey);
+                    cacheKeysCount++;
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-                // Send
-                _client.ClientSend(command, true);
-                // Receive
-                command = _client.ClientReceive();
-                // Parse string
-                var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            // Send and receive
+            command = _client.SendReceive(command);
+            // Parse string
+            var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
 
-                // Verify that we got something
-                if (commandResult == null)
-                {
-                    return null;
-                }
+            // Verify that we got something
+            if (commandResult == null)
+            {
+                return null;
+            }
                 
-                // Parse command from bytes
-                var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                return ParseCacheObjects(commandResultParts);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Parse command from bytes
+            var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return ParseCacheObjects(commandResultParts);
         }
 
         /// <summary>
@@ -191,42 +172,30 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
-                {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("get-tag {0}", tagName);
-                    command = memoryStream.ToArray();
-                }
-
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-                // Send
-                _client.ClientSend(command, true);
-                // Receive
-                command = _client.ClientReceive();
-                // Parse string
-                var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
-
-                // Verify that we got something
-                if (commandResult == null)
-                {
-                    return null;
-                }
-
-                // Parse command from bytes
-                var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                return ParseCacheObjects(commandResultParts);
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("get-tag {0}", tagName);
+                command = memoryStream.ToArray();
             }
-            catch
+
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            // Send and receive
+            command = _client.SendReceive(command);
+            // Parse string
+            var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
+
+            // Verify that we got something
+            if (commandResult == null)
             {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
+                return null;
             }
+
+            // Parse command from bytes
+            var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return ParseCacheObjects(commandResultParts);
         }
 
         /// <summary>
@@ -289,35 +258,25 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set");
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set");
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -337,35 +296,25 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set {0}", absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set {0}", absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -385,35 +334,25 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set {0}", (int)slidingExpiration.TotalSeconds);
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set {0}", (int)slidingExpiration.TotalSeconds);
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -434,35 +373,25 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set-intern");
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set-intern");
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -534,35 +463,25 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set-tag {0}", tagName);
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set-tag {0}", tagName);
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -587,35 +506,25 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set-tag {0} {1}", tagName, absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set-tag {0} {1}", tagName, absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -640,35 +549,25 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set-tag {0} {1}", tagName, (int)slidingExpiration.TotalSeconds);
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set-tag {0} {1}", tagName, (int)slidingExpiration.TotalSeconds);
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -694,35 +593,25 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("set-tag-intern {0}", tagName);
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("set-tag-intern {0}", tagName);
-                    foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                        memoryStream.WriteSpace();
-                        memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -750,33 +639,23 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeys");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("del");
+                foreach (var cacheKey in cacheKeys)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("del");
-                    foreach (var cacheKey in cacheKeys)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(cacheKey);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKey);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -800,33 +679,23 @@ namespace Dache.Client
                 throw new ArgumentNullException("tagNames");
             }
 
-            try
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
             {
-                byte[] command = null;
-                using (var memoryStream = new MemoryStream())
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("del-tag");
+                foreach (var tagName in tagNames)
                 {
-                    memoryStream.WriteControlBytePlaceHolder();
-                    memoryStream.Write("del-tag");
-                    foreach (var tagName in tagNames)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(tagName);
-                    }
-                    command = memoryStream.ToArray();
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(tagName);
                 }
+                command = memoryStream.ToArray();
+            }
 
-                // Set control byte
-                command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-                // Send
-                _client.ClientSend(command, false);
-            }
-            catch
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            // Send
+            _client.Send(command);
         }
 
         /// <summary>
@@ -847,6 +716,14 @@ namespace Dache.Client
         /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
         /// </summary>
         public event EventHandler Reconnected;
+
+        private void HandleError(object state, SocketErrorArgs e)
+        {
+            // Enter the disconnected state
+            DisconnectFromServer();
+
+            throw new Exception(e.ErrorMessage);
+        }
 
         /// <summary>
         /// Makes the client enter the disconnected state.

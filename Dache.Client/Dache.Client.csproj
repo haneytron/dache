@@ -45,20 +45,32 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Dache.CacheHost\Communication\BlockingQueue.cs">
-        <Link>Communication\BlockingQueue.cs</Link>
-    </Compile>
     <Compile Include="..\Dache.CacheHost\Communication\DacheProtocolHelper.cs">
       <Link>Communication\DacheProtocolHelper.cs</Link>
     </Compile>
     <Compile Include="..\Dache.CacheHost\Communication\ICacheHostContract.cs">
       <Link>Communication\ICacheHostContract.cs</Link>
     </Compile>
-    <Compile Include="..\Dache.CacheHost\Communication\Pool.cs">
-      <Link>Communication\Pool.cs</Link>
+    <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\BlockingQueue.cs">
+        <Link>Communication\SimplSockets\BlockingQueue.cs</Link>
     </Compile>
-      <Compile Include="..\Dache.CacheHost\Communication\SocketRocker.cs">
-          <Link>Communication\SocketRocker.cs</Link>
+      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\ISimplSocketClient.cs">
+          <Link>Communication\SimplSockets\ISimplSocketClient.cs</Link>
+      </Compile>
+      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\ISimplSocketServer.cs">
+          <Link>Communication\SimplSockets\ISimplSocketServer.cs</Link>
+      </Compile>
+      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\MessageReceivedArgs.cs">
+          <Link>Communication\SimplSockets\MessageReceivedArgs.cs</Link>
+      </Compile>
+      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\Pool.cs">
+          <Link>Communication\SimplSockets\Pool.cs</Link>
+      </Compile>
+      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\SimplSocket.cs">
+          <Link>Communication\SimplSockets\SimplSocket.cs</Link>
+      </Compile>
+      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\SocketErrorArgs.cs">
+          <Link>Communication\SimplSockets\SocketErrorArgs.cs</Link>
       </Compile>
     <Compile Include="..\Dache.Core\Logging\EventViewerLogger.cs">
       <Link>Logging\EventViewerLogger.cs</Link>
@@ -89,6 +101,9 @@
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Communication\SimplSockets\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

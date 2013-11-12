@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 using Dache.Core.Routing;
+using SimplSockets;
 
 namespace Dache.CacheHost.Communication
 {
@@ -21,7 +22,7 @@ namespace Dache.CacheHost.Communication
     public class CacheHostServer : ICacheHostContract, IRunnable
     {
         // The cache server
-        private readonly SocketRocker _server = null;
+        private readonly ISimplSocketServer _server = null;
         // The local end point
         private readonly IPEndPoint _localEndPoint = null;
         // The maximum number of simultaneous connections
@@ -51,13 +52,14 @@ namespace Dache.CacheHost.Communication
             var ipAddress = ipHostInfo.AddressList.First(i => i.AddressFamily == AddressFamily.InterNetwork);
             _localEndPoint = new IPEndPoint(ipAddress, port);
 
-            // Define the socket rocker
-            _server = new SocketRocker(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections);
+            // Define the server
+            _server = SimplSocket.CreateServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
+            _server.MessageReceived += ReceiveMessage;
         }
 
-        private void ReceiveMessage(SocketRocker.ReceivedMessage receivedMessage)
+        private void ReceiveMessage(object sender, MessageReceivedArgs e)
         {
-            var command = receivedMessage.Message;
+            var command = e.ReceivedMessage.Message;
             // Parse out the command byte
             DacheProtocolHelper.MessageType messageType = DacheProtocolHelper.MessageType.Literal;
             DacheProtocolHelper.ExtractControlByte(command, out messageType);
@@ -67,7 +69,7 @@ namespace Dache.CacheHost.Communication
             if (commandResult != null)
             {
                 // Send the result if there is one
-                _server.ServerSend(commandResult, receivedMessage);
+                _server.Reply(commandResult, e.ReceivedMessage);
             }
         }
          
@@ -272,7 +274,7 @@ namespace Dache.CacheHost.Communication
         public void Start()
         {
             // Listen for connections
-            _server.Listen(_localEndPoint, ReceiveMessage);
+            _server.Listen(_localEndPoint);
         }
 
         /// <summary>

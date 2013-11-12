@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Dache.CacheHost.Communication
+namespace SimplSockets
 {
-    public class BlockingQueue<T>
+    internal sealed class BlockingQueue<T>
     {
         Queue<T> _queue = null;
         Semaphore _semaphore = new Semaphore(0, Int32.MaxValue);
