@@ -12,7 +12,7 @@ using Dache.Client.Exceptions;
 namespace Dache.Client
 {
     /// <summary>
-    /// The WCF client for cache host communication.
+    /// The client for cache host communication.
     /// </summary>
     public class CacheClient : ICacheClient
     {

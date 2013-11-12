@@ -12,7 +12,7 @@ using SimplSockets;
 namespace Dache.Client
 {
     /// <summary>
-    /// Encapsulates a WCF cache host client.
+    /// Encapsulates a cache host client.
     /// </summary>
     internal class CommunicationClient : ICacheHostContract
     {

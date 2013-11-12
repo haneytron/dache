@@ -8,7 +8,10 @@ using System.Threading;
 
 namespace Dache.CacheHost.Communication
 {
-    public static class DacheProtocolHelper
+    /// <summary>
+    /// Assists in communicating via the Dache protocol.
+    /// </summary>
+    internal static class DacheProtocolHelper
     {
         // The communication encoding
         public static readonly Encoding CommunicationEncoding = Encoding.UTF8;
