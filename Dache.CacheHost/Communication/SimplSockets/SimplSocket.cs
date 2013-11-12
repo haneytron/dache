@@ -31,8 +31,6 @@ namespace SimplSockets
         // The receive buffer queue lock
         private readonly ReaderWriterLockSlim _receiveBufferQueueLock = new ReaderWriterLockSlim();
 
-        // The function that handles received messages
-        private Action<ReceivedMessage> _receivedMessageFunc = null;
         // The number of currently connected clients
         private int _currentlyConnectedClients = 0;
         // Whether or not a connection currently exists
@@ -224,7 +222,7 @@ namespace SimplSockets
 
             // Create socket
             _socket = _socketFunc();
-            
+
             try
             {
                 _socket.Bind(localEndpoint);
@@ -742,10 +740,17 @@ namespace SimplSockets
             public int TotalBytesToRead = -1;
         }
 
+        /// <summary>
+        /// A received message.
+        /// </summary>
         public class ReceivedMessage
         {
             internal Socket Socket;
             internal int ThreadId;
+
+            /// <summary>
+            /// The message bytes.
+            /// </summary>
             public byte[] Message;
         }
 

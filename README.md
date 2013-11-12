@@ -2,6 +2,10 @@ DACHE 1.1.2
 ===========
 
 
+distributed caching for .net applications 
+
+fast, scalable distributed caching with meaningful performance metrics for your managers and a simple api for your development team
+
 http://www.getdache.net
 
 info@getdache.net

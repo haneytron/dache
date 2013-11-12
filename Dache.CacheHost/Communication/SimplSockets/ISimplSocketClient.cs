@@ -36,10 +36,5 @@ namespace SimplSockets
         /// An event that is fired whenever a socket communication error occurs.
         /// </summary>
         event EventHandler<SocketErrorArgs> Error;
-
-        /// <summary>
-        /// Disposes the instance and frees unmanaged resources.
-        /// </summary>
-        void Dispose();
     }
 }

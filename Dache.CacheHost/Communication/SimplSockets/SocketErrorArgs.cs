@@ -10,7 +10,7 @@ namespace SimplSockets
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="message">The error message.</param>
+        /// <param name="errorMessage">The error message.</param>
         internal SocketErrorArgs(string errorMessage)
         {
             ErrorMessage = errorMessage;
