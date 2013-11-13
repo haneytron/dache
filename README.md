@@ -79,8 +79,8 @@ Client
 
 The Dache Client is a single DLL which you include in any application which you wish to be able 
 to talk to Dache from. Add it as a reference and begin coding. There is an included XML file so 
-that Intellisense will show you method and type information. An example configuration file is 
-also included to show you how to configure your application.
+that Intellisense will show you method and type information. An example configuration file named 
+`Client.Example.config` is also included to show you how to configure your application.
 
 NOTE: all clients should be configured with the same list of servers. The list of servers does 
 not have to be in the same order, but each client's list should contain the same servers.
