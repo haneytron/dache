@@ -181,6 +181,11 @@ namespace SimplSockets
             {
                 HandleCommunicationError(_socket, ex);
             }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
+                return;
+            }
 
             // Get a message state from the pool
             var messageState = _messageStatePool.Pop();
@@ -234,7 +239,10 @@ namespace SimplSockets
             catch (SocketException ex)
             {
                 HandleCommunicationError(_socket, ex);
-                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
             }
         }
 
@@ -288,6 +296,11 @@ namespace SimplSockets
             {
                 HandleCommunicationError(_socket, ex);
             }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
+                return;
+            }
         }
 
         /// <summary>
@@ -322,6 +335,11 @@ namespace SimplSockets
             catch (SocketException ex)
             {
                 HandleCommunicationError(_socket, ex);
+                return null;
+            }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
                 return null;
             }
 
@@ -370,6 +388,11 @@ namespace SimplSockets
                 HandleCommunicationError(receivedMessage.Socket, ex);
                 return;
             }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
+                return;
+            }
 
             // Put received message back in the pool
             _receiveMessagePool.Push(receivedMessage);
@@ -409,6 +432,12 @@ namespace SimplSockets
                 HandleCommunicationError(_socket, ex);
                 return;
             }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
+                return;
+            }
+
             // Turn on or off Nagle algorithm
             handler.NoDelay = !_useNagleAlgorithm;
 
@@ -420,6 +449,11 @@ namespace SimplSockets
             catch (SocketException ex)
             {
                 HandleCommunicationError(_socket, ex);
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
                 return;
             }
 
@@ -440,6 +474,11 @@ namespace SimplSockets
             catch (SocketException ex)
             {
                 HandleCommunicationError(handler, ex);
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
                 return;
             }
 
@@ -473,6 +512,11 @@ namespace SimplSockets
                 HandleCommunicationError(socket, ex);
                 return;
             }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
+                return;
+            }
         }
 
         private void ReceiveCallback(IAsyncResult asyncResult)
@@ -491,6 +535,11 @@ namespace SimplSockets
             catch (SocketException ex)
             {
                 HandleCommunicationError(messageState.Handler, ex);
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
                 return;
             }
 
@@ -522,7 +571,10 @@ namespace SimplSockets
                 catch (SocketException ex)
                 {
                     HandleCommunicationError(messageState.Handler, ex);
-                    return;
+                }
+                catch (ObjectDisposedException)
+                {
+                    // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
                 }
             }
         }
@@ -664,17 +716,26 @@ namespace SimplSockets
         /// <param name="ex">The exception that the socket raised.</param>
         private void HandleCommunicationError(Socket socket, Exception ex)
         {
-            // Close the socket
-            try
+            lock (socket)
             {
-                socket.Shutdown(SocketShutdown.Both);
-            }
-            catch
-            {
-                // Ignore
-            }
+                // Close the socket
+                try
+                {
+                    socket.Shutdown(SocketShutdown.Both);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Socket was already closed/disposed, so return out to prevent raising the Error event multiple times
+                    // This is most likely to happen when an error occurs during heavily multithreaded use
+                    return;
+                }
+                catch
+                {
+                    // Ignore
+                }
 
-            socket.Close();
+                socket.Close();
+            }
 
             // Release all multiplexer clients by signalling them
             _clientMultiplexerLock.EnterReadLock();

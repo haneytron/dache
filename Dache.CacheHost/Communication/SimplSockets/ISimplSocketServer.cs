@@ -27,6 +27,11 @@ namespace SimplSockets
         void Close();
 
         /// <summary>
+        /// Gets the currently connected client count.
+        /// </summary>
+        int CurrentlyConnectedClients { get; }
+
+        /// <summary>
         /// An event that is fired whenever a message is received. Hook into this to process messages and potentially call Reply to send a response.
         /// </summary>
         event EventHandler<MessageReceivedArgs> MessageReceived;
