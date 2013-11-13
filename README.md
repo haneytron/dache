@@ -90,8 +90,8 @@ Host
 --------
 
 
-The host is the actual process that does the caching work. To install it, run install.bat or
-install it manually via .NET 4.0's installutil from a command prompt:
+The host is the actual process that does the caching work. To install it, run `install.bat` or
+install it manually via .NET 4.0's `installutil` from a command prompt:
 
     C:\Windows\Microsoft.NET\Framework\v4.0.30319>installutil "C:\Path\To\Dache.CacheHost.exe"
 
@@ -100,6 +100,10 @@ service if you want to install multiple Dache hosts on a single server under uni
 
 After installation, open the `Dache.CacheHost.exe.config` file and configure the appropriate 
 settings. The configuration file is fully XML commented.
+
+To uninstall, run 'uninstall.bat' or uninstall it manually via .NET 4.0's `installutil` from a command prompt:
+
+    C:\Windows\Microsoft.NET\Framework\v4.0.30319>installutil /u "C:\Path\To\Dache.CacheHost.exe"
 
 
 Board
