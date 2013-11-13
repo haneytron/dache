@@ -1,9 +1,4 @@
-﻿*Move to native low level TCP sockets for optimal performance and invent a syntax/grammar to allow non .NET clients
-
--have 2 sockets per client: 1 async for one way, one sync for gets
--must recode server since on accept it will receive perpetually - need to account for overlapping messages received at both server and client (past the bounds of a single message). Multiplex?
-
-DACHE TCP LOW LEVEL LANGUAGE SYNTAX:
+﻿DACHE TCP LOW LEVEL LANGUAGE SYNTAX:
 
 get cacheKey1 cacheKey2 cacheKey3 cacheKey4...
 get-tag tagName
@@ -25,3 +20,4 @@ del-tag tagName1 tagName2 tagName3 tagName4...
 -Chained updates: like tagging, mark cache keys for chaining and when you update the value of an object, it updates it for all of the cache keys
 -Introduce of Sorted Sets/Lists with weights
 -Create integer storage methods and increment/decrement methods?
+-Azure host
