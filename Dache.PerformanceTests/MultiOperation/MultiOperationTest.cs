@@ -126,6 +126,34 @@ namespace Dache.PerformanceTests.MultiOperation
             Console.WriteLine("Get Tagged object count: " + getManyResults.Count);
             #endregion
 
+            #region Local Get 10000 strings
+            stopwatch.Restart();
+            for (int i = 1; i <= 10000; i++)
+            {
+                if (!cacheClient.TryGetLocal("test" + i, out value))
+                {
+                    Console.WriteLine("Get failed for cache key: " + "test" + i);
+                }
+            }
+            stopwatch.Stop();
+
+            Console.WriteLine("Local Get time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
+            #endregion
+
+            #region Local Get again 10000 strings
+            stopwatch.Restart();
+            for (int i = 1; i <= 10000; i++)
+            {
+                if (!cacheClient.TryGetLocal("test" + i, out value))
+                {
+                    Console.WriteLine("Get failed for cache key: " + "test" + i);
+                }
+            }
+            stopwatch.Stop();
+
+            Console.WriteLine("Local Get again time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
+            #endregion
+
             Console.WriteLine();
             Console.WriteLine("***** BEGIN REMOVE 10000 TESTS *****");
             Console.WriteLine();
@@ -193,7 +221,7 @@ namespace Dache.PerformanceTests.MultiOperation
             Console.WriteLine("***** BEGIN 10000 COMPLEX OBJECT GET TEST *****");
             Console.WriteLine();
 
-            #region Regular Add 10000 complex objects with sliding expiration
+            #region Regular Get 10000 complex objects with sliding expiration
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
@@ -202,6 +230,28 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Stop();
 
             Console.WriteLine("Get complex object time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
+            #endregion
+
+            #region Local Get 10000 complex objects with sliding expiration
+            stopwatch.Restart();
+            for (int i = 1; i <= 10000; i++)
+            {
+                cacheClient.TryGetLocal("testabsolutecomplex" + i, out myObject);
+            }
+            stopwatch.Stop();
+
+            Console.WriteLine("Local Get complex object time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
+            #endregion
+
+            #region Local Get again 10000 complex objects with sliding expiration
+            stopwatch.Restart();
+            for (int i = 1; i <= 10000; i++)
+            {
+                cacheClient.TryGetLocal("testabsolutecomplex" + i, out myObject);
+            }
+            stopwatch.Stop();
+
+            Console.WriteLine("Local Get again complex object time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
             #endregion
 
             overallStopwatch.Stop();
