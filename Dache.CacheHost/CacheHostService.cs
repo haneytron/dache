@@ -95,7 +95,7 @@ namespace Dache.CacheHost
 
                 // Initialize the client to cache server
                 var port = CacheHostConfigurationSection.Settings.Port;
-                var clientToCacheServer = new CacheHostServer(port, 1000, 4096);
+                var cacheHostServer = new CacheHostServer(port, 1000, 4096);
 
                 // Configure the custom performance counter manager
                 CustomPerformanceCounterManagerContainer.Instance = new CustomPerformanceCounterManager(string.Format("port:{0}", port), false);
@@ -104,7 +104,7 @@ namespace Dache.CacheHost
                 var cacheHostInformationPoller = new CacheHostInformationPoller(1000);
 
                 // Instantiate the cache host engine
-                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, memCache, clientToCacheServer);
+                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, memCache, cacheHostServer);
             }
             catch (Exception ex)
             {

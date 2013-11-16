@@ -19,8 +19,8 @@ namespace Dache.CacheHost
         /// </summary>
         /// <param name="cacheHostInformationPoller">The cache host information poller.</param>
         /// <param name="memCache">The mem cache to use for storing objects.</param>
-        /// <param name="cacheServer">The cache server.</param>
-        public CacheHostEngine(IRunnable cacheHostInformationPoller, MemCache memCache, IRunnable cacheServer)
+        /// <param name="cacheHostServer">The cache host server.</param>
+        public CacheHostEngine(IRunnable cacheHostInformationPoller, MemCache memCache, IRunnable cacheHostServer)
         {
             // Sanitize
             if (cacheHostInformationPoller == null)
@@ -31,9 +31,9 @@ namespace Dache.CacheHost
             {
                 throw new ArgumentNullException("memCache");
             }
-            if (cacheServer == null)
+            if (cacheHostServer == null)
             {
-                throw new ArgumentNullException("cacheServer");
+                throw new ArgumentNullException("cacheHostServer");
             }
 
             // Set the cache host information poller
@@ -43,7 +43,7 @@ namespace Dache.CacheHost
             MemCacheContainer.Instance = memCache;
 
             // Initialize the serer
-            _cacheServer = cacheServer;
+            _cacheServer = cacheHostServer;
         }
 
         /// <summary>

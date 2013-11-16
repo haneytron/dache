@@ -13,7 +13,6 @@ set-tag-intern tagName cacheKey1 serializedObject1 cacheKey2 serializedObject2
 del cacheKey1 cacheKey2 cacheKey3 cacheKey4...
 del-tag tagName1 tagName2 tagName3 tagName4...
 
--Update client Timespan signature to int for seconds
 -Offer both IIS hosting and classic Service hosting
 -Better way to do static Container classes?
 -Clear tag from TagRoutingTable memory when removing all tagged items from host
