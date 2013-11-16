@@ -7,7 +7,7 @@ namespace Dache.Core.Performance
     /// <summary>
     /// Manages custom performance counters.
     /// </summary>
-    public class CustomPerformanceCounterManager
+    public class CustomPerformanceCounterManager : ICustomPerformanceCounterManager
     {
         // The performance counter category name
         private const string _performanceCounterCategoryName = "Dache";
@@ -211,5 +211,21 @@ namespace Dache.Core.Performance
         /// The removes per second.
         /// </summary>
         public PerformanceCounter RemovesPerSecond { get; private set; }
+
+        /// <summary>
+        /// Called when disposed.
+        /// </summary>
+        public void Dispose()
+        {
+            NumberOfCachedObjects.Dispose();
+            TotalRequestsPerSecond.Dispose();
+            CacheExpirationsAndEvictionsPerSecond.Dispose();
+            CacheMemoryUsagePercent.Dispose();
+            CacheMemoryUsageBasePercent.Dispose();
+            CacheMemoryUsageMb.Dispose();
+            AddsPerSecond.Dispose();
+            GetsPerSecond.Dispose();
+            RemovesPerSecond.Dispose();
+        }
     }
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Runtime.Caching;
 using System.Threading;
-using Dache.CacheHost.Performance;
+using Dache.Core.Performance;
 
 namespace Dache.CacheHost.Storage
 {
@@ -14,6 +14,8 @@ namespace Dache.CacheHost.Storage
     {
         // The underlying memory cache
         private readonly MemoryCache _memoryCache = null;
+        // The custom performance counter manager
+        private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
         // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
         private readonly IDictionary<string, string> _internDictionary = null;
         // The dictionary that serves as an intern reference count, with the key being the hash code and the value being the number of references to the object
@@ -28,7 +30,8 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="cacheName">The name of the cache.</param>
         /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of the total system memory.</param>
-        public MemCache(string cacheName, int physicalMemoryLimitPercentage)
+        /// <param name="customPerformanceCounterManager">The custom performance counter manager.</param>
+        public MemCache(string cacheName, int physicalMemoryLimitPercentage, ICustomPerformanceCounterManager customPerformanceCounterManager)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(cacheName))
@@ -39,6 +42,10 @@ namespace Dache.CacheHost.Storage
             {
                 throw new ArgumentException("cannot be <= 0", "physicalMemoryLimitPercentage");
             }
+            if (customPerformanceCounterManager == null)
+            {
+                throw new ArgumentNullException("customPerformanceCounterManager");
+            }
 
             var cacheConfig = new NameValueCollection();
             cacheConfig.Add("pollingInterval", "00:00:15");
@@ -47,6 +54,8 @@ namespace Dache.CacheHost.Storage
             _memoryCache = new MemoryCache(cacheName, cacheConfig);
             _internDictionary = new Dictionary<string, string>(100);
             _internReferenceDictionary = new Dictionary<string, int>(100);
+
+            _customPerformanceCounterManager = customPerformanceCounterManager;
         }
 
         /// <summary>
@@ -76,9 +85,9 @@ namespace Dache.CacheHost.Storage
             _memoryCache.Set(key, value, cacheItemPolicy);
 
             // Increment the Add counter
-            CustomPerformanceCounterManagerContainer.Instance.AddsPerSecond.RawValue++;
+            _customPerformanceCounterManager.AddsPerSecond.RawValue++;
             // Increment the Total counter
-            CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
+            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
         }
 
         /// <summary>
@@ -142,9 +151,9 @@ namespace Dache.CacheHost.Storage
             }
 
             // Increment the Add counter
-            CustomPerformanceCounterManagerContainer.Instance.AddsPerSecond.RawValue++;
+            _customPerformanceCounterManager.AddsPerSecond.RawValue++;
             // Increment the Total counter
-            CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
+            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
         }
 
         /// <summary>
@@ -161,9 +170,9 @@ namespace Dache.CacheHost.Storage
             }
 
             // Increment the Get counter
-            CustomPerformanceCounterManagerContainer.Instance.GetsPerSecond.RawValue++;
+            _customPerformanceCounterManager.GetsPerSecond.RawValue++;
             // Increment the Total counter
-            CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
+            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
 
 
             // Check for interned
@@ -199,9 +208,9 @@ namespace Dache.CacheHost.Storage
             }
 
             // Increment the Remove counter
-            CustomPerformanceCounterManagerContainer.Instance.RemovesPerSecond.RawValue++;
+            _customPerformanceCounterManager.RemovesPerSecond.RawValue++;
             // Increment the Total counter
-            CustomPerformanceCounterManagerContainer.Instance.TotalRequestsPerSecond.RawValue++;
+            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
 
             string hashKey = null;
             int referenceCount = 0;

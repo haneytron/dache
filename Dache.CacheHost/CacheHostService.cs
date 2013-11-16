@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.ServiceProcess;
 using System.Threading;
 using Dache.CacheHost.Communication;
 using Dache.CacheHost.Configuration;
-using Dache.CacheHost.Performance;
 using Dache.CacheHost.Polling;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
@@ -86,19 +84,21 @@ namespace Dache.CacheHost
 
             try
             {
-                // Initialize the mem cache container instance
-                var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
-                var memCache = new MemCache("Dache", physicalMemoryLimitPercentage);
-
-                // Initialize the client to cache server
                 var port = CacheHostConfigurationSection.Settings.Port;
-                var cacheHostServer = new CacheHostServer(memCache, port, 1000, 4096);
 
                 // Configure the custom performance counter manager
-                CustomPerformanceCounterManagerContainer.Instance = new CustomPerformanceCounterManager(string.Format("port:{0}", port), false);
+                var customPerformanceCounterManager = new CustomPerformanceCounterManager(string.Format("port:{0}", port), false);
+
+                // Initialize the mem cache container instance
+                var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
+                var memCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+
+                // Initialize the client to cache server
+                
+                var cacheHostServer = new CacheHostServer(memCache, port, 1000, 4096);
 
                 // Initialize the cache host information poller
-                var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, 1000);
+                var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, customPerformanceCounterManager, 1000);
 
                 // Instantiate the cache host engine
                 _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, cacheHostServer);

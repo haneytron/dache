@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
-using Dache.CacheHost.Performance;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
+using Dache.Core.Performance;
 
 namespace Dache.CacheHost.Polling
 {
@@ -14,6 +14,8 @@ namespace Dache.CacheHost.Polling
     {
         // The mem cache
         private readonly IMemCache _memCache = null;
+        // The custom performance counter manager
+        private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
         // The polling interval in milliseconds
         private readonly int _pollingIntervalMilliseconds = 0;
         // The cache host information polling timer
@@ -29,13 +31,18 @@ namespace Dache.CacheHost.Polling
         /// The constructor.
         /// </summary>
         /// <param name="memCache">The mem cache.</param>
+        /// <param name="customPerformanceCounterManager">The custom performance counter manager.</param>
         /// <param name="pollingIntervalMilliseconds">The polling interval, in milliseconds.</param>
-        public CacheHostInformationPoller(IMemCache memCache, int pollingIntervalMilliseconds)
+        public CacheHostInformationPoller(IMemCache memCache, ICustomPerformanceCounterManager customPerformanceCounterManager, int pollingIntervalMilliseconds)
         {
             // Sanitize
             if (memCache == null)
             {
                 throw new ArgumentNullException("memCache");
+            }
+            if (customPerformanceCounterManager == null)
+            {
+                throw new ArgumentNullException("customPerformanceCounterManager");
             }
             if (pollingIntervalMilliseconds <= 0)
             {
@@ -43,6 +50,7 @@ namespace Dache.CacheHost.Polling
             }
 
             _memCache = memCache;
+            _customPerformanceCounterManager = customPerformanceCounterManager;
             _pollingIntervalMilliseconds = pollingIntervalMilliseconds;
 
             // Initialize the cache host information polling timer
@@ -73,21 +81,19 @@ namespace Dache.CacheHost.Polling
         /// <param name="state">The state. Ignored but required for timer callback methods. Pass null.</param>
         private void PollCacheHost(object state)
         {
-            var customPerformanceCounterManager = CustomPerformanceCounterManagerContainer.Instance;
-
             // Lock to ensure atomicity (no overlap)
             lock (_cacheHostInformationPollingTimer)
             {
                 // Update performance counters
-                customPerformanceCounterManager.NumberOfCachedObjects.RawValue = _memCache.Count;
+                _customPerformanceCounterManager.NumberOfCachedObjects.RawValue = _memCache.Count;
                 var usedMemoryMb = _currentMemoryPerformanceCounter.RawValue / 1048576; // bytes / (1024 * 1024) for MB
 
-                customPerformanceCounterManager.CacheMemoryUsageMb.RawValue = usedMemoryMb;
-                customPerformanceCounterManager.CacheMemoryUsagePercent.RawValue = usedMemoryMb;
-                customPerformanceCounterManager.CacheMemoryUsageBasePercent.RawValue = _memCache.MemoryLimit;
+                _customPerformanceCounterManager.CacheMemoryUsageMb.RawValue = usedMemoryMb;
+                _customPerformanceCounterManager.CacheMemoryUsagePercent.RawValue = usedMemoryMb;
+                _customPerformanceCounterManager.CacheMemoryUsageBasePercent.RawValue = _memCache.MemoryLimit;
 
                 // Calculate expirations and evictions
-                customPerformanceCounterManager.CacheExpirationsAndEvictionsPerSecond.RawValue = _currentCacheTrimPerformanceCounter.RawValue - _lastCacheTrimmedValue;
+                _customPerformanceCounterManager.CacheExpirationsAndEvictionsPerSecond.RawValue = _currentCacheTrimPerformanceCounter.RawValue - _lastCacheTrimmedValue;
                 _lastCacheTrimmedValue = _currentCacheTrimPerformanceCounter.RawValue;
             }
         }

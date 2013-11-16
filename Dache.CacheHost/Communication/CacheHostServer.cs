@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
+using Dache.Core.Performance;
 using Dache.Core.Routing;
 using SimplSockets;
 

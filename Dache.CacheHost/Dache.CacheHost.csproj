@@ -64,7 +64,6 @@
     <Compile Include="Communication\SimplSockets\SimplSocket.cs" />
     <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
     <Compile Include="Configuration\CustomLoggerElement.cs" />
-    <Compile Include="Performance\CustomPerformanceCounterManagerContainer.cs" />
     <Compile Include="Polling\CacheHostInformationPoller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\SharedAssemblyInfo.cs">
