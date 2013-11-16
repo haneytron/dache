@@ -377,7 +377,7 @@ namespace Dache.Client
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="tagName">The tag name.</param>
         /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
-        public List<T> GetTaggedLocal<T>(string tagName, bool cacheResultLocally)
+        public List<T> GetTaggedLocal<T>(string tagName)
         {
             // Create a cache key for tag name
             var cacheKey = "tag:" + tagName;
