@@ -44,7 +44,6 @@
     <Compile Include="Interfaces\IRunnable.cs" />
     <Compile Include="Logging\EventViewerLogger.cs" />
     <Compile Include="Logging\ILogger.cs" />
-    <Compile Include="Logging\LoggerContainer.cs" />
     <Compile Include="Performance\CustomPerformanceCounterInstaller.cs" />
     <Compile Include="Performance\CustomPerformanceCounterManager.cs" />
     <Compile Include="Performance\ICustomPerformanceCounterManager.cs" />

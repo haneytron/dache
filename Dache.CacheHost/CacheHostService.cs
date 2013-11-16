@@ -16,6 +16,9 @@ namespace Dache.CacheHost
     /// </summary>
     internal class CacheHostService : ServiceBase
     {
+        // The logger
+        private readonly ILogger _logger = null;
+
         // The cache host engine that does the actual work
         private IRunnable _cacheHostEngine = null;
 
@@ -49,7 +52,7 @@ namespace Dache.CacheHost
                 if (string.IsNullOrWhiteSpace(customLoggerTypeString))
                 {
                     // No custom logging
-                    LoggerContainer.Instance = new EventViewerLogger("Cache Host", "Dache");
+                    _logger = new EventViewerLogger("Cache Host", "Dache");
                     return;
                 }
 
@@ -58,13 +61,13 @@ namespace Dache.CacheHost
                 // Verify that it implements our ILogger interface
                 if (customLoggerType != null && customLoggerType.IsAssignableFrom(typeof(ILogger)))
                 {
-                    LoggerContainer.Instance = (ILogger)Activator.CreateInstance(customLoggerType);
+                    _logger = (ILogger)Activator.CreateInstance(customLoggerType);
                 }
             }
             catch
             {
                 // Custom logger load failed - no custom logging
-                LoggerContainer.Instance = new EventViewerLogger("Cache Host", "Dache");
+                _logger = new EventViewerLogger("Cache Host", "Dache");
                 return;
             }
         }
@@ -75,12 +78,12 @@ namespace Dache.CacheHost
         /// <param name="args">The arguments passed, if any.</param>
         protected override void OnStart(string[] args)
         {
-            LoggerContainer.Instance.Info("Cache Host is starting", "Cache Host is starting");
+            _logger.Info("Cache Host is starting", "Cache Host is starting");
 
             // Configure the thread pool's minimum threads
             ThreadPool.SetMinThreads(128, 128);
 
-            LoggerContainer.Instance.Info("Cache Host is starting", "Verifying settings");
+            _logger.Info("Cache Host is starting", "Verifying settings");
 
             try
             {
@@ -112,13 +115,13 @@ namespace Dache.CacheHost
                 }
 
                 // Log the error
-                LoggerContainer.Instance.Error("Cache Host failed to start", ex.Message);
+                _logger.Error("Cache Host failed to start", ex.Message);
 
                 // Stop the service
                 Stop();
             }
 
-            LoggerContainer.Instance.Info("Cache Host is starting", "Settings verified successfully");
+            _logger.Info("Cache Host is starting", "Settings verified successfully");
 
             _cacheHostEngine.Start();
         }
@@ -128,7 +131,7 @@ namespace Dache.CacheHost
         /// </summary>
         protected override void OnStop()
         {
-            LoggerContainer.Instance.Info("Cache Host is stopping", "Cache Host is stopping");
+            _logger.Info("Cache Host is stopping", "Cache Host is stopping");
 
             _cacheHostEngine.Stop();
         }
