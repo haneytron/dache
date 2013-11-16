@@ -73,9 +73,8 @@
     <Compile Include="CustomInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Storage\LoadBalancingChangeMonitor.cs" />
+    <Compile Include="Storage\IMemCache.cs" />
     <Compile Include="Storage\MemCache.cs" />
-    <Compile Include="Storage\MemCacheContainer.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Dache.Core\Dache.Core.csproj">

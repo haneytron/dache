@@ -21,6 +21,8 @@ namespace Dache.CacheHost.Communication
     /// </summary>
     public class CacheHostServer : ICacheHostContract, IRunnable
     {
+        // The mem cache
+        private readonly IMemCache _memCache = null;
         // The cache server
         private readonly ISimplSocketServer _server = null;
         // The local end point
@@ -38,11 +40,33 @@ namespace Dache.CacheHost.Communication
         /// <summary>
         /// The constructor.
         /// </summary>
+        /// <param name="memCache">The mem cache.</param>
         /// <param name="port">The port.</param>
         /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
-        public CacheHostServer(int port, int maximumConnections, int messageBufferSize)
+        public CacheHostServer(IMemCache memCache, int port, int maximumConnections, int messageBufferSize)
         {
+            // Sanitize
+            if (memCache == null)
+            {
+                throw new ArgumentNullException("memCache");
+            }
+            if (port <= 0)
+            {
+                throw new ArgumentException("cannot be <= 0", "port");
+            }
+            if (maximumConnections <= 0)
+            {
+                throw new ArgumentException("cannot be <= 0", "maximumConnections");
+            }
+            if (messageBufferSize < 256)
+            {
+                throw new ArgumentException("cannot be < 256", "messageBufferSize");
+            }
+
+            // Set the mem cache
+            _memCache = memCache;
+
             // Set maximum connections and message buffer size
             _maximumConnections = maximumConnections;
             _messageBufferSize = messageBufferSize;
@@ -303,7 +327,7 @@ namespace Dache.CacheHost.Communication
             }
 
             // Try to get value
-            return MemCacheContainer.Instance.Get(cacheKey);
+            return _memCache.Get(cacheKey);
         }
 
         /// <summary>
@@ -332,7 +356,7 @@ namespace Dache.CacheHost.Communication
                 }
 
                 // Try to get value
-                var getResult = MemCacheContainer.Instance.Get(cacheKey);
+                var getResult = _memCache.Get(cacheKey);
                 if (getResult != null)
                 {
                     result.Add(getResult);
@@ -365,7 +389,7 @@ namespace Dache.CacheHost.Communication
             {
                 foreach (var cacheKey in cacheKeys)
                 {
-                    var cacheValue = MemCacheContainer.Instance.Get(cacheKey);
+                    var cacheValue = _memCache.Get(cacheKey);
                     if (cacheValue == null)
                     {
                         continue;
@@ -387,7 +411,7 @@ namespace Dache.CacheHost.Communication
         public void AddOrUpdate(string cacheKey, byte[] serializedObject)
         {
             // Place object in cache
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, _defaultCacheItemPolicy);
+            _memCache.Add(cacheKey, serializedObject, _defaultCacheItemPolicy);
         }
 
         /// <summary>
@@ -405,7 +429,7 @@ namespace Dache.CacheHost.Communication
             };
             
             // Place object in cache
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
+            _memCache.Add(cacheKey, serializedObject, cacheItemPolicy);
         }
 
         /// <summary>
@@ -423,7 +447,7 @@ namespace Dache.CacheHost.Communication
             };
 
             // Place object in cache
-            MemCacheContainer.Instance.Add(cacheKey, serializedObject, cacheItemPolicy);
+            _memCache.Add(cacheKey, serializedObject, cacheItemPolicy);
         }
 
         /// <summary>
@@ -436,7 +460,7 @@ namespace Dache.CacheHost.Communication
         public void AddOrUpdateInterned(string cacheKey, byte[] serializedObject)
         {
             // Place object in cache
-            MemCacheContainer.Instance.AddInterned(cacheKey, serializedObject);
+            _memCache.AddInterned(cacheKey, serializedObject);
         }
 
         /// <summary>
@@ -745,7 +769,7 @@ namespace Dache.CacheHost.Communication
             }
 
             // Remove object from cache
-            MemCacheContainer.Instance.Remove(cacheKey);
+            _memCache.Remove(cacheKey);
         }
 
         /// <summary>
@@ -785,7 +809,7 @@ namespace Dache.CacheHost.Communication
             {
                 foreach (var cacheKey in cacheKeys)
                 {
-                    MemCacheContainer.Instance.Remove(cacheKey);
+                    _memCache.Remove(cacheKey);
                 }
             }
         }

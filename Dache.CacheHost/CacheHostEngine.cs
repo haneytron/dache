@@ -18,18 +18,13 @@ namespace Dache.CacheHost
         /// The constructor.
         /// </summary>
         /// <param name="cacheHostInformationPoller">The cache host information poller.</param>
-        /// <param name="memCache">The mem cache to use for storing objects.</param>
         /// <param name="cacheHostServer">The cache host server.</param>
-        public CacheHostEngine(IRunnable cacheHostInformationPoller, MemCache memCache, IRunnable cacheHostServer)
+        public CacheHostEngine(IRunnable cacheHostInformationPoller, IRunnable cacheHostServer)
         {
             // Sanitize
             if (cacheHostInformationPoller == null)
             {
                 throw new ArgumentNullException("cacheHostInformationPoller");
-            }
-            if (memCache == null)
-            {
-                throw new ArgumentNullException("memCache");
             }
             if (cacheHostServer == null)
             {
@@ -38,9 +33,6 @@ namespace Dache.CacheHost
 
             // Set the cache host information poller
             _cacheHostInformationPoller = cacheHostInformationPoller;
-
-            // Set the mem cache container instance
-            MemCacheContainer.Instance = memCache;
 
             // Initialize the serer
             _cacheServer = cacheHostServer;
@@ -63,15 +55,11 @@ namespace Dache.CacheHost
         /// </summary>
         public void Stop()
         {
-            // Dispose the MemCache guaranteed
-            using (MemCacheContainer.Instance)
-            {
-                // Stop listening for requests
-                _cacheServer.Stop();
+            // Stop listening for requests
+            _cacheServer.Stop();
 
-                // Stop the cache host information poller
-                _cacheHostInformationPoller.Stop();
-            }
+            // Stop the cache host information poller
+            _cacheHostInformationPoller.Stop();
         }
     }
 }

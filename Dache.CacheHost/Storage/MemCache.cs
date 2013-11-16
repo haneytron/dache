@@ -10,7 +10,7 @@ namespace Dache.CacheHost.Storage
     /// <summary>
     /// Encapsulates a memory cache that can store byte arrays. This type is thread safe.
     /// </summary>
-    public class MemCache : IDisposable
+    public class MemCache : IMemCache
     {
         // The underlying memory cache
         private readonly MemoryCache _memoryCache = null;
@@ -27,14 +27,22 @@ namespace Dache.CacheHost.Storage
         /// The constructor.
         /// </summary>
         /// <param name="cacheName">The name of the cache.</param>
-        /// <param name="cacheConfig">The cache configuration.</param>
-        public MemCache(string cacheName, NameValueCollection cacheConfig = null)
+        /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of the total system memory.</param>
+        public MemCache(string cacheName, int physicalMemoryLimitPercentage)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(cacheName))
             {
                 throw new ArgumentNullException("cacheName");
             }
+            if (physicalMemoryLimitPercentage <= 0)
+            {
+                throw new ArgumentException("cannot be <= 0", "physicalMemoryLimitPercentage");
+            }
+
+            var cacheConfig = new NameValueCollection();
+            cacheConfig.Add("pollingInterval", "00:00:15");
+            cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
 
             _memoryCache = new MemoryCache(cacheName, cacheConfig);
             _internDictionary = new Dictionary<string, string>(100);
@@ -52,7 +60,7 @@ namespace Dache.CacheHost.Storage
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
             {
-                throw new ArgumentException("key is null, empty, or white space");
+                throw new ArgumentException("cannot be null, empty, or white space", "key");
             }
             if (value == null)
             {
@@ -84,7 +92,7 @@ namespace Dache.CacheHost.Storage
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
             {
-                throw new ArgumentException("key is null, empty, or white space");
+                throw new ArgumentException("cannot be null, empty, or white space", "key");
             }
             if (value == null)
             {

@@ -88,23 +88,20 @@ namespace Dache.CacheHost
             {
                 // Initialize the mem cache container instance
                 var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
-                var cacheConfig = new NameValueCollection();
-                cacheConfig.Add("pollingInterval", "00:00:15");
-                cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
-                var memCache = new MemCache("Dache", cacheConfig);
+                var memCache = new MemCache("Dache", physicalMemoryLimitPercentage);
 
                 // Initialize the client to cache server
                 var port = CacheHostConfigurationSection.Settings.Port;
-                var cacheHostServer = new CacheHostServer(port, 1000, 4096);
+                var cacheHostServer = new CacheHostServer(memCache, port, 1000, 4096);
 
                 // Configure the custom performance counter manager
                 CustomPerformanceCounterManagerContainer.Instance = new CustomPerformanceCounterManager(string.Format("port:{0}", port), false);
 
                 // Initialize the cache host information poller
-                var cacheHostInformationPoller = new CacheHostInformationPoller(1000);
+                var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, 1000);
 
                 // Instantiate the cache host engine
-                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, memCache, cacheHostServer);
+                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, cacheHostServer);
             }
             catch (Exception ex)
             {
