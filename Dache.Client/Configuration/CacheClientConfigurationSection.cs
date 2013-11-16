@@ -26,15 +26,41 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// How often to attempt to re-establish the connection to a disconnected cache host, in milliseconds.
+        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds.
         /// </summary>
-        [IntegerValidator(MinValue = 1000, MaxValue = 60000)]
-        [ConfigurationProperty("hostReconnectIntervalMilliseconds", IsRequired = true, DefaultValue = 10000)]
-        public int HostReconnectIntervalMilliseconds
+        [IntegerValidator(MinValue = 1, MaxValue = 300)]
+        [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = true, DefaultValue = 10)]
+        public int HostReconnectIntervalSeconds
         {
             get
             {
-                return (int)this["hostReconnectIntervalMilliseconds"];
+                return (int)this["hostReconnectIntervalSeconds"];
+            }
+        }
+
+        /// <summary>
+        /// The local cache memory limit, as a percentage of the total system memory. Valid range is 20 to 90.
+        /// </summary>
+        [IntegerValidator(MinValue = 20, MaxValue = 90)]
+        [ConfigurationProperty("localCacheMemoryLimitPercentage", IsRequired = true, DefaultValue = 80)]
+        public int LocalCacheMemoryLimitPercentage
+        {
+            get
+            {
+                return (int)this["localCacheMemoryLimitPercentage"];
+            }
+        }
+
+        /// <summary>
+        /// When to expire locally cached entries, in seconds.
+        /// </summary>
+        [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("localCacheAbsoluteExpirationSeconds", IsRequired = true, DefaultValue = 10)]
+        public int LocalCacheAbsoluteExpirationSeconds
+        {
+            get
+            {
+                return (int)this["localCacheAbsoluteExpirationSeconds"];
             }
         }
 

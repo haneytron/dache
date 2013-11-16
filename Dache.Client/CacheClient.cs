@@ -8,6 +8,8 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using Dache.Client.Exceptions;
+using System.Collections.Specialized;
+using System.Runtime.Caching;
 
 namespace Dache.Client
 {
@@ -17,9 +19,16 @@ namespace Dache.Client
     public class CacheClient : ICacheClient
     {
         // The list of cache clients
-        private readonly List<CacheHostBucket> _cacheHostLoadBalancingDistribution = new List<CacheHostBucket>(20);
+        private readonly List<CacheHostBucket> _cacheHostLoadBalancingDistribution = new List<CacheHostBucket>(10);
         // The lock used to ensure state
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
+
+        // The local cache
+        private readonly MemoryCache _localCache = null;
+        // The local cache item absolute expiration seconds
+        private readonly int _localCacheItemExpirationSeconds = 0;
+        // The local cache name suffix - all instances of this class share the value to avoid duplication
+        private static int _localCacheNameSuffix = 0;
 
         // The binary serializer
         private readonly IBinarySerializer _binarySerializer = null;
@@ -40,7 +49,7 @@ namespace Dache.Client
             // Get the cache hosts from configuration
             var cacheHosts = CacheClientConfigurationSection.Settings.CacheHosts;
             // Get the cache host reconnect interval from configuration
-            var hostReconnectIntervalMilliseconds = CacheClientConfigurationSection.Settings.HostReconnectIntervalMilliseconds;
+            var hostReconnectIntervalSeconds = CacheClientConfigurationSection.Settings.HostReconnectIntervalSeconds;
 
             // Sanitize
             if (cacheHosts == null)
@@ -48,11 +57,22 @@ namespace Dache.Client
                 throw new ConfigurationErrorsException("At least one cache host must be specified in your application's configuration.");
             }
 
+            // Initialize and configure the local cache
+            var physicalMemoryLimitPercentage = CacheClientConfigurationSection.Settings.LocalCacheMemoryLimitPercentage;
+            var cacheConfig = new NameValueCollection();
+            cacheConfig.Add("pollingInterval", "00:00:15");
+            cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
+            // Increment the local cache name suffix to avoid overlapping local caches
+            int localCacheNameSuffix = Interlocked.Increment(ref _localCacheNameSuffix);
+            _localCache = new MemoryCache("Dache Local Cache " + localCacheNameSuffix, cacheConfig);
+
+            _localCacheItemExpirationSeconds = CacheClientConfigurationSection.Settings.LocalCacheAbsoluteExpirationSeconds;
+
             // Add the cache hosts to the cache client list
             foreach (CacheHostElement cacheHost in cacheHosts.Cast<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
                 // Instantiate a cache host client container
-                var clientContainer = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalMilliseconds, 1000, 4096);
+                var clientContainer = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalSeconds * 1000, 1000, 4096);
 
                 // Hook up the disconnected and reconnected events
                 clientContainer.Disconnected += OnClientDisconnected;
@@ -86,10 +106,10 @@ namespace Dache.Client
         /// <summary>
         /// Gets the object stored at the given cache key from the cache.
         /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKey">The cache key.</param>
         /// <param name="value">The value or default for that type if the method returns false.</param>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <returns>True if successful, false otherwise.</returns>
+        /// <returns>true if successful, false otherwise.</returns>
         public bool TryGet<T>(string cacheKey, out T value)
         {
             // Sanitize
@@ -137,12 +157,43 @@ namespace Dache.Client
                 return false;
             }
         }
+        
+        /// <summary>
+        /// Gets the object stored at the given cache key from the local cache. If it is not found in the local 
+        /// cache, the object is retrieved remotely and cached locally for subsequent local lookups.
+        /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="value">The value or default for that type if the method returns false.</param>
+        /// <returns>true if successful, false otherwise.</returns>
+        public bool TryGetLocal<T>(string cacheKey, out T value)
+        {
+            var localCacheKey = "cachekey:" + cacheKey;
+
+            // Try and get from local cache
+            object result = _localCache.Get(localCacheKey);
+            if (result != null)
+            {
+                value = (T)result;
+                return true;
+            }
+
+            // Call usual TryGet
+            bool boolResult = TryGet(cacheKey, out value);
+            if (boolResult)
+            {
+                // Cache locally
+                _localCache.Add(localCacheKey, value, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
+            }
+
+            return boolResult;
+        }
 
         /// <summary>
         /// Gets the objects stored at the given cache keys from the cache.
         /// </summary>
-        /// <param name="cacheKeys">The cache keys.</param>
         /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="cacheKeys">The cache keys.</param>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
         public List<T> Get<T>(IEnumerable<string> cacheKeys)
         {
@@ -225,10 +276,47 @@ namespace Dache.Client
         }
 
         /// <summary>
+        /// Gets the objects stored at the given cache keys from the local cache. If they are not found in the local 
+        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
+        /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="cacheKeys">The cache keys.</param>
+        /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
+        public List<T> GetLocal<T>(IEnumerable<string> cacheKeys)
+        {
+            // Create a cache key that is a unique order-independent hash code of all cache keys
+            var hash = 0;
+            foreach (var cacheKey in cacheKeys)
+            {
+                int h = cacheKey.GetHashCode();
+                if (h != 0)
+                    hash = unchecked(hash * h);
+            }
+            var orderIndependentCacheKey = "getmany:" + hash.ToString();
+
+            // Try and get from local cache
+            List<T> result = _localCache.Get(orderIndependentCacheKey) as List<T>;
+            if (result != null)
+            {
+                return result;
+            }
+
+            // Call usual Get
+            result = Get<T>(cacheKeys);
+            if (result != null)
+            {
+                // Cache locally
+                _localCache.Add(orderIndependentCacheKey, result, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Gets the objects stored at the given tag name from the cache.
         /// </summary>
-        /// <param name="tagName">The tag name.</param>
         /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="tagName">The tag name.</param>
         /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
         public List<T> GetTagged<T>(string tagName)
         {
@@ -280,6 +368,36 @@ namespace Dache.Client
             }
 
             return results;
+        }
+
+        /// <summary>
+        /// Gets the objects stored at the given tag name from the local cache. If they are not found in the local 
+        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
+        /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="tagName">The tag name.</param>
+        /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
+        public List<T> GetTaggedLocal<T>(string tagName, bool cacheResultLocally)
+        {
+            // Create a cache key for tag name
+            var cacheKey = "tag:" + tagName;
+
+            // Try and get from local cache
+            List<T> result = _localCache.Get(tagName) as List<T>;
+            if (result != null)
+            {
+                return result;
+            }
+
+            // Call usual GetTagged
+            result = GetTagged<T>(tagName);
+            if (result != null)
+            {
+                // Cache locally
+                _localCache.Add(cacheKey, result, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
+            }
+
+            return result;
         }
 
         /// <summary>

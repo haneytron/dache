@@ -13,27 +13,55 @@ namespace Dache.Client
         /// <summary>
         /// Gets the object stored at the given cache key from the cache.
         /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKey">The cache key.</param>
         /// <param name="value">The value or default for that type if the method returns false.</param>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <returns>True if successful, false otherwise.</returns>
+        /// <returns>true if successful, false otherwise.</returns>
         bool TryGet<T>(string cacheKey, out T value);
+
+        /// <summary>
+        /// Gets the object stored at the given cache key from the local cache. If it is not found in the local 
+        /// cache, the object is retrieved remotely and cached locally for subsequent local lookups.
+        /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="cacheKey">The cache key.</param>
+        /// <param name="value">The value or default for that type if the method returns false.</param>
+        /// <returns>true if successful, false otherwise.</returns>
+        bool TryGetLocal<T>(string cacheKey, out T value);
 
         /// <summary>
         /// Gets the objects stored at the given cache keys from the cache.
         /// </summary>
-        /// <param name="cacheKeys">The cache keys.</param>
         /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="cacheKeys">The cache keys.</param>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
         List<T> Get<T>(IEnumerable<string> cacheKeys);
 
         /// <summary>
+        /// Gets the objects stored at the given cache keys from the local cache. If they are not found in the local 
+        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
+        /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="cacheKeys">The cache keys.</param>
+        /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
+        List<T> GetLocal<T>(IEnumerable<string> cacheKeys);
+
+        /// <summary>
         /// Gets the objects stored at the given tag name from the cache.
         /// </summary>
-        /// <param name="tagName">The tag name.</param>
         /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="tagName">The tag name.</param>
         /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
         List<T> GetTagged<T>(string tagName);
+
+        /// <summary>
+        /// Gets the objects stored at the given tag name from the local cache. If they are not found in the local 
+        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
+        /// </summary>
+        /// <typeparam name="T">The expected type.</typeparam>
+        /// <param name="tagName">The tag name.</param>
+        /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
+        List<T> GetTaggedLocal<T>(string tagName, bool cacheResultLocally);
 
         /// <summary>
         /// Adds or updates an object in the cache at the given cache key.
