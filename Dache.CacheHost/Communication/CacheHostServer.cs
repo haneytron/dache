@@ -24,6 +24,8 @@ namespace Dache.CacheHost.Communication
     {
         // The mem cache
         private readonly IMemCache _memCache = null;
+        // The tag routing table
+        private readonly ITagRoutingTable _tagRoutingTable = null;
         // The cache server
         private readonly ISimplSocketServer _server = null;
         // The local end point
@@ -33,8 +35,6 @@ namespace Dache.CacheHost.Communication
         // The message buffer size
         private readonly int _messageBufferSize = 0;
 
-        // The connection receiver cancellation token source
-        private readonly CancellationTokenSource _connectionReceiverCancellationTokenSource = new CancellationTokenSource();
         // The default cache item policy
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
 
@@ -42,15 +42,20 @@ namespace Dache.CacheHost.Communication
         /// The constructor.
         /// </summary>
         /// <param name="memCache">The mem cache.</param>
+        /// <param name="tagRoutingTable">The tag routing table.</param>
         /// <param name="port">The port.</param>
         /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
-        public CacheHostServer(IMemCache memCache, int port, int maximumConnections, int messageBufferSize)
+        public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, int port, int maximumConnections, int messageBufferSize)
         {
             // Sanitize
             if (memCache == null)
             {
                 throw new ArgumentNullException("memCache");
+            }
+            if (tagRoutingTable == null)
+            {
+                throw new ArgumentNullException("tagRoutingTable");
             }
             if (port <= 0)
             {
@@ -67,6 +72,8 @@ namespace Dache.CacheHost.Communication
 
             // Set the mem cache
             _memCache = memCache;
+            // Set the tag routing table
+            _tagRoutingTable = tagRoutingTable;
 
             // Set maximum connections and message buffer size
             _maximumConnections = maximumConnections;
@@ -307,9 +314,6 @@ namespace Dache.CacheHost.Communication
         /// </summary>
         public void Stop()
         {
-            // Issue cancellation to connection receiver thread
-            _connectionReceiverCancellationTokenSource.Cancel();
-
             // Shutdown and close the server socket
             _server.Close();
         }
@@ -385,7 +389,7 @@ namespace Dache.CacheHost.Communication
             List<byte[]> result = new List<byte[]>(10);
 
             // Get the values
-            var cacheKeys = TagRoutingTable.Instance.GetTaggedCacheKeys(tagName);
+            var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName);
             if (cacheKeys != null)
             {
                 foreach (var cacheKey in cacheKeys)
@@ -563,7 +567,7 @@ namespace Dache.CacheHost.Communication
             AddOrUpdate(cacheKey, serializedObject);
 
             // Add to the local tag routing table
-            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
+            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -592,7 +596,7 @@ namespace Dache.CacheHost.Communication
             AddOrUpdate(cacheKey, serializedObject, absoluteExpiration);
 
             // Add to the local tag routing table
-            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
+            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -621,7 +625,7 @@ namespace Dache.CacheHost.Communication
             AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
 
             // Add to the local tag routing table
-            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
+            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -645,7 +649,7 @@ namespace Dache.CacheHost.Communication
             AddOrUpdateInterned(cacheKey, serializedObject);
 
             // Add to the local tag routing table
-            TagRoutingTable.Instance.AddOrUpdate(cacheKey, tagName);
+            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -805,7 +809,7 @@ namespace Dache.CacheHost.Communication
             }
 
             // Remove them all
-            var cacheKeys = TagRoutingTable.Instance.GetTaggedCacheKeys(tagName);
+            var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName);
             if (cacheKeys != null)
             {
                 foreach (var cacheKey in cacheKeys)

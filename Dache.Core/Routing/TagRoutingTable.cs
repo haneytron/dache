@@ -7,36 +7,23 @@ namespace Dache.Core.Routing
     /// <summary>
     /// The routing table that indicates which tags contain which cache keys. Thread safe.
     /// </summary>
-    public class TagRoutingTable
+    public class TagRoutingTable : ITagRoutingTable
     {
         // The tagged cache keys: key is tag name, value is cache keys
-        private IDictionary<string, HashSet<string>> _taggedCacheKeys = new Dictionary<string, HashSet<string>>(1000);
+        private readonly IDictionary<string, HashSet<string>> _taggedCacheKeys = null;
         // The cache keys and their associated tags: key is cache key, value is tag name
-        private IDictionary<string, string> _cacheKeyTags = new Dictionary<string, string>(1000);
-
+        private readonly IDictionary<string, string> _cacheKeyTags = null;
         // The lock used to ensure thread safety
-        private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
-
-        // The singleton instance
-        private static readonly TagRoutingTable _instance = new TagRoutingTable();
+        private readonly ReaderWriterLockSlim _lock = null;
 
         /// <summary>
-        /// Private constructor for singleton.
+        /// The constructor.
         /// </summary>
-        private TagRoutingTable()
+        public TagRoutingTable()
         {
-
-        }
-
-        /// <summary>
-        /// The singleton instance.
-        /// </summary>
-        public static TagRoutingTable Instance
-        {
-            get
-            {
-                return _instance;
-            }
+            _taggedCacheKeys = new Dictionary<string, HashSet<string>>(1000);
+            _cacheKeyTags = new Dictionary<string, string>(1000);
+            _lock = new ReaderWriterLockSlim();
         }
 
         /// <summary>
@@ -91,7 +78,7 @@ namespace Dache.Core.Routing
             _lock.EnterWriteLock();
             try
             {
-                // First remove from tag dictionaries if the key already existed as tagged
+                // Remove from the tag dictionaries
                 RemoveFromTagDictionaries(cacheKey);
             }
             finally

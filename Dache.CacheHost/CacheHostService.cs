@@ -8,6 +8,7 @@ using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
+using Dache.Core.Routing;
 
 namespace Dache.CacheHost
 {
@@ -96,9 +97,11 @@ namespace Dache.CacheHost
                 var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
                 var memCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
 
-                // Initialize the client to cache server
-                
-                var cacheHostServer = new CacheHostServer(memCache, port, 1000, 4096);
+                // Initialize the tag routing table
+                var tagRoutingTable = new TagRoutingTable();
+
+                // Initialize the cache host server
+                var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, port, 1000, 4096);
 
                 // Initialize the cache host information poller
                 var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, customPerformanceCounterManager, 1000);

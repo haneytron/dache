@@ -19,6 +19,7 @@ namespace Dache.Client.Plugins.SessionState
         // The cache key
         private const string _cacheKey = "__DacheCustomSessionState_SessionID:{0}_ApplicationName:{1}";
         // The cache client
+        // TODO: read custom logger, serializer from configuration
         private readonly ICacheClient _cacheClient = new CacheClient();
 
         // The application name
