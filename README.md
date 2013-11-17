@@ -26,16 +26,27 @@ VERSION HISTORY
 - Dache now operates on a TCP syntax that is platform independent. This means that people can use Dache from non-.NET applications if they choose to write a native client that employs the commands. In the commands, all objects are passed as base-64 strings. The commands are:
 
 > get cacheKey1 cacheKey2 cacheKey3 cacheKey4...
+
 > get-tag tagName
+
 > set cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > set absoluteExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > set slidingExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > set-intern cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > set-tag tagName cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > set-tag tagName absoluteExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > set-tag tagName slidingExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > set-tag-intern tagName cacheKey1 serializedObject1 cacheKey2 serializedObject2
+
 > del cacheKey1 cacheKey2 cacheKey3 cacheKey4...
+
 > del-tag tagName1 tagName2 tagName3 tagName4...
 
 - Created local caching that allows for a "turbo" of sorts. The objects cached locally will not be kept in sync with the cache hosts, however this is a great option for "reference data" that never changes. By using local caching, there is no repeated trip over the wire for static data.
