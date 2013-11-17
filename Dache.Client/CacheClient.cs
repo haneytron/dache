@@ -38,8 +38,8 @@ namespace Dache.Client
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="binarySerializer">The custom binary serializer to use. Pass null to use the default serializer. NOTE: must be thread safe.</param>
-        /// <param name="logger">The custom logger to use. Pass null to use the default logger. NOTE: must be thread safe.</param>
+        /// <param name="binarySerializer">The custom binary serializer to use. The custom binary serializer must be thread safe. Pass null to use the default serializer.</param>
+        /// <param name="logger">The custom logger to use. The custom logger must be thread safe. Pass null to use the default logger.</param>
         public CacheClient(IBinarySerializer binarySerializer = null, ILogger logger = null)
         {
             // Assign custom serializer and logger

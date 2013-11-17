@@ -15,15 +15,22 @@ namespace Dache.Client.Plugins.OutputCache
         // The cache key
         private const string _cacheKey = "__DacheCustomMvcChildActionOutputCaching_CacheKey:{0}";
         // The cache client
-        private readonly ICacheClient _cacheClient = new CacheClient();
+        private readonly ICacheClient _cacheClient = null;
 
         /// <summary>
         /// The constructor.
         /// </summary>
-        public DacheMvcChildActionCache() 
+        /// <param name="cacheClient">The cache client.</param>
+        public DacheMvcChildActionCache(ICacheClient cacheClient) 
             : base("Dache MVC Child Action Cache")
         {
-        
+            // Sanitize
+            if (cacheClient == null)
+            {
+                throw new ArgumentNullException("cacheClient");
+            }
+
+            _cacheClient = cacheClient;
         }
         
         /// <summary>
@@ -36,6 +43,16 @@ namespace Dache.Client.Plugins.OutputCache
         /// <returns>true if insertion succeeded, false otherwise.</returns>
         public override bool Add(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
         {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "key");
+            }
+            if (value == null)
+            {
+                throw new ArgumentNullException("value");
+            }
+
             var cacheKey = string.Format(_cacheKey, key);
 
             _cacheClient.AddOrUpdate(cacheKey, value, absoluteExpiration);
@@ -51,6 +68,12 @@ namespace Dache.Client.Plugins.OutputCache
         /// <returns>The cache entry that is identified by key.</returns>
         public override object Get(string key, string regionName = null)
         {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "key");
+            }
+
             var cacheKey = string.Format(_cacheKey, key);
 
             object value = null;

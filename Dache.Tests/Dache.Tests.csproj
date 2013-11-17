@@ -43,6 +43,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Runtime.Caching" />
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -57,13 +58,35 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Dache.Client\BinarySerializerTests.cs" />
+    <Compile Include="Dache.Client\DacheMvcChildActionCacheTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Dache.CacheHost\" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="ExternalReferences\Moq.dll" />
     <Content Include="ExternalReferences\Moq.pdb" />
     <Content Include="ExternalReferences\Moq.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Dache.Board\Dache.Board.csproj">
+      <Project>{6cec0b51-bbdc-4c86-bd07-be252f7c2c4e}</Project>
+      <Name>Dache.Board</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Dache.CacheHost\Dache.CacheHost.csproj">
+      <Project>{1b9fcbf1-dfca-4911-8a2d-345d45c77fe6}</Project>
+      <Name>Dache.CacheHost</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Dache.Client\Dache.Client.csproj">
+      <Project>{66581bd3-d11b-491a-bfe3-a0da56c6d6f5}</Project>
+      <Name>Dache.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Dache.Core\Dache.Core.csproj">
+      <Project>{e304662c-ac30-4427-9ca0-f63297f37694}</Project>
+      <Name>Dache.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

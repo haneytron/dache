@@ -19,3 +19,4 @@ del-tag tagName1 tagName2 tagName3 tagName4...
 -Introduce of Sorted Sets/Lists with weights
 -Create integer storage methods and increment/decrement methods?
 -Azure host
+-Build NHibernate second level cache provider plugin
