@@ -1,4 +1,4 @@
-DACHE 1.1.2
+DACHE 1.2.0
 ===========
 
 
@@ -13,6 +13,44 @@ info@getdache.net
 
 VERSION HISTORY
 ============================================
+
+
+1.2.0
+------------------
+
+
+- This release is MASSIVE and AWESOME! :)
+
+- Created and implemented SimplSockets, a library designed for extremely efficient socket communication. As a result, WCF has been removed entirely. The client side uses multiplexing on a single connection. Throughput to Dache has nearly tripled: I could not max out a single cache server with 2 of my computers doing roughly 100,000 commands per second each! http://www.github.com/ironyx/simplsockets if you'd like to learn more.
+
+- Dache now operates on a TCP syntax that is platform independent. This means that people can use Dache from non-.NET applications if they choose to write a native client that employs the commands. In the commands, all objects are passed as base-64 strings. The commands are:
+
+> get cacheKey1 cacheKey2 cacheKey3 cacheKey4...
+> get-tag tagName
+> set cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> set absoluteExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> set slidingExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> set-intern cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> set-tag tagName cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> set-tag tagName absoluteExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> set-tag tagName slidingExpiration cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> set-tag-intern tagName cacheKey1 serializedObject1 cacheKey2 serializedObject2
+> del cacheKey1 cacheKey2 cacheKey3 cacheKey4...
+> del-tag tagName1 tagName2 tagName3 tagName4...
+
+- Created local caching that allows for a "turbo" of sorts. The objects cached locally will not be kept in sync with the cache hosts, however this is a great option for "reference data" that never changes. By using local caching, there is no repeated trip over the wire for static data.
+
+- Added runnable performance tests that can be executed to test Dache throughput locally or remotely.
+
+- Improved efficiency of initial client connection to cache host.
+
+- Removed static Container classes which were not very OO; they have been replaced with proper inversion of control.
+
+- Created initial unit tests; will add to them as development continues in the future
+
+- Cleaned up various classes and updated XML comments
+
+- Renamed methods on client contract. Unfortunately this is a breaking change however the client commands are now overloaded and much more intuitive to use.
 
 
 1.1.2
