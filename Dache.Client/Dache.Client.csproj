@@ -52,26 +52,26 @@
       <Link>Communication\ICacheHostContract.cs</Link>
     </Compile>
     <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\BlockingQueue.cs">
-        <Link>Communication\SimplSockets\BlockingQueue.cs</Link>
+      <Link>Communication\SimplSockets\BlockingQueue.cs</Link>
     </Compile>
-      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\ISimplSocketClient.cs">
-          <Link>Communication\SimplSockets\ISimplSocketClient.cs</Link>
-      </Compile>
-      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\ISimplSocketServer.cs">
-          <Link>Communication\SimplSockets\ISimplSocketServer.cs</Link>
-      </Compile>
-      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\MessageReceivedArgs.cs">
-          <Link>Communication\SimplSockets\MessageReceivedArgs.cs</Link>
-      </Compile>
-      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\Pool.cs">
-          <Link>Communication\SimplSockets\Pool.cs</Link>
-      </Compile>
-      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\SimplSocket.cs">
-          <Link>Communication\SimplSockets\SimplSocket.cs</Link>
-      </Compile>
-      <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\SocketErrorArgs.cs">
-          <Link>Communication\SimplSockets\SocketErrorArgs.cs</Link>
-      </Compile>
+    <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\ISimplSocketClient.cs">
+      <Link>Communication\SimplSockets\ISimplSocketClient.cs</Link>
+    </Compile>
+    <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\ISimplSocketServer.cs">
+      <Link>Communication\SimplSockets\ISimplSocketServer.cs</Link>
+    </Compile>
+    <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\MessageReceivedArgs.cs">
+      <Link>Communication\SimplSockets\MessageReceivedArgs.cs</Link>
+    </Compile>
+    <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\Pool.cs">
+      <Link>Communication\SimplSockets\Pool.cs</Link>
+    </Compile>
+    <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\SimplSocket.cs">
+      <Link>Communication\SimplSockets\SimplSocket.cs</Link>
+    </Compile>
+    <Compile Include="..\Dache.CacheHost\Communication\SimplSockets\SocketErrorArgs.cs">
+      <Link>Communication\SimplSockets\SocketErrorArgs.cs</Link>
+    </Compile>
     <Compile Include="..\Dache.Core\Logging\EventViewerLogger.cs">
       <Link>Logging\EventViewerLogger.cs</Link>
     </Compile>
@@ -81,6 +81,8 @@
     <Compile Include="Configuration\CacheClientConfigurationSection.cs" />
     <Compile Include="Configuration\CacheHostElement.cs" />
     <Compile Include="Configuration\CacheHostsCollection.cs" />
+    <Compile Include="Configuration\CustomTypeElement.cs" />
+    <Compile Include="Configuration\CustomTypesLoader.cs" />
     <Compile Include="Exceptions\NoCacheHostsAvailableException.cs" />
     <Compile Include="Plugins\OutputCache\DacheMvcChildActionCache.cs" />
     <Compile Include="Plugins\OutputCache\DacheOutputCacheProvider.cs" />
@@ -102,9 +104,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Communication\SimplSockets\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

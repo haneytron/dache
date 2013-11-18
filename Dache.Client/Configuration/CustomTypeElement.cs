@@ -1,14 +1,14 @@
 ﻿using System.Configuration;
 
-namespace Dache.CacheHost.Configuration
+namespace Dache.Client.Configuration
 {
     /// <summary>
-    /// Provides a custom logger element for configuration.
+    /// Provides a custom type element for configuration.
     /// </summary>
-    public class CustomLoggerElement : ConfigurationElement
+    public class CustomTypeElement : ConfigurationElement
     {
         /// <summary>
-        /// The custom logger type.
+        /// The custom type.
         /// </summary>
         [StringValidator(InvalidCharacters = @"\: ")]
         [ConfigurationProperty("type", IsRequired = true)]

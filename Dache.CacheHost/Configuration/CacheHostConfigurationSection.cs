@@ -1,4 +1,5 @@
 ﻿using System.Configuration;
+using Dache.Client.Configuration;
 
 namespace Dache.CacheHost.Configuration
 {
@@ -25,11 +26,11 @@ namespace Dache.CacheHost.Configuration
         /// The custom logger.
         /// </summary>
         [ConfigurationProperty("customLogger", IsRequired = false)]
-        public CustomLoggerElement CustomLogger
+        public CustomTypeElement CustomLogger
         {
             get
             {
-                return (CustomLoggerElement)this["customLogger"];
+                return (CustomTypeElement)this["customLogger"];
             }
         }
 

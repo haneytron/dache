@@ -45,32 +45,8 @@ namespace Dache.CacheHost
             // Set the host name
             ServiceName = "Dache Cache Host";
 
-            // Configure custom logging
-            try
-            {
-                var customLoggerTypeString = CacheHostConfigurationSection.Settings.CustomLogger.Type;
-                // Check for custom logger
-                if (string.IsNullOrWhiteSpace(customLoggerTypeString))
-                {
-                    // No custom logging
-                    _logger = new EventViewerLogger("Cache Host", "Dache");
-                    return;
-                }
-
-                // Have a custom logger, attempt to load it and confirm it
-                var customLoggerType = Type.GetType(customLoggerTypeString);
-                // Verify that it implements our ILogger interface
-                if (customLoggerType != null && customLoggerType.IsAssignableFrom(typeof(ILogger)))
-                {
-                    _logger = (ILogger)Activator.CreateInstance(customLoggerType);
-                }
-            }
-            catch
-            {
-                // Custom logger load failed - no custom logging
-                _logger = new EventViewerLogger("Cache Host", "Dache");
-                return;
-            }
+            // Load custom logging
+            _logger = CustomLoggerLoader.LoadLogger();
         }
 
         /// <summary>

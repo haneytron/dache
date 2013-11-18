@@ -12,7 +12,7 @@ namespace Dache.PerformanceTests.MultiOperation
     {
         public static void Run()
         {
-            var cacheClient = new CacheClient(null, null);
+            var cacheClient = new CacheClient();
 
             var stopwatch = new Stopwatch();
 

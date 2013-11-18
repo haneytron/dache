@@ -38,13 +38,13 @@ namespace Dache.Client
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="binarySerializer">The custom binary serializer to use. The custom binary serializer must be thread safe. Pass null to use the default serializer.</param>
-        /// <param name="logger">The custom logger to use. The custom logger must be thread safe. Pass null to use the default logger.</param>
-        public CacheClient(IBinarySerializer binarySerializer = null, ILogger logger = null)
+        public CacheClient()
         {
-            // Assign custom serializer and logger
-            _binarySerializer = binarySerializer ?? new BinarySerializer();
-            _logger = logger ?? new EventViewerLogger("Cache Client", "Dache");
+            // Load custom logging
+            _logger = CustomTypesLoader.LoadLogger();
+
+            // Configure custom serializer
+            _binarySerializer = CustomTypesLoader.LoadSerializer();
 
             // Get the cache hosts from configuration
             var cacheHosts = CacheClientConfigurationSection.Settings.CacheHosts;

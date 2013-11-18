@@ -65,6 +65,30 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
+        /// The custom logger.
+        /// </summary>
+        [ConfigurationProperty("customLogger", IsRequired = false)]
+        public CustomTypeElement CustomLogger
+        {
+            get
+            {
+                return (CustomTypeElement)this["customLogger"];
+            }
+        }
+
+        /// <summary>
+        /// The custom serializer.
+        /// </summary>
+        [ConfigurationProperty("customSerializer", IsRequired = false)]
+        public CustomTypeElement CustomSerializer
+        {
+            get
+            {
+                return (CustomTypeElement)this["customSerializer"];
+            }
+        }
+
+        /// <summary>
         /// The cache hosts collection.
         /// </summary>
         [ConfigurationProperty("cacheHosts", IsDefaultCollection = false)]

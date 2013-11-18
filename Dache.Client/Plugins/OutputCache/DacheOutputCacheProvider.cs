@@ -14,7 +14,6 @@ namespace Dache.Client.Plugins.OutputCache
         // The cache key
         private const string _cacheKey = "__DacheCustomOutputCaching_CacheKey:{0}";
         // The cache client
-        // TODO: read custom logger, serializer from configuration
         private static readonly ICacheClient _cacheClient = new CacheClient();
 
         /// <summary>
