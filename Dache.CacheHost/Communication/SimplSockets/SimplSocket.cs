@@ -58,39 +58,56 @@ namespace SimplSockets
         /// Create a client.
         /// </summary>
         /// <param name="socketFunc">The function that creates a new socket. Use this to specify your socket constructor and initialize settings.</param>
+        /// <param name="errorHandler">The error handler that is raised when a Socket error occurs.</param>
         /// <param name="messageBufferSize">The message buffer size to use for send/receive.</param>
         /// <param name="maximumConnections">The maximum connections to allow to use the socket simultaneously.</param>
         /// <param name="useNagleAlgorithm">Whether or not to use the Nagle algorithm.</param>
-        public static ISimplSocketClient CreateClient(Func<Socket> socketFunc, int messageBufferSize, int maximumConnections, bool useNagleAlgorithm)
+        public static ISimplSocketClient CreateClient(Func<Socket> socketFunc, EventHandler<SocketErrorArgs> errorHandler, int messageBufferSize, int maximumConnections, bool useNagleAlgorithm)
         {
-            return new SimplSocket(socketFunc, messageBufferSize, maximumConnections, useNagleAlgorithm);
+            return new SimplSocket(socketFunc, errorHandler, messageBufferSize, maximumConnections, useNagleAlgorithm);
         }
 
         /// <summary>
         /// Create a server.
         /// </summary>
         /// <param name="socketFunc">The function that creates a new socket. Use this to specify your socket constructor and initialize settings.</param>
+        /// <param name="errorHandler">The error handler that is raised when a Socket error occurs.</param>
+        /// <param name="messageHandler">The message handler that handles incoming messages.</param>
         /// <param name="messageBufferSize">The message buffer size to use for send/receive.</param>
         /// <param name="maximumConnections">The maximum connections to allow to use the socket simultaneously.</param>
         /// <param name="useNagleAlgorithm">Whether or not to use the Nagle algorithm.</param>
-        public static ISimplSocketServer CreateServer(Func<Socket> socketFunc, int messageBufferSize, int maximumConnections, bool useNagleAlgorithm)
+        public static ISimplSocketServer CreateServer(Func<Socket> socketFunc, EventHandler<SocketErrorArgs> errorHandler, EventHandler<MessageReceivedArgs> messageHandler, 
+            int messageBufferSize, int maximumConnections, bool useNagleAlgorithm)
         {
-            return new SimplSocket(socketFunc, messageBufferSize, maximumConnections, useNagleAlgorithm);
+            // Sanitize
+            if (messageHandler == null)
+            {
+                throw new ArgumentNullException("messageHandler");
+            }
+
+            var simplSocket = new SimplSocket(socketFunc, errorHandler, messageBufferSize, maximumConnections, useNagleAlgorithm);
+            simplSocket.MessageReceived += messageHandler;
+            return simplSocket;
         }
 
         /// <summary>
         /// The private constructor - used to enforce factor-style instantiation.
         /// </summary>
         /// <param name="socketFunc">The function that creates a new socket. Use this to specify your socket constructor and initialize settings.</param>
+        /// <param name="errorHandler">The error handler that is raised when a Socket error occurs.</param>
         /// <param name="messageBufferSize">The message buffer size to use for send/receive.</param>
         /// <param name="maximumConnections">The maximum connections to allow to use the socket simultaneously.</param>
         /// <param name="useNagleAlgorithm">Whether or not to use the Nagle algorithm.</param>
-        private SimplSocket(Func<Socket> socketFunc, int messageBufferSize, int maximumConnections, bool useNagleAlgorithm)
+        private SimplSocket(Func<Socket> socketFunc, EventHandler<SocketErrorArgs> errorHandler, int messageBufferSize, int maximumConnections, bool useNagleAlgorithm)
         {
             // Sanitize
             if (socketFunc == null)
             {
                 throw new ArgumentNullException("socketFunc");
+            }
+            if (errorHandler == null)
+            {
+                throw new ArgumentNullException("errorHandler");
             }
             if (messageBufferSize < 128)
             {
@@ -102,6 +119,7 @@ namespace SimplSockets
             }
 
             _socketFunc = socketFunc;
+            Error += errorHandler;
             _messageBufferSize = messageBufferSize;
             _maximumConnections = maximumConnections;
             _maxConnectionsSemaphore = new Semaphore(maximumConnections, maximumConnections);
@@ -158,9 +176,8 @@ namespace SimplSockets
         /// will not be called if the connection fails. Instead this method will return false.
         /// </summary>
         /// <param name="endPoint">The endpoint.</param>
-        /// <param name="errorHandler">The error handler.</param>
         /// <returns>true if connection is successful, false otherwise.</returns>
-        public bool Connect(EndPoint endPoint, EventHandler<SocketErrorArgs> errorHandler)
+        public bool Connect(EndPoint endPoint)
         {
             // Sanitize
             if (_isDoingSomething)
@@ -170,10 +187,6 @@ namespace SimplSockets
             if (endPoint == null)
             {
                 throw new ArgumentNullException("endPoint");
-            }
-            if (errorHandler == null)
-            {
-                throw new ArgumentNullException("errorHandler");
             }
 
             _isDoingSomething = true;
@@ -196,11 +209,9 @@ namespace SimplSockets
             }
             catch (SocketException ex)
             {
+                _isDoingSomething = false;
                 return false;
             }
-
-            // Register error handler
-            Error += errorHandler;
 
             // Get a message state from the pool
             var messageState = _messageStatePool.Pop();
@@ -233,8 +244,7 @@ namespace SimplSockets
         /// Begin listening for incoming connections. Once this is called, you must call Close before calling Connect or Listen again.
         /// </summary>
         /// <param name="localEndpoint">The local endpoint to listen on.</param>
-        /// <param name="errorHandler">The error handler.</param>
-        public void Listen(EndPoint localEndpoint, EventHandler<SocketErrorArgs> errorHandler)
+        public void Listen(EndPoint localEndpoint)
         {
             // Sanitize
             if (_isDoingSomething)
@@ -245,15 +255,8 @@ namespace SimplSockets
             {
                 throw new ArgumentNullException("localEndpoint");
             }
-            if (errorHandler == null)
-            {
-                throw new ArgumentNullException("errorHandler");
-            }
 
             _isDoingSomething = true;
-
-            // Register error handler
-            Error += errorHandler;
 
             // Create socket
             _socket = _socketFunc();

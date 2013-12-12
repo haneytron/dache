@@ -12,8 +12,7 @@ namespace SimplSockets
         /// Begin listening for incoming connections. Once this is called, you must call Close before calling Connect or Listen again.
         /// </summary>
         /// <param name="localEndpoint">The local endpoint to listen on.</param>
-        /// <param name="errorHandler">The error handler.</param>
-        void Listen(EndPoint localEndpoint, EventHandler<SocketErrorArgs> errorHandler);
+        void Listen(EndPoint localEndpoint);
 
         /// <summary>
         /// Sends a message back to the client.

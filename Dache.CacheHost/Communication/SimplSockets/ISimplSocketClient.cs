@@ -9,13 +9,11 @@ namespace SimplSockets
     public interface ISimplSocketClient : IDisposable
     {
         /// <summary>
-        /// Connects to an endpoint. Once this is called, you must call Close before calling Connect or Listen again. The errorHandler method 
-        /// will not be called if the connection fails. Instead this method will return false.
+        /// Connects to an endpoint. Once this is called, you must call Close before calling Connect or Listen again. This method will not raise an error.
         /// </summary>
         /// <param name="endPoint">The endpoint.</param>
-        /// <param name="errorHandler">The error handler.</param>
         /// <returns>true if connection is successful, false otherwise.</returns>
-        bool Connect(EndPoint endPoint, EventHandler<SocketErrorArgs> errorHandler);
+        bool Connect(EndPoint endPoint);
 
         /// <summary>
         /// Sends a message to the server without waiting for a response (one-way communication).

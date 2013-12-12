@@ -64,7 +64,8 @@ namespace Dache.Client
             }
 
             // Define the client
-            _client = SimplSocket.CreateClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
+            _client = SimplSocket.CreateClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), 
+                (sender, e) => { DisconnectFromServer(); }, messageBufferSize, maximumConnections, false);
 
             // Establish the remote endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry(address);
@@ -80,11 +81,7 @@ namespace Dache.Client
 
         public bool Connect()
         {
-            return _client.Connect(_remoteEndPoint, (sender, e) =>
-            {
-                // Enter the disconnected state
-                DisconnectFromServer();
-            });
+            return _client.Connect(_remoteEndPoint);
         }
 
         /// <summary>

@@ -85,8 +85,8 @@ namespace Dache.CacheHost.Communication
             _localEndPoint = new IPEndPoint(ipAddress, port);
 
             // Define the server
-            _server = SimplSocket.CreateServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
-            _server.MessageReceived += ReceiveMessage;
+            _server = SimplSocket.CreateServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), 
+                (sender, e) => { /* Ignore it, client's toast */ }, ReceiveMessage, messageBufferSize, maximumConnections, false);
         }
 
         private void ReceiveMessage(object sender, MessageReceivedArgs e)
@@ -306,10 +306,7 @@ namespace Dache.CacheHost.Communication
         public void Start()
         {
             // Listen for connections
-            _server.Listen(_localEndPoint, (sender, e) =>
-            {
-                // Ignore it, client's toast
-            });
+            _server.Listen(_localEndPoint);
         }
 
         /// <summary>
