@@ -1,4 +1,4 @@
-DACHE 1.2.0
+DACHE 1.2.1
 ===========
 
 
@@ -6,13 +6,26 @@ distributed caching for .net applications
 
 fast, scalable distributed caching with meaningful performance metrics for your managers and a simple api for your development team
 
-http://www.getdache.net
+**WEB:**   http://www.getdache.net
 
-info@getdache.net
+**EMAIL:** info@getdache.net
 
 
 VERSION HISTORY
 ============================================
+
+
+1.2.1
+------------------
+
+
+- Upgraded SimplSockets to 1.1.0 which introduces many fixes to Dache socket communication.
+
+- Client threads will no longer hang when a cache host is disconnected.
+
+- Special thanks to Ruslan (https://github.com/ruzhovt) for discovering and documenting the source of these errors.
+
+- Fixed bug in cache client host orders when disconnect/reconnect occurs. This ensures that all cache clients have the same host order, so that cached items are distributed properly.
 
 
 1.2.0
