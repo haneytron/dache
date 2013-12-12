@@ -20,6 +20,8 @@ namespace Dache.Client
     {
         // The list of cache clients
         private readonly List<CacheHostBucket> _cacheHostLoadBalancingDistribution = new List<CacheHostBucket>(10);
+        // The cache host bucket comparer
+        private readonly IComparer<CacheHostBucket> _cacheHostBucketComparer = new CacheHostBucketComparer();
         // The lock used to ensure state
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
@@ -69,7 +71,7 @@ namespace Dache.Client
             _localCacheItemExpirationSeconds = CacheClientConfigurationSection.Settings.LocalCacheAbsoluteExpirationSeconds;
 
             // Add the cache hosts to the cache client list
-            foreach (CacheHostElement cacheHost in cacheHosts.Cast<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
+            foreach (CacheHostElement cacheHost in cacheHosts)
             {
                 // Instantiate a cache host client container
                 var clientContainer = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalSeconds * 1000, 1000, 4096);
@@ -92,11 +94,7 @@ namespace Dache.Client
             for (int i = 0; i < _cacheHostLoadBalancingDistribution.Count; i++)
             {
                 var cacheHostBucket = _cacheHostLoadBalancingDistribution[i];
-                try
-                {
-                    cacheHostBucket.CacheHost.Connect();
-                }
-                catch
+                if (!cacheHostBucket.CacheHost.Connect())
                 {
                     i--;
                 }
@@ -1534,6 +1532,9 @@ namespace Dache.Client
             // Get the number of cache hosts
             var registeredCacheHostCount = _cacheHostLoadBalancingDistribution.Count;
 
+            // Reorder cache hosts so that all clients always use the same order
+            _cacheHostLoadBalancingDistribution.Sort(_cacheHostBucketComparer);
+
             int x = 0;
             // Iterate all cache hosts in the load balancing distribution
             for (int i = 0; i < _cacheHostLoadBalancingDistribution.Count; i++)
@@ -1668,6 +1669,23 @@ namespace Dache.Client
             /// The maximum value of the range.
             /// </summary>
             public int MaxValue { get; set; }
+        }
+
+        /// <summary>
+        /// A cache host bucket comparer that compares cache host buckets by the underlying communication client's friendly address and port string.
+        /// </summary>
+        private class CacheHostBucketComparer : IComparer<CacheHostBucket>
+        {
+            /// <summary>
+            /// Compares two cache host buckets.
+            /// </summary>
+            /// <param name="x">The first cache host bucket.</param>
+            /// <param name="y">The second cache host bucket.</param>
+            /// <returns>-1 if x is less than y, 1 is x is greater than x, or 1 if x equals y.</returns>
+            public int Compare(CacheHostBucket x, CacheHostBucket y)
+            {
+                return string.Compare(x.CacheHost.ToString(), y.CacheHost.ToString());
+            }
         }
     }
 }

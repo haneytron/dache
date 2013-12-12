@@ -154,14 +154,26 @@ namespace SimplSockets
         }
 
         /// <summary>
-        /// Connects to an endpoint. Once this is called, you must call Close before calling Connect or Listen again.
+        /// Connects to an endpoint. Once this is called, you must call Close before calling Connect or Listen again. The errorHandler method 
+        /// will not be called if the connection fails. Instead this method will return false.
         /// </summary>
         /// <param name="endPoint">The endpoint.</param>
-        public void Connect(EndPoint endPoint)
+        /// <param name="errorHandler">The error handler.</param>
+        /// <returns>true if connection is successful, false otherwise.</returns>
+        public bool Connect(EndPoint endPoint, EventHandler<SocketErrorArgs> errorHandler)
         {
+            // Sanitize
             if (_isDoingSomething)
             {
                 throw new InvalidOperationException("socket is already in use");
+            }
+            if (endPoint == null)
+            {
+                throw new ArgumentNullException("endPoint");
+            }
+            if (errorHandler == null)
+            {
+                throw new ArgumentNullException("errorHandler");
             }
 
             _isDoingSomething = true;
@@ -172,6 +184,11 @@ namespace SimplSockets
             // Turn on or off Nagle algorithm
             _socket.NoDelay = !_useNagleAlgorithm;
 
+            // Do not proceed until we have room to do so
+            _maxConnectionsSemaphore.WaitOne();
+
+            Interlocked.Increment(ref _currentlyConnectedClients);
+
             // Post a connect to the socket synchronously
             try
             {
@@ -179,13 +196,11 @@ namespace SimplSockets
             }
             catch (SocketException ex)
             {
-                HandleCommunicationError(_socket, ex);
+                return false;
             }
-            catch (ObjectDisposedException)
-            {
-                // If disposed, handle communication error was already done and we're just catching up on other threads. Supress it.
-                return;
-            }
+
+            // Register error handler
+            Error += errorHandler;
 
             // Get a message state from the pool
             var messageState = _messageStatePool.Pop();
@@ -210,20 +225,35 @@ namespace SimplSockets
 
             // Process all incoming messages
             Task.Factory.StartNew(() => ProcessReceivedMessage(messageState));
+
+            return true;
         }
 
         /// <summary>
         /// Begin listening for incoming connections. Once this is called, you must call Close before calling Connect or Listen again.
         /// </summary>
         /// <param name="localEndpoint">The local endpoint to listen on.</param>
-        public void Listen(EndPoint localEndpoint)
+        /// <param name="errorHandler">The error handler.</param>
+        public void Listen(EndPoint localEndpoint, EventHandler<SocketErrorArgs> errorHandler)
         {
+            // Sanitize
             if (_isDoingSomething)
             {
                 throw new InvalidOperationException("socket is already in use");
             }
+            if (localEndpoint == null)
+            {
+                throw new ArgumentNullException("localEndpoint");
+            }
+            if (errorHandler == null)
+            {
+                throw new ArgumentNullException("errorHandler");
+            }
 
             _isDoingSomething = true;
+
+            // Register error handler
+            Error += errorHandler;
 
             // Create socket
             _socket = _socketFunc();
@@ -406,7 +436,7 @@ namespace SimplSockets
         /// <summary>
         /// An event that is fired whenever a socket communication error occurs.
         /// </summary>
-        public event EventHandler<SocketErrorArgs> Error;
+        private event EventHandler<SocketErrorArgs> Error;
 
         /// <summary>
         /// Disposes the instance and frees unmanaged resources.
@@ -723,17 +753,18 @@ namespace SimplSockets
                 {
                     socket.Shutdown(SocketShutdown.Both);
                 }
+                catch (SocketException)
+                {
+                    // Socket was not able to be shutdown, likely because it was never opened
+                }
                 catch (ObjectDisposedException)
                 {
                     // Socket was already closed/disposed, so return out to prevent raising the Error event multiple times
                     // This is most likely to happen when an error occurs during heavily multithreaded use
                     return;
                 }
-                catch
-                {
-                    // Ignore
-                }
 
+                // Close / dispose the socket
                 socket.Close();
             }
 
@@ -751,11 +782,11 @@ namespace SimplSockets
                 _clientMultiplexerLock.ExitReadLock();
             }
 
-            // Release one from the max connections semaphore
-            _maxConnectionsSemaphore.Release();
-
             // Decrement the counter keeping track of the total number of clients connected to the server
             Interlocked.Decrement(ref _currentlyConnectedClients);
+
+            // Release one from the max connections semaphore
+            _maxConnectionsSemaphore.Release();
 
             // Raise the error event
             var error = Error;

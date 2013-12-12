@@ -9,10 +9,11 @@ namespace SimplSockets
     public interface ISimplSocketServer : IDisposable
     {
         /// <summary>
-        /// Begin listening for incoming connections. Once this is called, you must call Close before calling Listen again.
+        /// Begin listening for incoming connections. Once this is called, you must call Close before calling Connect or Listen again.
         /// </summary>
         /// <param name="localEndpoint">The local endpoint to listen on.</param>
-        void Listen(EndPoint localEndpoint);
+        /// <param name="errorHandler">The error handler.</param>
+        void Listen(EndPoint localEndpoint, EventHandler<SocketErrorArgs> errorHandler);
 
         /// <summary>
         /// Sends a message back to the client.
@@ -35,10 +36,5 @@ namespace SimplSockets
         /// An event that is fired whenever a message is received. Hook into this to process messages and potentially call Reply to send a response.
         /// </summary>
         event EventHandler<MessageReceivedArgs> MessageReceived;
-
-        /// <summary>
-        /// An event that is fired whenever a socket communication error occurs.
-        /// </summary>
-        event EventHandler<SocketErrorArgs> Error;
     }
 }

@@ -306,7 +306,10 @@ namespace Dache.CacheHost.Communication
         public void Start()
         {
             // Listen for connections
-            _server.Listen(_localEndPoint);
+            _server.Listen(_localEndPoint, (sender, e) =>
+            {
+                // Ignore it, client's toast
+            });
         }
 
         /// <summary>

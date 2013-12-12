@@ -78,19 +78,13 @@ namespace Dache.Client
             _reconnectTimer = new Timer(ReconnectToServer, null, Timeout.Infinite, Timeout.Infinite); 
         }
 
-        public void Connect()
+        public bool Connect()
         {
-            try
-            {
-                _client.Connect(_remoteEndPoint);
-            }
-            catch
+            return _client.Connect(_remoteEndPoint, (sender, e) =>
             {
                 // Enter the disconnected state
                 DisconnectFromServer();
-                // Rethrow
-                throw;
-            }
+            });
         }
 
         /// <summary>
@@ -798,12 +792,8 @@ namespace Dache.Client
                 // Close the client
                 _client.Close();
 
-                try
-                {
-                    // Reconnect
-                    Connect();
-                }
-                catch
+                // Reconnect
+                if (!Connect())
                 {
                     // Reconnection failed, so we're done (the Timer will retry)
                     return;
