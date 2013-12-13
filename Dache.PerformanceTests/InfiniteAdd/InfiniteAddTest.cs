@@ -15,6 +15,9 @@ namespace Dache.PerformanceTests.InfiniteAdd
             Console.WriteLine("***** BEGIN INFINITE ADD TEST (WILL NEVER END) *****");
             Console.WriteLine();
 
+            cacheClient.HostDisconnected += (sender, e) => { Console.WriteLine("*** Host disconnected"); };
+            cacheClient.HostReconnected += (sender, e) => { Console.WriteLine("*** Host reconnected"); };
+
             int i = 1;
             while (true)
             {

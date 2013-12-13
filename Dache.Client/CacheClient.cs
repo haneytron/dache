@@ -80,6 +80,13 @@ namespace Dache.Client
                 clientContainer.Disconnected += OnClientDisconnected;
                 clientContainer.Reconnected += OnClientReconnected;
 
+                // Attempt to connect
+                if (!clientContainer.Connect())
+                {
+                    // Skip it for now
+                    continue;
+                }
+
                 // Add to the client list - constructor so no lock needed over the add here
                 _cacheHostLoadBalancingDistribution.Add(new CacheHostBucket 
                 {
@@ -89,16 +96,6 @@ namespace Dache.Client
 
             // Now calculate the load balancing distribution
             CalculateCacheHostLoadBalancingDistribution();
-
-            // Now connect to each cache host
-            for (int i = 0; i < _cacheHostLoadBalancingDistribution.Count; i++)
-            {
-                var cacheHostBucket = _cacheHostLoadBalancingDistribution[i];
-                if (!cacheHostBucket.CacheHost.Connect())
-                {
-                    i--;
-                }
-            }
         }
 
         /// <summary>

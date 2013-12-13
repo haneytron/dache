@@ -81,7 +81,13 @@ namespace Dache.Client
 
         public bool Connect()
         {
-            return _client.Connect(_remoteEndPoint);
+            var result = _client.Connect(_remoteEndPoint);
+            if (!result)
+            {
+                // Disconnect the client
+                DisconnectFromServer();
+            }
+            return result;
         }
 
         /// <summary>
@@ -707,14 +713,6 @@ namespace Dache.Client
         /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
         /// </summary>
         public event EventHandler Reconnected;
-
-        private void HandleError(object state, SocketErrorArgs e)
-        {
-            // Enter the disconnected state
-            DisconnectFromServer();
-
-            throw new Exception(e.ErrorMessage);
-        }
 
         /// <summary>
         /// Makes the client enter the disconnected state.
