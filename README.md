@@ -18,6 +18,7 @@ VERSION HISTORY
 1.2.1
 ------------------
 
+- Fixed issue with infinite hang on startup if not all listed cache hosts were online
 
 - Upgraded SimplSockets to 1.1.0 which introduces many fixes to Dache socket communication.
 
