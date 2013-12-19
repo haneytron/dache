@@ -41,11 +41,6 @@ namespace Dache.Core.Performance
         PerformanceCounter TotalRequestsPerSecond { get; }
 
         /// <summary>
-        /// The cache expirations per second.
-        /// </summary>
-        PerformanceCounter CacheExpirationsAndEvictionsPerSecond { get; }
-
-        /// <summary>
         /// The cache memory usage percent.
         /// </summary>
         PerformanceCounter CacheMemoryUsagePercent { get; }

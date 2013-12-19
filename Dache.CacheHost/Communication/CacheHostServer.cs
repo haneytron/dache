@@ -80,7 +80,7 @@ namespace Dache.CacheHost.Communication
             _messageBufferSize = messageBufferSize;
 
             // Establish the endpoint for the socket
-            var ipHostInfo = Dns.GetHostEntry("localhost");
+            var ipHostInfo = Dns.GetHostEntry(string.Empty);
             var ipAddress = ipHostInfo.AddressList.First(i => i.AddressFamily == AddressFamily.InterNetwork);
             _localEndPoint = new IPEndPoint(ipAddress, port);
 

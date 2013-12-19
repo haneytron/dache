@@ -22,8 +22,6 @@ namespace Dache.CacheHost.Polling
         private readonly Timer _cacheHostInformationPollingTimer = null;
         // The performance counter for the process' current memory
         private readonly PerformanceCounter _currentMemoryPerformanceCounter = new PerformanceCounter("Process", "Private Bytes", Process.GetCurrentProcess().ProcessName, true);
-        // The performance counter for the cache trim count
-        private readonly PerformanceCounter _currentCacheTrimPerformanceCounter = new PerformanceCounter(".NET Memory Cache 4.0", "Cache Trims", Process.GetCurrentProcess().ProcessName + ":dache", true);
         // The last cached trimmed value
         private long _lastCacheTrimmedValue = 0;
 
@@ -91,10 +89,6 @@ namespace Dache.CacheHost.Polling
                 _customPerformanceCounterManager.CacheMemoryUsageMb.RawValue = usedMemoryMb;
                 _customPerformanceCounterManager.CacheMemoryUsagePercent.RawValue = usedMemoryMb;
                 _customPerformanceCounterManager.CacheMemoryUsageBasePercent.RawValue = _memCache.MemoryLimit;
-
-                // Calculate expirations and evictions
-                _customPerformanceCounterManager.CacheExpirationsAndEvictionsPerSecond.RawValue = _currentCacheTrimPerformanceCounter.RawValue - _lastCacheTrimmedValue;
-                _lastCacheTrimmedValue = _currentCacheTrimPerformanceCounter.RawValue;
             }
         }
     }

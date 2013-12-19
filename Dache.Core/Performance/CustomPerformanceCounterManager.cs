@@ -36,10 +36,6 @@ namespace Dache.Core.Performance
             _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             TotalRequestsPerSecond = performanceCounter;
 
-            performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Cache Expirations and Evictions per Second", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
-            CacheExpirationsAndEvictionsPerSecond = performanceCounter;
-
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Cache Memory Usage %", performanceCounterInstanceName, readOnly);
             _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             CacheMemoryUsagePercent = performanceCounter;
@@ -103,10 +99,6 @@ namespace Dache.Core.Performance
                 else if (string.Equals(performanceCounter.CounterName, "Total Requests per Second", StringComparison.OrdinalIgnoreCase))
                 {
                     TotalRequestsPerSecond = performanceCounter;
-                }
-                else if (string.Equals(performanceCounter.CounterName, "Cache Expirations and Evictions per Second", StringComparison.OrdinalIgnoreCase))
-                {
-                    CacheExpirationsAndEvictionsPerSecond = performanceCounter;
                 }
                 else if (string.Equals(performanceCounter.CounterName, "Cache Memory Usage %", StringComparison.OrdinalIgnoreCase))
                 {
@@ -178,11 +170,6 @@ namespace Dache.Core.Performance
         public PerformanceCounter TotalRequestsPerSecond { get; private set; }
 
         /// <summary>
-        /// The cache expirations per second.
-        /// </summary>
-        public PerformanceCounter CacheExpirationsAndEvictionsPerSecond { get; private set; }
-
-        /// <summary>
         /// The cache memory usage percent.
         /// </summary>
         public PerformanceCounter CacheMemoryUsagePercent { get; private set; }
@@ -219,7 +206,6 @@ namespace Dache.Core.Performance
         {
             NumberOfCachedObjects.Dispose();
             TotalRequestsPerSecond.Dispose();
-            CacheExpirationsAndEvictionsPerSecond.Dispose();
             CacheMemoryUsagePercent.Dispose();
             CacheMemoryUsageBasePercent.Dispose();
             CacheMemoryUsageMb.Dispose();
