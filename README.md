@@ -1,4 +1,4 @@
-DACHE 1.2.1
+DACHE 1.2.2
 ===========
 
 
@@ -13,6 +13,14 @@ fast, scalable distributed caching with meaningful performance metrics for your 
 
 VERSION HISTORY
 ============================================
+
+
+1.2.2
+------------------
+
+- Fixed issue in how SimplSockets assigned listening IP for Cache Host
+
+- Fixed issue with Customer Performance Counters that was causing a crash on startup for some servers and users
 
 
 1.2.1
