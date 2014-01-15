@@ -81,8 +81,8 @@ namespace Dache.CacheHost.Communication
 
             // Establish the endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry(string.Empty);
-            var ipAddress = ipHostInfo.AddressList.First(i => i.AddressFamily == AddressFamily.InterNetwork);
-            _localEndPoint = new IPEndPoint(ipAddress, port);
+            // Listen on all interfaces
+            _localEndPoint = new IPEndPoint(IPAddress.Any, port);
 
             // Define the server
             _server = SimplSocket.CreateServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), 
