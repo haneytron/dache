@@ -872,7 +872,7 @@ namespace SimplSockets
 
         private static void ExtractControlBytes(byte[] buffer, int offset, out int messageLength, out int threadId)
         {
-            messageLength = (buffer[offset + 3] << 24) | (buffer[offset + 2] << 16) | (buffer[offset + 1] << 8) | buffer[offset + 0] - _controlBytesPlaceholder.Length;
+            messageLength = ((buffer[offset + 3] << 24) | (buffer[offset + 2] << 16) | (buffer[offset + 1] << 8) | buffer[offset + 0]) - _controlBytesPlaceholder.Length;
             threadId = (buffer[offset + 7] << 24) | (buffer[offset + 6] << 16) | (buffer[offset + 5] << 8) | buffer[offset + 4];
         }
 
