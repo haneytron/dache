@@ -1,4 +1,4 @@
-DACHE 1.2.2
+DACHE 1.2.3
 ===========
 
 
@@ -13,6 +13,14 @@ fast, scalable distributed caching with meaningful performance metrics for your 
 
 VERSION HISTORY
 ============================================
+
+
+1.2.3
+------------------
+
+- Changed SimplSockets so that it binds to IpAddress.Any to enable listening on all interfaces for a given port. This should resolve some communication issues when a server has multiple NICs or interfaces.
+
+- Fixed a bug in SimplSockets regarding calculation of message length (thanks to Christoph Martens for identifying and reporting the bug)
 
 
 1.2.2
