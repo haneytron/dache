@@ -71,7 +71,16 @@ namespace Dache.CacheHost
 
                 // Initialize the mem cache container instance
                 var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
-                var memCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                IMemCache memCache;
+
+                if (CacheHostConfigurationSection.Settings.StorageProvider == typeof(GZipMemCache))
+                {
+                    memCache = new GZipMemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                }
+                else
+                {
+                    memCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                }
 
                 // Initialize the tag routing table
                 var tagRoutingTable = new TagRoutingTable();

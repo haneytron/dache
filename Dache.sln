@@ -1,6 +1,20 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30110.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3DBCCF8F-343C-455F-A8C5-F23B8A2E6B75}"
+	ProjectSection(SolutionItems) = preProject
+		All.runsettings = All.runsettings
+		CacheHost.runsettings = CacheHost.runsettings
+		Client.runsettings = Client.runsettings
+		Core.runsettings = Core.runsettings
+		LICENSE.txt = LICENSE.txt
+		README.md = README.md
+		SharedAssemblyInfo.cs = SharedAssemblyInfo.cs
+		TODO.txt = TODO.txt
+	EndProjectSection
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.CacheHost", "Dache.CacheHost\Dache.CacheHost.csproj", "{1B9FCBF1-DFCA-4911-8A2D-345D45C77FE6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Core", "Dache.Core\Dache.Core.csproj", "{E304662C-AC30-4427-9CA0-F63297F37694}"
@@ -8,14 +22,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Client", "Dache.Client\Dache.Client.csproj", "{66581BD3-D11B-491A-BFE3-A0DA56C6D6F5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Board", "Dache.Board\Dache.Board.csproj", "{6CEC0B51-BBDC-4C86-BD07-BE252F7C2C4E}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3DBCCF8F-343C-455F-A8C5-F23B8A2E6B75}"
-	ProjectSection(SolutionItems) = preProject
-		LICENSE.txt = LICENSE.txt
-		README.md = README.md
-		SharedAssemblyInfo.cs = SharedAssemblyInfo.cs
-		TODO.txt = TODO.txt
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Tests", "Dache.Tests\Dache.Tests.csproj", "{E30A003E-F46B-4CB6-BE0D-741F73A8A1E8}"
 EndProject
@@ -54,8 +60,5 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

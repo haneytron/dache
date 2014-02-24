@@ -1,4 +1,7 @@
-﻿using System.Configuration;
+﻿using System;
+using System.ComponentModel;
+using System.Configuration;
+using Dache.CacheHost.Storage;
 using Dache.Client.Configuration;
 
 namespace Dache.CacheHost.Configuration
@@ -65,6 +68,23 @@ namespace Dache.CacheHost.Configuration
             set
             {
                 this["cacheMemoryLimitPercentage"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the storage provider.
+        /// </summary>
+        [TypeConverter(typeof(TypeNameConverter))]
+        [ConfigurationProperty("storageProvider", IsRequired = false, DefaultValue = typeof(MemCache))]
+        public Type StorageProvider
+        {
+            get
+            {
+                return this["storageProvider"] as Type;
+            }
+            set
+            {
+                this["storageProvider"] = value;
             }
         }
     }
