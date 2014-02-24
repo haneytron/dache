@@ -64,6 +64,7 @@
     <Compile Include="Dache.CacheHost\GZipMemCacheTests.cs" />
     <Compile Include="Dache.Client\BinarySerializerTests.cs" />
     <Compile Include="Dache.Client\DacheMvcChildActionCacheTests.cs" />
+    <Compile Include="Dache.Client\GZipSerializerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup />
