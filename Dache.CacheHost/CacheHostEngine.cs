@@ -1,5 +1,4 @@
 ﻿using System;
-using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 
 namespace Dache.CacheHost

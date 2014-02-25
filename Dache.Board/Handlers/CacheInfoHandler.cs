@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
-using System.Web;
 using Dache.Board.Configuration;
 
 namespace Dache.Board.Handlers

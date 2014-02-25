@@ -35,15 +35,11 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Communication\DacheProtocolHelper.cs" />
     <Compile Include="Comparers\GenericComparer.cs" />
+    <Compile Include="Interfaces\ICacheHostContract.cs" />
     <Compile Include="Interfaces\IRunnable.cs" />
     <Compile Include="Logging\EventViewerLogger.cs" />
     <Compile Include="Logging\ILogger.cs" />
