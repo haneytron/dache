@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Dache.CacheHost</RootNamespace>
     <AssemblyName>Dache.CacheHost</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -22,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>true</UseVSHostingProcess>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,36 +34,25 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>false</UseVSHostingProcess>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="SimplSockets">
+      <HintPath>..\packages\SimplSockets.1.1.1\lib\SimplSockets.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
     <Reference Include="System.ServiceProcess" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CacheHostEngine.cs" />
     <Compile Include="CacheHostService.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Communication\SimplSockets\BlockingQueue.cs" />
     <Compile Include="Communication\CacheHostServer.cs" />
-    <Compile Include="Communication\SimplSockets\ISimplSocketServer.cs" />
-    <Compile Include="Communication\DacheProtocolHelper.cs" />
-    <Compile Include="Communication\ICacheHostContract.cs" />
-    <Compile Include="Communication\SimplSockets\ISimplSocketClient.cs" />
-    <Compile Include="Communication\SimplSockets\MessageReceivedArgs.cs" />
-    <Compile Include="Communication\SimplSockets\SocketErrorArgs.cs" />
-    <Compile Include="Communication\SimplSockets\Pool.cs" />
-    <Compile Include="Communication\SimplSockets\SimplSocket.cs" />
     <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
     <Compile Include="..\Dache.Client\Configuration\CustomTypeElement.cs">
       <Link>Configuration\CustomTypeElement.cs</Link>
@@ -75,6 +66,7 @@
     <Compile Include="CustomInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Storage\GZipMemCache.cs" />
     <Compile Include="Storage\IMemCache.cs" />
     <Compile Include="Storage\MemCache.cs" />
   </ItemGroup>
@@ -91,6 +83,7 @@
     <None Include="install.bat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="packages.config" />
     <None Include="uninstall.bat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

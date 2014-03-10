@@ -6,16 +6,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Caching;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
-using Dache.Core.Performance;
 using Dache.Core.Routing;
 using SimplSockets;
 
-namespace Dache.CacheHost.Communication
+namespace Dache.Core.Communication
 {
     /// <summary>
     /// The server for client to cache communication.
