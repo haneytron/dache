@@ -64,7 +64,7 @@ namespace Dache.CacheHost.Storage
         /// <param name="key">The key of the byte array. Null is not supported.</param>
         /// <param name="value">The byte array. Null is not supported.</param>
         /// <param name="cacheItemPolicy">The cache item policy.</param>
-        public virtual void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
+        public void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -96,7 +96,7 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="key">The key of the byte array. Null is not supported.</param>
         /// <param name="value">The byte array. Null is not supported.</param>
-        public virtual void AddInterned(string key, byte[] value)
+        public void AddInterned(string key, byte[] value)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -161,7 +161,7 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="key">The key of the byte array.</param>
         /// <returns>The byte array if found, otherwise null.</returns>
-        public virtual byte[] Get(string key)
+        public byte[] Get(string key)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))

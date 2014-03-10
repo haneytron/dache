@@ -3,18 +3,24 @@ using System.IO;
 using System.IO.Compression;
 using System.Runtime.Caching;
 using System.Threading.Tasks;
-using Dache.Core.Performance;
 
 namespace Dache.CacheHost.Storage
 {
     /// <summary>
     /// Encapsulates a memory cache that can compress and store byte arrays. This type is thread safe.
     /// </summary>
-    public class GZipMemCache : MemCache
+    public class GZipMemCache : IMemCache
     {
-        public GZipMemCache(string cacheName, int physicalMemoryLimitPercentage, ICustomPerformanceCounterManager customPerformanceCounterManager)
-            : base(cacheName, physicalMemoryLimitPercentage, customPerformanceCounterManager)
-        { }
+        private readonly MemCache memCache;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GZipMemCache"/> class.
+        /// </summary>
+        /// <param name="memCache">The memory cache.</param>
+        public GZipMemCache(MemCache memCache)
+        {
+            this.memCache = memCache;
+        }
 
         /// <summary>
         /// Inserts or updates a byte array in the cache at the given key with the specified cache item policy.
@@ -25,7 +31,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// Passed byte array will be compressed by using <see cref="GZipStream"/>.
         /// </remarks>
-        public override void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
+        public void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -42,7 +48,7 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("cacheItemPolicy");
             }
 
-            base.Add(key, Compress(value).Result, cacheItemPolicy);
+            memCache.Add(key, Compress(value).Result, cacheItemPolicy);
         }
 
         /// <summary>
@@ -54,7 +60,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// Passed byte array will be compressed by using <see cref="GZipStream"/>.
         /// </remarks>
-        public override void AddInterned(string key, byte[] value)
+        public void AddInterned(string key, byte[] value)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -67,7 +73,7 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("value");
             }
 
-            base.AddInterned(key, Compress(value).Result);
+            memCache.AddInterned(key, Compress(value).Result);
         }
 
         /// <summary>
@@ -80,7 +86,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// Return byte array will be decompressed via <see cref="GZipStream"/> before being returned.
         /// </remarks>
-        public override byte[] Get(string key)
+        public byte[] Get(string key)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -88,7 +94,31 @@ namespace Dache.CacheHost.Storage
                 return null;
             }
 
-            return Decompress(base.Get(key)).Result;
+            return Decompress(memCache.Get(key)).Result;
+        }
+
+        /// <inheritdoc />
+        public byte[] Remove(string key)
+        {
+            return memCache.Remove(key);
+        }
+
+        /// <inheritdoc />
+        public long Count
+        {
+            get { return memCache.Count; }
+        }
+
+        /// <inheritdoc />
+        public long MemoryLimit
+        {
+            get { return memCache.MemoryLimit; }
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            memCache.Dispose();
         }
 
         /// <summary>
@@ -101,9 +131,10 @@ namespace Dache.CacheHost.Storage
         /// </remarks>
         protected async Task<byte[]> Compress(byte[] value)
         {
+            // Sanitize
             if (value == null)
             {
-                throw new ArgumentNullException("value", "Can't compress null value");
+                throw new ArgumentNullException("value", "Can't compress null value.");
             }
 
             using (MemoryStream originalStream = new MemoryStream(value))
