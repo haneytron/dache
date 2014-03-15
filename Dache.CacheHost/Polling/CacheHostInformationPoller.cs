@@ -22,8 +22,6 @@ namespace Dache.CacheHost.Polling
         private readonly Timer _cacheHostInformationPollingTimer = null;
         // The performance counter for the process' current memory
         private readonly PerformanceCounter _currentMemoryPerformanceCounter = new PerformanceCounter("Process", "Private Bytes", Process.GetCurrentProcess().ProcessName, true);
-        // The last cached trimmed value
-        private long _lastCacheTrimmedValue = 0;
 
         /// <summary>
         /// The constructor.

@@ -14,13 +14,15 @@ namespace Dache.Tests.Dache.CacheHost
     public class GZipMemCacheTests
     {
         GZipMemCacheAccessor sut;
+        Mock<MemCache> memCacheMock;
         Mock<ICustomPerformanceCounterManager> customPerformanceCounterManagerMock;
 
         [TestInitialize]
         public void Initialize()
         {
             customPerformanceCounterManagerMock = new Mock<ICustomPerformanceCounterManager>();
-            sut = new GZipMemCacheAccessor("Dache", 20, customPerformanceCounterManagerMock.Object);
+            memCacheMock = new Mock<MemCache>("Dache", 20, customPerformanceCounterManagerMock.Object);
+            sut = new GZipMemCacheAccessor(memCacheMock.Object);
         }
 
         [TestMethod]
@@ -53,8 +55,8 @@ namespace Dache.Tests.Dache.CacheHost
 
     public class GZipMemCacheAccessor : GZipMemCache
     {
-        public GZipMemCacheAccessor(string cacheName, int physicalMemoryLimitPercentage, ICustomPerformanceCounterManager customPerformanceCounterManager)
-            : base(cacheName, physicalMemoryLimitPercentage, customPerformanceCounterManager)
+        public GZipMemCacheAccessor(MemCache memCache)
+            : base(memCache)
         { }
 
         public new async Task<byte[]> Compress(byte[] value)

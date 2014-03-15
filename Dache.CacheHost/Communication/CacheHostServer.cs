@@ -13,7 +13,7 @@ using Dache.Core.Logging;
 using Dache.Core.Routing;
 using SimplSockets;
 
-namespace Dache.CacheHost.Communication
+namespace Dache.Core.Communication
 {
     /// <summary>
     /// The server for client to cache communication.

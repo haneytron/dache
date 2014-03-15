@@ -1,16 +1,16 @@
-﻿using Dache.CacheHost.Communication;
-using Dache.Client.Configuration;
-using Dache.Client.Serialization;
-using Dache.Core.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Runtime.Serialization;
 using System.Threading;
+using Dache.Client.Configuration;
 using Dache.Client.Exceptions;
-using System.Collections.Specialized;
-using System.Runtime.Caching;
+using Dache.Client.Serialization;
+using Dache.Core.Communication;
+using Dache.Core.Logging;
 
 namespace Dache.Client
 {

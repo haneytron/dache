@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
-using Dache.CacheHost.Communication;
+using System.Threading;
+using Dache.Core.Communication;
 using SimplSockets;
 
 namespace Dache.Client
