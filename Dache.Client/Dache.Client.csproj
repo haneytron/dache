@@ -84,6 +84,7 @@
     <Compile Include="Configuration\CustomTypeElement.cs" />
     <Compile Include="Configuration\CustomTypesLoader.cs" />
     <Compile Include="Exceptions\NoCacheHostsAvailableException.cs" />
+    <Compile Include="Logging\FileLogger.cs" />
     <Compile Include="Plugins\OutputCache\DacheMvcChildActionCache.cs" />
     <Compile Include="Plugins\OutputCache\DacheOutputCacheProvider.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionState.cs" />
