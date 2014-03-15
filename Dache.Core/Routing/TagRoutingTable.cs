@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Dache.Core.Routing
@@ -10,11 +12,11 @@ namespace Dache.Core.Routing
     public class TagRoutingTable : ITagRoutingTable
     {
         // The tagged cache keys: key is tag name, value is cache keys
-        private readonly IDictionary<string, HashSet<string>> _taggedCacheKeys = null;
+        private readonly IDictionary<string, HashSet<string>> _taggedCacheKeys;
         // The cache keys and their associated tags: key is cache key, value is tag name
-        private readonly IDictionary<string, string> _cacheKeyTags = null;
+        private readonly IDictionary<string, string> _cacheKeyTags;
         // The lock used to ensure thread safety
-        private readonly ReaderWriterLockSlim _lock = null;
+        private readonly ReaderWriterLockSlim _lock;
 
         /// <summary>
         /// The constructor.
@@ -94,24 +96,47 @@ namespace Dache.Core.Routing
         /// <returns>The tagged cache keys, or null if none were found.</returns>
         public IList<string> GetTaggedCacheKeys(string tagName)
         {
+            return GetTaggedCacheKeys(tagName, "*");
+        }
+
+        /// <summary>
+        /// Gets the tagged cache keys for a given tag and matching the given search pattern.
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">The search pattern. If no pattern is provided, default '*' (all) is used.</param>
+        /// <returns>The tagged cache keys, or null if none were found.</returns>
+        public IList<string> GetTaggedCacheKeys(string tagName, string pattern)
+        {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
 
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                pattern = "*";
+            }
+
             _lock.EnterReadLock();
             try
             {
                 // Get the cache keys
-                HashSet<string> cacheKeys = null;
+                HashSet<string> cacheKeys;
                 if (!_taggedCacheKeys.TryGetValue(tagName, out cacheKeys))
                 {
                     return null;
                 }
+
+                if (pattern == "*")
+                {
+                    return new List<string>(cacheKeys);
+                }
+
+                var r = new Regex(pattern, RegexOptions.IgnoreCase);
                 // Return a copy of the cache keys
-                return new List<string>(cacheKeys);
-            }
+                return cacheKeys.Where(k => r.IsMatch(k)).ToList();
+            }// no catch block?
             finally
             {
                 _lock.ExitReadLock();
@@ -124,10 +149,10 @@ namespace Dache.Core.Routing
         /// <param name="cacheKey">The cache key.</param>
         private void RemoveFromTagDictionaries(string cacheKey)
         {
-            HashSet<string> taggedCacheKeys = null;
-            string oldTagName = null;
+            string oldTagName;
             if (_cacheKeyTags.TryGetValue(cacheKey, out oldTagName))
             {
+                HashSet<string> taggedCacheKeys;
                 if (_taggedCacheKeys.TryGetValue(oldTagName, out taggedCacheKeys))
                 {
                     taggedCacheKeys.Remove(cacheKey);
@@ -144,7 +169,7 @@ namespace Dache.Core.Routing
         /// <param name="tagName">The tag name.</param>
         private void AddToTagDictionaries(string cacheKey, string tagName)
         {
-            HashSet<string> taggedCacheKeys = null;
+            HashSet<string> taggedCacheKeys;
             _cacheKeyTags[cacheKey] = tagName;
             if (!_taggedCacheKeys.TryGetValue(tagName, out taggedCacheKeys))
             {

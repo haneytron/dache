@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Dache.Client.Serialization;
 using Dache.Core.Logging;
 
@@ -30,18 +27,18 @@ namespace Dache.Client.Configuration
                     // No custom logging
                     return defaultLogger;
                 }
-                
+
                 // Have a custom logger, attempt to load it and confirm it
                 var customLoggerType = Type.GetType(customLoggerTypeString);
                 // Verify that it implements our ILogger interface
-                if (customLoggerType != null && customLoggerType.IsAssignableFrom(typeof(ILogger)))
+                if (customLoggerType != null && typeof(ILogger).IsAssignableFrom(customLoggerType))
                 {
                     return (ILogger)Activator.CreateInstance(customLoggerType);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Custom logger load failed - no custom logging
+                defaultLogger.Error(ex);
             }
 
             return defaultLogger;
@@ -65,18 +62,21 @@ namespace Dache.Client.Configuration
                     // No custom serializer
                     return defaultSerializer;
                 }
-                 
+
                 // Have a custom serializer, attempt to load it and confirm it
                 var customSerializerType = Type.GetType(customSerializerTypeString);
                 // Verify that it implements our IBinarySerializer interface
-                if (customSerializerType != null && customSerializerType.IsAssignableFrom(typeof(IBinarySerializer)))
+                if (customSerializerType != null && typeof(IBinarySerializer).IsAssignableFrom(customSerializerType))
                 {
                     return (IBinarySerializer)Activator.CreateInstance(customSerializerType);
                 }
+                if (customSerializerType == null) { throw new Exception("custom serializer is null"); }
+                if (!customSerializerType.IsAssignableFrom(typeof(IBinarySerializer))) { throw new Exception("custom serializer is not of type IBinarySerializer"); }
             }
-            catch
+            catch (Exception ex)
             {
                 // Custom serializer load failed - no custom serialization
+                LoadLogger().Error(ex);
             }
 
             return defaultSerializer;

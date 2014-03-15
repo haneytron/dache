@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Dache.Core.Logging;
 
 namespace Dache.CacheHost.Configuration
@@ -18,6 +15,7 @@ namespace Dache.CacheHost.Configuration
         public static ILogger LoadLogger()
         {
             var defaultLogger = new EventViewerLogger("Cache Host", "Dache");
+            //var defaultLogger = new FileLogger();
 
             // Configure custom logging
             try
@@ -33,13 +31,14 @@ namespace Dache.CacheHost.Configuration
                 // Have a custom logger, attempt to load it and confirm it
                 var customLoggerType = Type.GetType(customLoggerTypeString);
                 // Verify that it implements our ILogger interface
-                if (customLoggerType != null && customLoggerType.IsAssignableFrom(typeof(ILogger)))
+                if (customLoggerType != null && typeof(ILogger).IsAssignableFrom(customLoggerType))
                 {
                     return (ILogger)Activator.CreateInstance(customLoggerType);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                defaultLogger.Error(ex);
                 // Custom logger load failed - no custom logging
             }
 

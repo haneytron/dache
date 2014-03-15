@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
-using Dache.CacheHost.Communication;
+using System.Threading;
+using Dache.Core.Communication;
 using SimplSockets;
 
 namespace Dache.Client
@@ -64,7 +63,7 @@ namespace Dache.Client
             }
 
             // Define the client
-            _client = SimplSocket.CreateClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), 
+            _client = SimplSocket.CreateClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
                 (sender, e) => { DisconnectFromServer(); }, messageBufferSize, maximumConnections, false);
 
             // Establish the remote endpoint for the socket
@@ -76,7 +75,7 @@ namespace Dache.Client
             _hostReconnectIntervalMilliseconds = hostReconnectIntervalMilliseconds;
 
             // Initialize reconnect timer
-            _reconnectTimer = new Timer(ReconnectToServer, null, Timeout.Infinite, Timeout.Infinite); 
+            _reconnectTimer = new Timer(ReconnectToServer, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public bool Connect()
@@ -150,7 +149,7 @@ namespace Dache.Client
             {
                 return null;
             }
-                
+
             // Parse command from bytes
             var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             return ParseCacheObjects(commandResultParts);
@@ -215,7 +214,7 @@ namespace Dache.Client
         {
             AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, absoluteExpiration);
         }
-        
+
         /// <summary>
         /// Adds or updates a serialized object in the cache at the given cache key.
         /// </summary>
@@ -661,7 +660,17 @@ namespace Dache.Client
         /// <param name="tagName">The tag name.</param>
         public void RemoveTagged(string tagName)
         {
-            RemoveTagged(new[] { tagName });
+            RemoveTagged(new[] { tagName }, "*");
+        }
+
+        /// <summary>
+        /// Removes all serialized objects associated with the given tag name and with keys matching the given pattern.
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">The search pattern (regex).</param>
+        public void RemoveTagged(string tagName, string pattern)
+        {
+            RemoveTagged(new[] { tagName }, pattern);
         }
 
         /// <summary>
@@ -670,17 +679,34 @@ namespace Dache.Client
         /// <param name="tagNames">The tag names.</param>
         public void RemoveTagged(IEnumerable<string> tagNames)
         {
+            RemoveTagged(tagNames, "*");
+        }
+
+        /// <summary>
+        /// Removes all serialized objects associated with the given tag names and with keys matching the given pattern.
+        /// </summary>
+        /// <param name="tagNames">The tag names.</param>
+        /// <param name="pattern">The search pattern (regex).</param>
+        public void RemoveTagged(IEnumerable<string> tagNames, string pattern)
+        {
             // Sanitize
             if (tagNames == null)
             {
                 throw new ArgumentNullException("tagNames");
             }
 
-            byte[] command = null;
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentNullException("pattern");
+            }
+
+            byte[] command;
             using (var memoryStream = new MemoryStream())
             {
                 memoryStream.WriteControlBytePlaceHolder();
                 memoryStream.Write("del-tag");
+                memoryStream.WriteSpace();
+                memoryStream.Write(pattern);
                 foreach (var tagName in tagNames)
                 {
                     memoryStream.WriteSpace();
@@ -691,6 +717,106 @@ namespace Dache.Client
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            // Send
+            _client.Send(command);
+        }
+
+        /// <summary>
+        /// Gets all keys associated with the given tag name and the optional search pattern
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">Optional. The search pattern (regex). Default is '*'.</param>
+        /// <returns>A list of the keys.</returns>
+        public List<byte[]> GetKeysTagged(string tagName, string pattern = "*")
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+            }
+
+            byte[] command;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("keys-tag {0} {1}", tagName, pattern);
+                command = memoryStream.ToArray();
+            }
+
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
+            // Send and receive
+            var rawResult = _client.SendReceive(command);
+
+            // Verify that we got something
+            if (rawResult == null)
+                return null;
+
+            // Parse string
+            var decodedResult = DacheProtocolHelper.CommunicationEncoding.GetString(rawResult);
+            if (string.IsNullOrWhiteSpace(decodedResult))
+                return null; // should probably log this or notify the client
+
+            // Parse command from bytes
+            var commandResultParts = decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return ParseCacheObjects(commandResultParts);
+        }
+
+        /// <summary>
+        /// Gets all the keys in the cache matching the provided pattern. WARNING: this is likely a very expensive operation for large caches. 
+        /// </summary>
+        /// <param name="pattern">The search pattern (regex)</param>
+        /// <returns>The list of keys matching the provided pattern</returns>
+        public List<byte[]> Keys(string pattern)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
+            }
+
+            byte[] command;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("keys {0}", pattern);
+                command = memoryStream.ToArray();
+            }
+
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
+            // Send and receive
+            var rawResult = _client.SendReceive(command);
+
+            // Verify that we got something
+            if (rawResult == null)
+                return null;
+
+            // Parse string
+            var decodedResult = DacheProtocolHelper.CommunicationEncoding.GetString(rawResult);
+            if (string.IsNullOrWhiteSpace(decodedResult))
+                return null; // should probably log this or notify the client
+
+            // Parse command from bytes
+            var commandResultParts = decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return ParseCacheObjects(commandResultParts);
+        }
+
+        /// <summary>
+        /// Clears the cache
+        /// </summary>
+        public void Clear()
+        {
+            byte[] command;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("clear");
+                command = memoryStream.ToArray();
+            }
+
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
             // Send
             _client.Send(command);
         }
@@ -813,7 +939,7 @@ namespace Dache.Client
         {
             // Regular set
             var cacheObjects = new List<byte[]>(commandParts.Length);
-            for (int i = 0; i < commandParts.Length; i ++)
+            for (int i = 0; i < commandParts.Length; i++)
             {
                 cacheObjects.Add(Convert.FromBase64String(commandParts[i]));
             }

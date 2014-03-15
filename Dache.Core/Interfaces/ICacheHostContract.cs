@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Dache.CacheHost.Communication
+namespace Dache.Core.Communication
 {
     /// <summary>
     /// Represents the communication contract between a cache client and a cache host.

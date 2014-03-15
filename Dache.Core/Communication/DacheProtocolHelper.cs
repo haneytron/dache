@@ -1,17 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 
-namespace Dache.CacheHost.Communication
+namespace Dache.Core.Communication
 {
     /// <summary>
     /// Assists in communicating via the Dache protocol.
     /// </summary>
-    internal static class DacheProtocolHelper
+    public static class DacheProtocolHelper
     {
         // The communication encoding
         public static readonly Encoding CommunicationEncoding = Encoding.UTF8;

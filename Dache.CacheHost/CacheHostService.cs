@@ -1,10 +1,10 @@
 ﻿using System;
 using System.ServiceProcess;
 using System.Threading;
-using Dache.CacheHost.Communication;
 using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Polling;
 using Dache.CacheHost.Storage;
+using Dache.Core.Communication;
 using Dache.Core.Interfaces;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
@@ -73,13 +73,15 @@ namespace Dache.CacheHost
                 var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
                 IMemCache memCache;
 
+                MemCache memoryCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+
                 if (CacheHostConfigurationSection.Settings.StorageProvider == typeof(GZipMemCache))
                 {
-                    memCache = new GZipMemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                    memCache = new GZipMemCache(memoryCache);
                 }
                 else
                 {
-                    memCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                    memCache = memoryCache;
                 }
 
                 // Initialize the tag routing table

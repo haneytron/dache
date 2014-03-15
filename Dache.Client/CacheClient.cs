@@ -1,15 +1,16 @@
-﻿using Dache.Client.Configuration;
-using Dache.Client.Serialization;
-using Dache.Core.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Runtime.Serialization;
 using System.Threading;
+using Dache.Client.Configuration;
 using Dache.Client.Exceptions;
-using System.Collections.Specialized;
-using System.Runtime.Caching;
+using Dache.Client.Serialization;
+using Dache.Core.Communication;
+using Dache.Core.Logging;
 
 namespace Dache.Client
 {
@@ -88,7 +89,7 @@ namespace Dache.Client
                 }
 
                 // Add to the client list - constructor so no lock needed over the add here
-                _cacheHostLoadBalancingDistribution.Add(new CacheHostBucket 
+                _cacheHostLoadBalancingDistribution.Add(new CacheHostBucket
                 {
                     CacheHost = clientContainer
                 });
@@ -152,7 +153,7 @@ namespace Dache.Client
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Gets the object stored at the given cache key from the local cache. If it is not found in the local 
         /// cache, the object is retrieved remotely and cached locally for subsequent local lookups.
@@ -1409,6 +1410,17 @@ namespace Dache.Client
         /// <param name="tagName">The tag name.</param>
         public void RemoveTagged(string tagName)
         {
+            RemoveTagged(tagName, "*");
+        }
+
+        /// <summary>
+        /// Removes the objects associated to the given tag name and with keys matching the given pattern from the cache.
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">The key search pattern (regex). Default is '*'</param>
+        /// <exception cref="ArgumentException"></exception>
+        public void RemoveTagged(string tagName, string pattern)
+        {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
             {
@@ -1430,6 +1442,130 @@ namespace Dache.Client
                     // Try a different cache host if this one could not be reached
                 }
             } while (true);
+        }
+
+        /// <summary>
+        /// Gets all keys associated with the given tag name and matching the given search pattern
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">The search pattern (regex). Default is '*'.</param>
+        /// <returns>A list of the keys.</returns>
+        public IList<string> GetKeysTagged(string tagName, string pattern = "*")
+        {
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+            }
+
+            IList<byte[]> rawResults;
+
+            do
+            {
+                // Use the tag's client
+                var client = DetermineClient(tagName);
+
+                try
+                {
+                    rawResults = client.GetKeysTagged(tagName, pattern);
+                    break;
+                }
+                catch
+                {
+                    // Try a different cache host if this one could not be reached
+                }
+            } while (true);
+
+            // If we got nothing back, return null
+            if (rawResults == null)
+            {
+                return null;
+            }
+
+            var results = new List<string>(rawResults.Count);
+
+            // Parse
+            for (int i = 0; i < rawResults.Count; i++)
+            {
+                try
+                {
+                    results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResults[i]));
+                }
+                catch
+                {
+                    // Log parsing error
+                    _logger.Error("Parsing Error", "An object returned in a GetKeysTagged call at index " + i + " could not be decoded");
+                }
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
+        /// </summary>
+        /// <returns>The list of all keys in the cache</returns>
+        public IList<string> Keys()
+        {
+            return Keys("*");
+        }
+
+        /// <summary>
+        /// Gets all the keys in the cache matching the provided pattern. WARNING: this is likely a very expensive operation for large caches. 
+        /// </summary>
+        /// <param name="pattern">The search pattern (regex)</param>
+        /// <returns>The list of keys matching the provided pattern</returns>
+        public IList<string> Keys(string pattern)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
+            }
+
+            var rawResults = new List<byte[]>();
+
+            foreach (var client in _cacheHostLoadBalancingDistribution)
+            {
+                var keys = client.CacheHost.Keys(pattern);
+                if (keys == null)
+                    continue;
+
+                rawResults.AddRange(keys);
+            }
+
+            // If we got nothing back, return null
+            if (rawResults.Count == 0)
+            {
+                return null;
+            }
+
+            var results = new List<string>(rawResults.Count);
+
+            // Parse
+            for (var i = 0; i < rawResults.Count; i++)
+            {
+                try
+                {
+                    results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResults[i]));
+                }
+                catch
+                {
+                    // Log parsing error
+                    _logger.Error("Parsing Error", "An object returned in a Keys call at index " + i + " could not be decoded");
+                }
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Clears the cache
+        /// </summary>
+        public void Clear()
+        {
+            foreach (var client in _cacheHostLoadBalancingDistribution)
+            {
+                client.CacheHost.Clear();
+            }
         }
 
         /// <summary>
@@ -1462,9 +1598,9 @@ namespace Dache.Client
                     // Already done
                     return;
                 }
-                    
+
                 _cacheHostLoadBalancingDistribution.Remove(cacheHostClient);
-                    
+
                 // Calculate load balancing distribution
                 CalculateCacheHostLoadBalancingDistribution();
             }
@@ -1472,7 +1608,7 @@ namespace Dache.Client
             {
                 _lock.ExitWriteLock();
             }
-                    
+
             // Log the event
             _logger.Warn("Cache Host Disconnected", "The cache client has been disconnected from the cache host located at " + client.ToString() + " - it will be reconnected automatically as soon it can be successfully contacted.");
 
@@ -1564,7 +1700,7 @@ namespace Dache.Client
         private CommunicationClient DetermineClient(string cacheKey)
         {
             _lock.EnterReadLock();
-            
+
             try
             {
                 // Ensure a client is available

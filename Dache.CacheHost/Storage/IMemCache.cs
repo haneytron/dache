@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Caching;
-using System.Text;
 
 namespace Dache.CacheHost.Storage
 {
@@ -40,6 +38,18 @@ namespace Dache.CacheHost.Storage
         /// <param name="key">The key of the byte array.</param>
         /// <returns>The byte array if the key was found in the cache, otherwise null.</returns>
         byte[] Remove(string key);
+
+        /// <summary>
+        /// Clears the cache
+        /// </summary>
+        void Clear();
+
+        /// <summary>
+        /// Gets all the keys in the cache matching the provided pattern. WARNING: this is likely a very expensive operation for large caches. 
+        /// </summary>
+        /// <param name="pattern">The search pattern (regex)</param>
+        /// <returns>The list of keys matching the provided pattern</returns>
+        IList<string> Keys(string pattern);
 
         /// <summary>
         /// Total number of objects in the cache.

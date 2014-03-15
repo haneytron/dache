@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using System.Linq;
-using System.Runtime.Caching;
+﻿using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
 
 namespace Dache.Client.Serialization
 {
@@ -48,10 +42,11 @@ namespace Dache.Client.Serialization
                 return null;
             }
 
-            var memoryStream = new MemoryStream(bytes.Length);
-            memoryStream.Write(bytes, 0, bytes.Length);
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            return new BinaryFormatter().Deserialize(memoryStream);
+            using (var memoryStream = new MemoryStream(bytes))
+            {
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                return new BinaryFormatter().Deserialize(memoryStream);
+            }
         }
     }
 }

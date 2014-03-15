@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
+using System.Linq;
 using System.Runtime.Caching;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Dache.Core.Performance;
 
@@ -13,7 +16,7 @@ namespace Dache.CacheHost.Storage
     public class MemCache : IMemCache
     {
         // The underlying memory cache
-        private readonly MemoryCache _memoryCache = null;
+        private MemoryCache _memoryCache = null;
         // The custom performance counter manager
         private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
         // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
@@ -24,6 +27,10 @@ namespace Dache.CacheHost.Storage
         private static readonly CacheItemPolicy _internCacheItemPolicy = new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable };
         // The intern dictionary lock
         private readonly ReaderWriterLockSlim _internDictionaryLock = new ReaderWriterLockSlim();
+        // The cache name
+        private string _cacheName;
+        // The cache configuration
+        private NameValueCollection _cacheConfig;
 
         /// <summary>
         /// The constructor.
@@ -47,11 +54,12 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("customPerformanceCounterManager");
             }
 
-            var cacheConfig = new NameValueCollection();
-            cacheConfig.Add("pollingInterval", "00:00:15");
-            cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
+            _cacheName = cacheName;
+            _cacheConfig = new NameValueCollection();
+            _cacheConfig.Add("pollingInterval", "00:00:15");
+            _cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
 
-            _memoryCache = new MemoryCache(cacheName, cacheConfig);
+            _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
             _internDictionary = new Dictionary<string, string>(100);
             _internReferenceDictionary = new Dictionary<string, int>(100);
 
@@ -64,7 +72,7 @@ namespace Dache.CacheHost.Storage
         /// <param name="key">The key of the byte array. Null is not supported.</param>
         /// <param name="value">The byte array. Null is not supported.</param>
         /// <param name="cacheItemPolicy">The cache item policy.</param>
-        public virtual void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
+        public void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -83,7 +91,6 @@ namespace Dache.CacheHost.Storage
 
             // Add to the cache
             _memoryCache.Set(key, value, cacheItemPolicy);
-
             // Increment the Add counter
             _customPerformanceCounterManager.AddsPerSecond.RawValue++;
             // Increment the Total counter
@@ -96,7 +103,7 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="key">The key of the byte array. Null is not supported.</param>
         /// <param name="value">The byte array. Null is not supported.</param>
-        public virtual void AddInterned(string key, byte[] value)
+        public void AddInterned(string key, byte[] value)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -161,7 +168,7 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="key">The key of the byte array.</param>
         /// <returns>The byte array if found, otherwise null.</returns>
-        public virtual byte[] Get(string key)
+        public byte[] Get(string key)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -250,6 +257,32 @@ namespace Dache.CacheHost.Storage
 
             // Interned object still exists, so fake the removal return of the object
             return _memoryCache.Get(hashKey) as byte[];
+        }
+
+        /// <summary>
+        /// Clears the cache
+        /// </summary>
+        public void Clear()
+        {
+            var oldCache = _memoryCache;
+            _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
+            oldCache.Dispose();
+        }
+
+        /// <summary>
+        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
+        /// </summary>
+        public IList<string> Keys(string pattern)
+        {
+            var allKeys = _memoryCache.Select(kvp => kvp.Key).ToList();
+
+            if (pattern == "*")
+            {
+                return allKeys;
+            }
+
+            var r = new Regex(pattern, RegexOptions.IgnoreCase);
+            return allKeys.Where(k => r.IsMatch(k)).ToList();
         }
 
         /// <summary>

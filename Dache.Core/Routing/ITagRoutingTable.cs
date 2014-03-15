@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Dache.Core.Routing
 {
@@ -30,5 +27,13 @@ namespace Dache.Core.Routing
         /// <param name="tagName">The tag name.</param>
         /// <returns>The tagged cache keys, or null if none were found.</returns>
         IList<string> GetTaggedCacheKeys(string tagName);
+
+        /// <summary>
+        /// Gets the tagged cache keys for a given tag and matching the given search pattern.
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">The search pattern. If no pattern is provided, default '*' (all) is used.</param>
+        /// <returns>The tagged cache keys, or null if none were found.</returns>
+        IList<string> GetTaggedCacheKeys(string tagName, string pattern);
     }
 }

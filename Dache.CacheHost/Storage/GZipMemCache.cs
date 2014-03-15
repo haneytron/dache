@@ -1,20 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.Caching;
 using System.Threading.Tasks;
-using Dache.Core.Performance;
 
 namespace Dache.CacheHost.Storage
 {
     /// <summary>
     /// Encapsulates a memory cache that can compress and store byte arrays. This type is thread safe.
     /// </summary>
-    public class GZipMemCache : MemCache
+    public class GZipMemCache : IMemCache
     {
-        public GZipMemCache(string cacheName, int physicalMemoryLimitPercentage, ICustomPerformanceCounterManager customPerformanceCounterManager)
-            : base(cacheName, physicalMemoryLimitPercentage, customPerformanceCounterManager)
-        { }
+        // The underlying mem cache
+        private MemCache _memCache = null;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GZipMemCache"/> class.
+        /// </summary>
+        /// <param name="memCache">The memory cache.</param>
+        public GZipMemCache(MemCache memCache)
+        {
+            _memCache = memCache;
+        }
 
         /// <summary>
         /// Inserts or updates a byte array in the cache at the given key with the specified cache item policy.
@@ -25,7 +33,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// Passed byte array will be compressed by using <see cref="GZipStream"/>.
         /// </remarks>
-        public override void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
+        public void Add(string key, byte[] value, CacheItemPolicy cacheItemPolicy)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -42,7 +50,7 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("cacheItemPolicy");
             }
 
-            base.Add(key, Compress(value).Result, cacheItemPolicy);
+            _memCache.Add(key, Compress(value).Result, cacheItemPolicy);
         }
 
         /// <summary>
@@ -54,7 +62,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// Passed byte array will be compressed by using <see cref="GZipStream"/>.
         /// </remarks>
-        public override void AddInterned(string key, byte[] value)
+        public void AddInterned(string key, byte[] value)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -67,7 +75,7 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("value");
             }
 
-            base.AddInterned(key, Compress(value).Result);
+            _memCache.AddInterned(key, Compress(value).Result);
         }
 
         /// <summary>
@@ -80,7 +88,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// Return byte array will be decompressed via <see cref="GZipStream"/> before being returned.
         /// </remarks>
-        public override byte[] Get(string key)
+        public byte[] Get(string key)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(key))
@@ -88,7 +96,63 @@ namespace Dache.CacheHost.Storage
                 return null;
             }
 
-            return Decompress(base.Get(key)).Result;
+            return Decompress(_memCache.Get(key)).Result;
+        }
+
+        /// <summary>
+        /// Removes a byte array from the cache.
+        /// </summary>
+        /// <param name="key">The key of the byte array.</param>
+        /// <returns>The byte array if the key was found in the cache, otherwise null.</returns>
+        public byte[] Remove(string key)
+        {
+            return _memCache.Remove(key);
+        }
+
+        /// <summary>
+        /// Clears the cache
+        /// </summary>
+        public void Clear()
+        {
+            _memCache.Clear();
+        }
+
+        /// <summary>
+        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
+        /// </summary>
+        public IList<string> Keys(string pattern)
+        {
+            return _memCache.Keys(pattern);
+        }
+
+        /// <summary>
+        /// Total number of objects in the cache.
+        /// </summary>
+        public long Count
+        {
+            get
+            { 
+                return _memCache.Count;
+            }
+        }
+
+        /// <summary>
+        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
+        /// </summary>
+        public long MemoryLimit
+        {
+            get
+            { 
+                return _memCache.MemoryLimit;
+            }
+        }
+
+        /// <summary>
+        /// Called when disposed.
+        /// </summary>
+        public void Dispose()
+        {
+            _memCache.Dispose();
         }
 
         /// <summary>
@@ -101,9 +165,10 @@ namespace Dache.CacheHost.Storage
         /// </remarks>
         protected async Task<byte[]> Compress(byte[] value)
         {
+            // Sanitize
             if (value == null)
             {
-                throw new ArgumentNullException("value", "Can't compress null value");
+                throw new ArgumentNullException("value", "Can't compress null value.");
             }
 
             using (MemoryStream originalStream = new MemoryStream(value))
