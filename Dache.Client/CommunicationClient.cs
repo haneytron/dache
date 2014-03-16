@@ -78,6 +78,10 @@ namespace Dache.Client
             _reconnectTimer = new Timer(ReconnectToServer, null, Timeout.Infinite, Timeout.Infinite);
         }
 
+        /// <summary>
+        /// Connects to the cache host.
+        /// </summary>
+        /// <returns>true if successful, false otherwise.</returns>
         public bool Connect()
         {
             var result = _client.Connect(_remoteEndPoint);
@@ -101,7 +105,6 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeys");
             }
-            // TODO: Any all of these methods or not?
             if (!cacheKeys.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeys");
@@ -150,7 +153,6 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
-            // TODO: Any all of these methods or not?
             if (!tagNames.Any())
             {
                 throw new ArgumentException("must have at least one element", "tagNames");
@@ -559,7 +561,10 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
-
+            if (!tagNames.Any())
+            {
+                throw new ArgumentException("must have at least one element", "tagNames");
+            }
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -644,7 +649,10 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
-
+            if (!tagNames.Any())
+            {
+                throw new ArgumentException("must have at least one element", "tagNames");
+            }
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -821,6 +829,11 @@ namespace Dache.Client
             }
         }
 
+        /// <summary>
+        /// Parses the command parts onto byte arrays.
+        /// </summary>
+        /// <param name="commandParts">The command parts.</param>
+        /// <returns>A list of byte arrays.</returns>
         private static List<byte[]> ParseCacheObjects(string[] commandParts)
         {
             // Regular set
