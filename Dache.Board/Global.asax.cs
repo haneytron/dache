@@ -8,8 +8,15 @@ namespace Dache.Board
     // Note: For instructions on enabling IIS6 or IIS7 classic mode, 
     // visit http://go.microsoft.com/?LinkId=9394801
 
+    /// <summary>
+    /// An MVC application.
+    /// </summary>
     public class MvcApplication : System.Web.HttpApplication
     {
+        /// <summary>
+        /// Registers global filters.
+        /// </summary>
+        /// <param name="filters">The global filters.</param>
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
             // Create the handle error attribute for MVC error handling
@@ -25,6 +32,10 @@ namespace Dache.Board
             filters.Add(new PageTitleAttribute());
         }
 
+        /// <summary>
+        /// Registers routes.
+        /// </summary>
+        /// <param name="routes">The routes.</param>
         public static void RegisterRoutes(RouteCollection routes)
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
@@ -48,6 +59,9 @@ namespace Dache.Board
             );
         }
 
+        /// <summary>
+        /// Called on application start.
+        /// </summary>
         protected void Application_Start()
         {
             AreaRegistration.RegisterAllAreas();

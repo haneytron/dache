@@ -782,7 +782,7 @@ namespace Dache.Core.Communication
         /// Gets all cache keys associated with the given tag names and optionally matching the given pattern.
         /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
-        /// <param name="tagName">The tag names.</param>
+        /// <param name="tagNames">The tag names.</param>
         /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
         /// <returns>The list of cache keys matching the provided pattern.</returns>
         public List<byte[]> GetCacheKeysTagged(IEnumerable<string> tagNames, string pattern = "*")

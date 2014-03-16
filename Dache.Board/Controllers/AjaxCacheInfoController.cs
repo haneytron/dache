@@ -3,8 +3,15 @@ using Dache.Board.Handlers;
 
 namespace Dache.Board.Controllers
 {
+    /// <summary>
+    /// Controls AJAX cache info actions.
+    /// </summary>
     public class AjaxCacheInfoController : Controller
     {
+        /// <summary>
+        /// Creates a cache info JSON object.
+        /// </summary>
+        /// <returns>The JSON.</returns>
         public JsonResult CacheInfo()
         {
             // Get the cache info
