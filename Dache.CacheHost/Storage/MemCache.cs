@@ -222,7 +222,7 @@ namespace Dache.CacheHost.Storage
             string hashKey = null;
             int referenceCount = 0;
             // Delete this interned key
-            _internDictionaryLock.EnterUpgradeableReadLock();
+            _internDictionaryLock.EnterReadLock();
             try
             {
                 if (!_internDictionary.TryGetValue(key, out hashKey))
@@ -230,10 +230,18 @@ namespace Dache.CacheHost.Storage
                     // Not interned, do normal work
                     return _memoryCache.Remove(key) as byte[];
                 }
+            }
+            finally
+            {
+                _internDictionaryLock.ExitReadLock();
+            }
 
-                // Is interned, remove it
-                _internDictionaryLock.EnterWriteLock();
-                try
+            // Is interned, remove it
+            _internDictionaryLock.EnterWriteLock();
+            try
+            {
+                // Double lock check to ensure still interned
+                if (_internDictionary.TryGetValue(key, out hashKey))
                 {
                     _internDictionary.Remove(key);
                     referenceCount = --_internReferenceDictionary[hashKey];
@@ -245,14 +253,10 @@ namespace Dache.CacheHost.Storage
                         return _memoryCache.Remove(hashKey) as byte[];
                     }
                 }
-                finally
-                {
-                    _internDictionaryLock.ExitWriteLock();
-                }
             }
             finally
             {
-                _internDictionaryLock.ExitUpgradeableReadLock();
+                _internDictionaryLock.EnterWriteLock();
             }
 
             // Interned object still exists, so fake the removal return of the object
@@ -328,8 +332,9 @@ namespace Dache.CacheHost.Storage
             {
                 result = (17 * result) + value[i];
             }
-            // TODO: should I intern this?
-            return string.Intern("__InternedCacheKey_" + result.ToString());
+            
+            // Return custom intern key
+            return string.Format("__InternedCacheKey_{0}", result);
         }
     }
 }

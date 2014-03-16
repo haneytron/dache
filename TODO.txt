@@ -17,7 +17,6 @@ keys-tag prefix* tagName1 tagName2 tagName3 tagName4...
 clear
 
 -Fix thread safety issues at MemCache with keys commands
--Fix CacheClient.cs inefficiencies on retries/enumeration changes
 -Offer both IIS hosting and classic Service hosting
 -Clear tag from TagRoutingTable memory when removing all tagged items from host
 -Introduce of Sorted Sets/Lists with weights
