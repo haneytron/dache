@@ -54,7 +54,7 @@ namespace Dache.Client.Serialization
 
             using (MemoryStream originalStream = new MemoryStream(bytes))
             {
-                using (GZipStream decompressionStream = new GZipStream(originalStream, CompressionMode.Decompress, true))
+                using (GZipStream decompressionStream = new GZipStream(originalStream, CompressionMode.Decompress, false))
                 {
                     return new BinaryFormatter().Deserialize(decompressionStream);
                 }

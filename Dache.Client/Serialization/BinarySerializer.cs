@@ -44,7 +44,6 @@ namespace Dache.Client.Serialization
 
             using (var memoryStream = new MemoryStream(bytes))
             {
-                memoryStream.Seek(0, SeekOrigin.Begin);
                 return new BinaryFormatter().Deserialize(memoryStream);
             }
         }

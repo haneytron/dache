@@ -15,7 +15,7 @@ namespace Dache.Client.Configuration
         /// <returns>The logger.</returns>
         public static ILogger LoadLogger()
         {
-            var defaultLogger = new EventViewerLogger("Cache Client", "Dache");
+            var defaultLogger = new FileLogger();
 
             // Configure custom logging
             try

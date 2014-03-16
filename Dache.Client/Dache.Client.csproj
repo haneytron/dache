@@ -45,19 +45,12 @@
     <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Dache.Core\Logging\EventViewerLogger.cs">
-      <Link>Logging\EventViewerLogger.cs</Link>
-    </Compile>
-    <Compile Include="..\Dache.Core\Logging\ILogger.cs">
-      <Link>Logging\ILogger.cs</Link>
-    </Compile>
     <Compile Include="Configuration\CacheClientConfigurationSection.cs" />
     <Compile Include="Configuration\CacheHostElement.cs" />
     <Compile Include="Configuration\CacheHostsCollection.cs" />
     <Compile Include="Configuration\CustomTypeElement.cs" />
     <Compile Include="Configuration\CustomTypesLoader.cs" />
     <Compile Include="Exceptions\NoCacheHostsAvailableException.cs" />
-    <Compile Include="Logging\FileLogger.cs" />
     <Compile Include="Plugins\OutputCache\DacheMvcChildActionCache.cs" />
     <Compile Include="Plugins\OutputCache\DacheOutputCacheProvider.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionState.cs" />
