@@ -114,7 +114,7 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
 
-            byte[] rawValue = null;
+            List<byte[]> rawValues = null;
 
             do
             {
@@ -122,7 +122,7 @@ namespace Dache.Client
 
                 try
                 {
-                    rawValue = client.Get(cacheKey);
+                    rawValues = client.Get(new[] { cacheKey });
                     break;
                 }
                 catch
@@ -132,7 +132,7 @@ namespace Dache.Client
             } while (true);
 
             // If we got nothing back, return false and the default value for the type;
-            if (rawValue == null)
+            if (rawValues == null || rawValues.Count == 0)
             {
                 value = default(T);
                 return false;
@@ -141,7 +141,7 @@ namespace Dache.Client
             // Deserialize
             try
             {
-                value = (T)_binarySerializer.Deserialize(rawValue);
+                value = (T)_binarySerializer.Deserialize(rawValues[0]);
                 return true;
             }
             catch

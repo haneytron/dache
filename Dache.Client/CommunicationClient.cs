@@ -90,21 +90,6 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets the serialized object stored at the given cache key from the cache.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <returns>The serialized object.</returns>
-        public byte[] Get(string cacheKey)
-        {
-            var result = Get(new[] { cacheKey });
-            if (result == null || result.Count == 0)
-            {
-                return null;
-            }
-            return result[0];
-        }
-
-        /// <summary>
         /// Gets the serialized objects stored at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
