@@ -116,12 +116,11 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeys");
             }
+            // TODO: Any all of these methods or not?
             if (!cacheKeys.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeys");
             }
-
-            int cacheKeysCount = 0;
 
             byte[] command = null;
             using (var memoryStream = new MemoryStream())
@@ -132,7 +131,6 @@ namespace Dache.Client
                 {
                     memoryStream.WriteSpace();
                     memoryStream.Write(cacheKey);
-                    cacheKeysCount++;
                 }
                 command = memoryStream.ToArray();
             }
@@ -158,21 +156,31 @@ namespace Dache.Client
         /// <summary>
         /// Gets all serialized objects associated with the given tag name.
         /// </summary>
-        /// <param name="tagName">The tag name.</param>
+        /// <param name="tagNames">The tag names.</param>
         /// <returns>A list of the serialized objects.</returns>
-        public List<byte[]> GetTagged(string tagName)
+        public List<byte[]> GetTagged(IEnumerable<string> tagNames)
         {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
+            if (tagNames == null)
             {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+                throw new ArgumentNullException("tagNames");
+            }
+            // TODO: Any all of these methods or not?
+            if (!tagNames.Any())
+            {
+                throw new ArgumentException("must have at least one element", "tagNames");
             }
 
             byte[] command = null;
             using (var memoryStream = new MemoryStream())
             {
                 memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("get-tag {0}", tagName);
+                memoryStream.Write("get-tag");
+                foreach (var tagName in tagNames)
+                {
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(tagName);
+                }
                 command = memoryStream.ToArray();
             }
 
@@ -192,50 +200,6 @@ namespace Dache.Client
             // Parse command from bytes
             var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             return ParseCacheObjects(commandResultParts);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        public void AddOrUpdate(string cacheKey, byte[] serializedObject)
-        {
-            AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) });
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdate(string cacheKey, byte[] serializedObject, DateTimeOffset absoluteExpiration)
-        {
-            AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, absoluteExpiration);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdate(string cacheKey, byte[] serializedObject, TimeSpan slidingExpiration)
-        {
-            AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, slidingExpiration);
-        }
-
-        /// <summary>
-        /// Adds or updates an interned serialized object in the cache at the given cache key.
-        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
-        /// You must remove them manually when appropriate or else you may face a memory leak.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        public void AddOrUpdateInterned(string cacheKey, byte[] serializedObject)
-        {
-            AddOrUpdateInterned(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) });
         }
 
         /// <summary>
@@ -388,54 +352,6 @@ namespace Dache.Client
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
             // Send
             _client.Send(command);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName)
-        {
-            AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, DateTimeOffset absoluteExpiration)
-        {
-            AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName, absoluteExpiration);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, TimeSpan slidingExpiration)
-        {
-            AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName, slidingExpiration);
-        }
-
-        /// <summary>
-        /// Adds or updates the interned serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
-        /// You must remove them manually when appropriate or else you may face a memory leak.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateTaggedInterned(string cacheKey, byte[] serializedObject, string tagName)
-        {
-            AddOrUpdateTaggedInterned(new[] { new KeyValuePair<string, byte[]>(cacheKey, serializedObject) }, tagName);
         }
 
         /// <summary>
@@ -611,15 +527,6 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Removes the serialized object at the given cache key from the cache.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        public void Remove(string cacheKey)
-        {
-            Remove(new[] { cacheKey });
-        }
-
-        /// <summary>
         /// Removes the serialized objects at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>
@@ -655,39 +562,12 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Removes all serialized objects associated with the given tag name.
-        /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        public void RemoveTagged(string tagName)
-        {
-            RemoveTagged(new[] { tagName }, "*");
-        }
-
-        /// <summary>
-        /// Removes all serialized objects associated with the given tag name and with keys matching the given pattern.
-        /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">The search pattern (regex).</param>
-        public void RemoveTagged(string tagName, string pattern)
-        {
-            RemoveTagged(new[] { tagName }, pattern);
-        }
-
-        /// <summary>
-        /// Removes all serialized objects associated with the given tag names.
+        /// Removes all serialized objects associated with the given tag names and optionally with keys matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="tagNames">The tag names.</param>
-        public void RemoveTagged(IEnumerable<string> tagNames)
-        {
-            RemoveTagged(tagNames, "*");
-        }
-
-        /// <summary>
-        /// Removes all serialized objects associated with the given tag names and with keys matching the given pattern.
-        /// </summary>
-        /// <param name="tagNames">The tag names.</param>
-        /// <param name="pattern">The search pattern (regex).</param>
-        public void RemoveTagged(IEnumerable<string> tagNames, string pattern)
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        public void RemoveTagged(IEnumerable<string> tagNames, string pattern = "*")
         {
             // Sanitize
             if (tagNames == null)
@@ -697,7 +577,7 @@ namespace Dache.Client
 
             if (string.IsNullOrWhiteSpace(pattern))
             {
-                throw new ArgumentNullException("pattern");
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
             }
 
             byte[] command;
@@ -722,52 +602,12 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets all keys associated with the given tag name and the optional search pattern
+        /// Gets all cache keys, optionally matching the provided pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">Optional. The search pattern (regex). Default is '*'.</param>
-        /// <returns>A list of the keys.</returns>
-        public List<byte[]> GetKeysTagged(string tagName, string pattern = "*")
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            byte[] command;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("keys-tag {0} {1}", tagName, pattern);
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
-            // Send and receive
-            var rawResult = _client.SendReceive(command);
-
-            // Verify that we got something
-            if (rawResult == null)
-                return null;
-
-            // Parse string
-            var decodedResult = DacheProtocolHelper.CommunicationEncoding.GetString(rawResult);
-            if (string.IsNullOrWhiteSpace(decodedResult))
-                return null; // should probably log this or notify the client
-
-            // Parse command from bytes
-            var commandResultParts = decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return ParseCacheObjects(commandResultParts);
-        }
-
-        /// <summary>
-        /// Gets all the keys in the cache matching the provided pattern. WARNING: this is likely a very expensive operation for large caches. 
-        /// </summary>
-        /// <param name="pattern">The search pattern (regex)</param>
-        /// <returns>The list of keys matching the provided pattern</returns>
-        public List<byte[]> Keys(string pattern)
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern</returns>
+        public List<byte[]> GetCacheKeys(string pattern = "*")
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(pattern))
@@ -790,12 +630,16 @@ namespace Dache.Client
 
             // Verify that we got something
             if (rawResult == null)
+            {
                 return null;
+            }
 
             // Parse string
             var decodedResult = DacheProtocolHelper.CommunicationEncoding.GetString(rawResult);
             if (string.IsNullOrWhiteSpace(decodedResult))
-                return null; // should probably log this or notify the client
+            {
+                return null;
+            }
 
             // Parse command from bytes
             var commandResultParts = decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -803,7 +647,64 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Clears the cache
+        /// Gets all cache keys associated with the given tag names and optionally matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="tagNames">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        public List<byte[]> GetCacheKeysTagged(IEnumerable<string> tagNames, string pattern = "*")
+        {
+            if (tagNames == null)
+            {
+                throw new ArgumentNullException("tagNames");
+            }
+
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
+            }
+
+            byte[] command;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("keys-tag");
+                memoryStream.WriteSpace();
+                memoryStream.Write(pattern);
+                foreach (var tagName in tagNames)
+                {
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(tagName);
+                }
+                command = memoryStream.ToArray();
+            }
+
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
+            // Send and receive
+            var rawResult = _client.SendReceive(command);
+
+            // Verify that we got something
+            if (rawResult == null)
+            {
+                return null;
+            }
+
+            // Parse string
+            var decodedResult = DacheProtocolHelper.CommunicationEncoding.GetString(rawResult);
+            if (string.IsNullOrWhiteSpace(decodedResult))
+            {
+                return null;
+            }
+
+            // Parse command from bytes
+            var commandResultParts = decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return ParseCacheObjects(commandResultParts);
+        }
+
+        /// <summary>
+        /// Clears the cache.
         /// </summary>
         public void Clear()
         {

@@ -117,242 +117,254 @@ namespace Dache.Core.Communication
 
         private byte[] ProcessCommand(string command, DacheProtocolHelper.MessageType messageType)
         {
+            // Sanitize
+            if (command == null)
+            {
+                return null;
+            }
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                return null;
+            }
+
             string[] commandParts = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (commandParts.Length == 0)
+            {
+                return null;
+            }
+
             List<byte[]> results;
             byte[] commandResult = null;
 
             switch (messageType)
             {
                 case DacheProtocolHelper.MessageType.Literal:
+                {
+                    if (string.Equals(commandParts[0], "keys", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (command.StartsWith("get-tag", StringComparison.OrdinalIgnoreCase))
+                        // Sanitize the command
+                        if (commandParts.Length != 2)
                         {
-                            // Sanitize the command
-                            if (commandParts.Length != 2)
-                            {
-                                return null;
-                            }
+                            return null;
+                        }
 
-                            // The only command with no delimiter is get-tag so do that
-                            var tagName = commandParts[1];
-                            results = GetTagged(tagName);
-                            // Structure the results for sending
-                            using (var memoryStream = new MemoryStream())
+                        var pattern = commandParts[1];
+                        results = GetCacheKeys(pattern);
+                        // Structure the results for sending
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            for (int i = 0; i < results.Count; i++)
                             {
-                                for (int i = 0; i < results.Count; i++)
+                                if (i != 0)
                                 {
-                                    if (i != 0)
-                                    {
-                                        memoryStream.WriteSpace();
-                                    }
-                                    memoryStream.WriteBase64(results[i]);
+                                    memoryStream.WriteSpace();
                                 }
-                                commandResult = memoryStream.ToArray();
+                                memoryStream.WriteBase64(results[i]);
                             }
+                            commandResult = memoryStream.ToArray();
                         }
-                        else if (string.Compare(commandParts[0], "keys-tag", StringComparison.OrdinalIgnoreCase) == 0)
-                        {
-                            // Sanitize the command
-                            if (commandParts.Length != 3)
-                            {
-                                return null;
-                            }
-
-                            var tagName = commandParts[1];
-                            var searchPattern = commandParts[2];
-                            results = GetKeysTagged(tagName, searchPattern);
-                            // Structure the results for sending
-                            using (var memoryStream = new MemoryStream())
-                            {
-                                for (int i = 0; i < results.Count; i++)
-                                {
-                                    if (i != 0)
-                                    {
-                                        memoryStream.WriteSpace();
-                                    }
-                                    memoryStream.WriteBase64(results[i]);
-                                }
-                                commandResult = memoryStream.ToArray();
-                            }
-                        }
-                        else if (string.Compare(commandParts[0], "keys", StringComparison.OrdinalIgnoreCase) == 0)
-                        {
-                            // Sanitize the command
-                            if (commandParts.Length != 2)
-                            {
-                                return null;
-                            }
-
-                            var searchPattern = commandParts[1];
-                            results = GetKeys(searchPattern);
-                            // Structure the results for sending
-                            using (var memoryStream = new MemoryStream())
-                            {
-                                for (int i = 0; i < results.Count; i++)
-                                {
-                                    if (i != 0)
-                                    {
-                                        memoryStream.WriteSpace();
-                                    }
-                                    memoryStream.WriteBase64(results[i]);
-                                }
-                                commandResult = memoryStream.ToArray();
-                            }
-                        }
-                        else if (command.StartsWith("clear", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Clear();
-                        }
-
-                        break;
                     }
+                    else if (string.Equals(commandParts[0], "clear", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Clear();
+                    }
+
+                    break;
+                }
                 case DacheProtocolHelper.MessageType.RepeatingCacheKeys:
+                {
+                    // Determine command
+                    if (string.Equals(commandParts[0], "get", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Determine command
-                        List<string> cacheKeys;
-                        if (command.StartsWith("get", StringComparison.OrdinalIgnoreCase))
+                        // Sanitize the command
+                        if (commandParts.Length < 2)
                         {
-                            // Sanitize the command
-                            if (commandParts.Length < 2)
-                            {
-                                return null;
-                            }
+                            return null;
+                        }
 
-                            cacheKeys = commandParts.Skip(1).ToList();
-                            results = Get(cacheKeys);
-                            // Structure the results for sending
-                            using (var memoryStream = new MemoryStream())
+                        var cacheKeys = commandParts.Skip(1);
+                        results = Get(cacheKeys);
+                        // Structure the results for sending
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            for (int i = 0; i < results.Count; i++)
                             {
-                                for (int i = 0; i < results.Count; i++)
+                                if (i != 0)
                                 {
-                                    if (i != 0)
-                                    {
-                                        memoryStream.WriteSpace();
-                                    }
-                                    memoryStream.WriteBase64(results[i]);
+                                    memoryStream.WriteSpace();
                                 }
-                                commandResult = memoryStream.ToArray();
+                                memoryStream.WriteBase64(results[i]);
                             }
+                            commandResult = memoryStream.ToArray();
                         }
-                        else if (command.StartsWith("del-tag", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Sanitize the command
-                            //sample commands: 
-                            //del-tag * tagName1
-                            //del-tag * tagName1 tagName2
-                            //del-tag myPrefix* tagName1 tagName2
-                            if (commandParts.Length < 3)
-                            {
-                                return null; //TODO: should probably log this or do something with it
-                            }
-
-                            var keyPattern = commandParts[1];
-                            var tagNames = commandParts.Skip(2).ToList();
-                            foreach (var tagName in tagNames)
-                            {
-                                RemoveTagged(tagName, keyPattern);
-                            }
-                        }
-                        else if (command.StartsWith("del", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Sanitize the command
-                            if (commandParts.Length < 2)
-                            {
-                                return null;
-                            }
-
-                            cacheKeys = commandParts.Skip(1).ToList();
-                            Remove(cacheKeys);
-                        }
-
-                        break;
                     }
-                case DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects:
+                    if (string.Equals(commandParts[0], "get-tag", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Determine command
-                        IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndObjects;
-                        if (command.StartsWith("set-tag-intern", StringComparison.OrdinalIgnoreCase))
+                        // Sanitize the command
+                        if (commandParts.Length < 2)
                         {
-                            // Only one method, so call it
-                            if (commandParts.Length == 2)
-                            {
-                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                                AddOrUpdateTaggedInterned(cacheKeysAndObjects, commandParts[1]);
-                            }
+                            return null;
                         }
-                        else if (command.StartsWith("set-intern", StringComparison.OrdinalIgnoreCase))
+
+                        var tagNames = commandParts.Skip(1);
+                        results = GetTagged(tagNames);
+                        // Structure the results for sending
+                        using (var memoryStream = new MemoryStream())
                         {
-                            // Only one method, so call it
-                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
-                            AddOrUpdateInterned(cacheKeysAndObjects);
+                            for (int i = 0; i < results.Count; i++)
+                            {
+                                if (i != 0)
+                                {
+                                    memoryStream.WriteSpace();
+                                }
+                                memoryStream.WriteBase64(results[i]);
+                            }
+                            commandResult = memoryStream.ToArray();
+                        }
+                    }
+                    else if (string.Equals(commandParts[0], "del-tag", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // sample commands: 
+                        // del-tag * tagName1
+                        // del-tag * tagName1 tagName2
+                        // del-tag myPrefix* tagName1 tagName2
+
+                        // Sanitize the command
+                        if (commandParts.Length < 3)
+                        {
+                            return null;
+                        }
+
+                        var pattern = commandParts[1];
+                        var tagNames = commandParts.Skip(2);
+                        RemoveTagged(tagNames, pattern);
+                    }
+                    else if (string.Equals(commandParts[0], "del", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Sanitize the command
+                        if (commandParts.Length < 2)
+                        {
+                            return null;
+                        }
+
+                        var cacheKeys = commandParts.Skip(1);
+                        Remove(cacheKeys);
+                    }
+                    else if (string.Equals(commandParts[0], "keys-tag", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Sanitize the command
+                        if (commandParts.Length < 3)
+                        {
+                            return null;
+                        }
+
+                        var pattern = commandParts[1];
+                        var tagNames = commandParts.Skip(2);
+                        results = GetCacheKeysTagged(tagNames, pattern);
+                        // Structure the results for sending
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            for (int i = 0; i < results.Count; i++)
+                            {
+                                if (i != 0)
+                                {
+                                    memoryStream.WriteSpace();
+                                }
+                                memoryStream.WriteBase64(results[i]);
+                            }
+                            commandResult = memoryStream.ToArray();
+                        }
+                    }
+
+                    break;
+                }
+                case DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects:
+                {
+                    // Determine command
+                    IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndObjects;
+                    if (string.Equals(commandParts[0], "set-tag-intern", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Only one method, so call it
+                        if (commandParts.Length == 2)
+                        {
+                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                            AddOrUpdateTaggedInterned(cacheKeysAndObjects, commandParts[1]);
+                        }
+                    }
+                    else if (string.Equals(commandParts[0], "set-intern", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Only one method, so call it
+                        cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
+                        AddOrUpdateInterned(cacheKeysAndObjects);
+                    }
+                    else if (string.Equals(commandParts[0], "set-tag", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // set-tag command should have no less than 4 parts: set-tag tagName keyName keyValue
+                        if (commandParts.Length < 4)
+                        {
+                            return null;
+                        }
+
+                        // Check whether we have absolute or sliding options
+                        if (commandParts.Length % 2 == 0)
+                        {
+                            // Regular set
+                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                            AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1]);
                         }
                         else
                         {
+                            // Get absolute or sliding expiration
                             int slidingExpiration;
                             DateTimeOffset absoluteExpiration;
-                            if (command.StartsWith("set-tag", StringComparison.OrdinalIgnoreCase))
+                            if (int.TryParse(commandParts[2], out slidingExpiration))
                             {
-                                if (commandParts.Length < 4) //set-tag command should have no less than 4 parts: set-tag tagName keyName keyValue
-                                    return null;
-
-                                // Check whether we have absolute or sliding options
-                                if (DateTimeOffset.TryParseExact(commandParts[2], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
-                                {
-                                    // absolute expiration
-                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
-                                    AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], absoluteExpiration);
-                                }
-                                else if (int.TryParse(commandParts[2], out slidingExpiration)) //TODO: assumes a number/int won't be used for a key name, probably not a safe assumption
-                                {
-                                    // sliding expiration
-                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
-                                    AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], TimeSpan.FromSeconds(slidingExpiration));
-                                }
-                                else
-                                {
-                                    // Regular set
-                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                                    AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1]);
-                                }
+                                // Sliding expiration
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
+                                AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], TimeSpan.FromSeconds(slidingExpiration));
                             }
-                            else if (command.StartsWith("set", StringComparison.OrdinalIgnoreCase))
+                            else if (DateTimeOffset.TryParseExact(commandParts[2], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
                             {
-                                // Check whether we have absolute or sliding options
-                                if (commandParts.Length % 2 != 0)
-                                {
-                                    // Regular set
-                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
-                                    AddOrUpdate(cacheKeysAndObjects);
-                                }
-                                else
-                                {
-                                    // Get absolute or sliding expiration
-                                    if (DateTimeOffset.TryParseExact(commandParts[1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
-                                    {
-                                        // absolute expiration
-                                        cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                                        AddOrUpdate(cacheKeysAndObjects, absoluteExpiration);
-                                    }
-                                    else if (int.TryParse(commandParts[1], out slidingExpiration))
-                                    {
-                                        // sliding expiration
-                                        cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                                        AddOrUpdate(cacheKeysAndObjects, TimeSpan.FromSeconds(slidingExpiration));
-                                    }
-                                    else
-                                    {
-                                        // Neither worked, so it's a bad message
-                                        return null;
-                                    }
-                                }
+                                // Absolute expiration
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
+                                AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], absoluteExpiration);
                             }
                         }
-
-                        break;
                     }
+                    else if (string.Equals(commandParts[0], "set", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Check whether we have absolute or sliding options
+                        if (commandParts.Length % 2 == 1)
+                        {
+                            // Regular set
+                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
+                            AddOrUpdate(cacheKeysAndObjects);
+                        }
+                        else
+                        {
+                            // Get absolute or sliding expiration
+                            int slidingExpiration;
+                            DateTimeOffset absoluteExpiration;
+                            if (int.TryParse(commandParts[1], out slidingExpiration))
+                            {
+                                // sliding expiration
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                                AddOrUpdate(cacheKeysAndObjects, TimeSpan.FromSeconds(slidingExpiration));
+                            }
+                            else if (DateTimeOffset.TryParseExact(commandParts[1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                            {
+                                // absolute expiration
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                                AddOrUpdate(cacheKeysAndObjects, absoluteExpiration);
+                            }
+                        }
+                    }
+
+                    break;
+                }
             }
 
-            // Return the result
+            // Return the result - may be null if there was no valid message
             return commandResult;
         }
 
@@ -383,23 +395,6 @@ namespace Dache.Core.Communication
         {
             // Shutdown and close the server socket
             _server.Close();
-        }
-
-        /// <summary>
-        /// Gets the serialized object stored at the given cache key from the cache.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <returns>The serialized object.</returns>
-        public byte[] Get(string cacheKey)
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
-            {
-                return null;
-            }
-
-            // Try to get value
-            return _memCache.Get(cacheKey);
         }
 
         /// <summary>
@@ -440,14 +435,14 @@ namespace Dache.Core.Communication
         }
 
         /// <summary>
-        /// Gets all serialized objects associated with the given tag name.
+        /// Gets all serialized objects associated with the given tag names.
         /// </summary>
-        /// <param name="tagName">The tag name.</param>
+        /// <param name="tagNames">The tag names.</param>
         /// <returns>A list of the serialized objects.</returns>
-        public List<byte[]> GetTagged(string tagName)
+        public List<byte[]> GetTagged(IEnumerable<string> tagNames)
         {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
+            if (tagNames == null)
             {
                 return null;
             }
@@ -455,84 +450,28 @@ namespace Dache.Core.Communication
             // Compile a list of the serialized objects
             var result = new List<byte[]>(10);
 
-            // Get the values
-            var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName);
-            if (cacheKeys != null)
+            // Enumerate all tag names
+            foreach (var tagName in tagNames)
             {
-                foreach (var cacheKey in cacheKeys)
+                // Get the values
+                var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName);
+                if (cacheKeys != null)
                 {
-                    var cacheValue = _memCache.Get(cacheKey);
-                    if (cacheValue == null)
+                    foreach (var cacheKey in cacheKeys)
                     {
-                        continue;
-                    }
+                        var cacheValue = _memCache.Get(cacheKey);
+                        if (cacheValue == null)
+                        {
+                            continue;
+                        }
 
-                    result.Add(cacheValue);
+                        result.Add(cacheValue);
+                    }
                 }
             }
 
             // Return the result
             return result;
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        public void AddOrUpdate(string cacheKey, byte[] serializedObject)
-        {
-            // Place object in cache
-            _memCache.Add(cacheKey, serializedObject, _defaultCacheItemPolicy);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdate(string cacheKey, byte[] serializedObject, DateTimeOffset absoluteExpiration)
-        {
-            // Define the cache item policy
-            var cacheItemPolicy = new CacheItemPolicy
-            {
-                AbsoluteExpiration = absoluteExpiration
-            };
-
-            // Place object in cache
-            _memCache.Add(cacheKey, serializedObject, cacheItemPolicy);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdate(string cacheKey, byte[] serializedObject, TimeSpan slidingExpiration)
-        {
-            // Define the cache item policy
-            var cacheItemPolicy = new CacheItemPolicy
-            {
-                SlidingExpiration = slidingExpiration
-            };
-
-            // Place object in cache
-            _memCache.Add(cacheKey, serializedObject, cacheItemPolicy);
-        }
-
-        /// <summary>
-        /// Adds or updates an interned serialized object in the cache at the given cache key.
-        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
-        /// You must remove them manually when appropriate or else you may face a memory leak.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        public void AddOrUpdateInterned(string cacheKey, byte[] serializedObject)
-        {
-            // Place object in cache
-            _memCache.AddInterned(cacheKey, serializedObject);
         }
 
         /// <summary>
@@ -550,7 +489,8 @@ namespace Dache.Core.Communication
             // Iterate all cache keys and associated serialized objects
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
-                AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value);
+                // Place object in cache
+                _memCache.Add(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, _defaultCacheItemPolicy);
             }
         }
 
@@ -567,10 +507,17 @@ namespace Dache.Core.Communication
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
 
+            // Define the cache item policy
+            var cacheItemPolicy = new CacheItemPolicy
+            {
+                AbsoluteExpiration = absoluteExpiration
+            };
+
             // Iterate all cache keys and associated serialized objects
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
-                AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, absoluteExpiration);
+                // Place object in cache
+                _memCache.Add(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, cacheItemPolicy);
             }
         }
 
@@ -587,10 +534,17 @@ namespace Dache.Core.Communication
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
 
+            // Define the cache item policy
+            var cacheItemPolicy = new CacheItemPolicy
+            {
+                SlidingExpiration = slidingExpiration
+            };
+
             // Iterate all cache keys and associated serialized objects
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
-                AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, slidingExpiration);
+                // Place object in cache
+                _memCache.Add(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, cacheItemPolicy);
             }
         }
 
@@ -611,100 +565,9 @@ namespace Dache.Core.Communication
             // Iterate all cache keys and associated serialized objects
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
-                AddOrUpdateInterned(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value);
+                // Place object in cache
+                _memCache.AddInterned(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value);
             }
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName)
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                // If they didn't send a tag name ignore it
-                AddOrUpdate(cacheKey, serializedObject);
-                return;
-            }
-
-            AddOrUpdate(cacheKey, serializedObject);
-
-            // Add to the local tag routing table
-            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, DateTimeOffset absoluteExpiration)
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                // If they didn't send a tag name ignore it
-                AddOrUpdate(cacheKey, serializedObject, absoluteExpiration);
-                return;
-            }
-
-            AddOrUpdate(cacheKey, serializedObject, absoluteExpiration);
-
-            // Add to the local tag routing table
-            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
-        }
-
-        /// <summary>
-        /// Adds or updates a serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateTagged(string cacheKey, byte[] serializedObject, string tagName, TimeSpan slidingExpiration)
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                // If they didn't send a tag name ignore it
-                AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
-                return;
-            }
-
-            AddOrUpdate(cacheKey, serializedObject, slidingExpiration);
-
-            // Add to the local tag routing table
-            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
-        }
-
-        /// <summary>
-        /// Adds or updates the interned serialized object in the cache at the given cache key and associates it with the given tag name.
-        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
-        /// You must remove them manually when appropriate or else you may face a memory leak.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="serializedObject">The serialized object.</param>
-        /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateTaggedInterned(string cacheKey, byte[] serializedObject, string tagName)
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                // If they didn't send a tag name ignore it
-                AddOrUpdateInterned(cacheKey, serializedObject);
-                return;
-            }
-
-            AddOrUpdateInterned(cacheKey, serializedObject);
-
-            // Add to the local tag routing table
-            _tagRoutingTable.AddOrUpdate(cacheKey, tagName);
         }
 
         /// <summary>
@@ -719,17 +582,20 @@ namespace Dache.Core.Communication
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
+            AddOrUpdate(cacheKeysAndSerializedObjects);
+
+            // If a tag name was not sent, ignore it
             if (string.IsNullOrWhiteSpace(tagName))
             {
-                // If they didn't send a tag name ignore it
-                AddOrUpdate(cacheKeysAndSerializedObjects);
                 return;
             }
 
             // Iterate all cache keys and associated serialized objects
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
-                AddOrUpdateTagged(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, tagName);
+                // Add to the local tag routing table
+                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
             }
         }
 
@@ -746,17 +612,20 @@ namespace Dache.Core.Communication
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+            
+            AddOrUpdate(cacheKeysAndSerializedObjects, absoluteExpiration);
+
+            // If a tag name was not sent, ignore it
             if (string.IsNullOrWhiteSpace(tagName))
             {
-                // If they didn't send a tag name ignore it
-                AddOrUpdate(cacheKeysAndSerializedObjects, absoluteExpiration);
                 return;
             }
 
             // Iterate all cache keys and associated serialized objects
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
-                AddOrUpdateTagged(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, tagName, absoluteExpiration);
+                // Add to the local tag routing table
+                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
             }
         }
 
@@ -773,17 +642,20 @@ namespace Dache.Core.Communication
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
+            AddOrUpdate(cacheKeysAndSerializedObjects, slidingExpiration);
+
+            // If a tag name was not sent, ignore it
             if (string.IsNullOrWhiteSpace(tagName))
             {
-                // If they didn't send a tag name ignore it
-                AddOrUpdate(cacheKeysAndSerializedObjects, slidingExpiration);
                 return;
             }
 
             // Iterate all cache keys and associated serialized objects
             foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
             {
-                AddOrUpdateTagged(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, tagName, slidingExpiration);
+                // Add to the local tag routing table
+                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
             }
         }
 
@@ -801,6 +673,9 @@ namespace Dache.Core.Communication
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
+            AddOrUpdateInterned(cacheKeysAndSerializedObjects);
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 // If they didn't send a tag name ignore it
@@ -808,27 +683,18 @@ namespace Dache.Core.Communication
                 return;
             }
 
-            // Iterate all cache keys and associated serialized objects
-            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-            {
-                AddOrUpdateTagged(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, tagName);
-            }
-        }
-
-        /// <summary>
-        /// Removes the serialized object at the given cache key from the cache.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        public void Remove(string cacheKey)
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheKey))
+            // If a tag name was not sent, ignore it
+            if (string.IsNullOrWhiteSpace(tagName))
             {
                 return;
             }
 
-            // Remove object from cache
-            _memCache.Remove(cacheKey);
+            // Iterate all cache keys and associated serialized objects
+            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+            {
+                // Add to the local tag routing table
+                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
+            }
         }
 
         /// <summary>
@@ -846,82 +712,52 @@ namespace Dache.Core.Communication
             // Iterate all cache keys
             foreach (var cacheKey in cacheKeys)
             {
-                Remove(cacheKey);
-            }
-        }
-
-        public void RemoveTagged(string tagName)
-        {
-            RemoveTagged(tagName, "*");
-        }
-
-        /// <summary>
-        /// Removes all serialized objects associated with the given tag name and with keys matching the given pattern.
-        /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">The search pattern (regex). Default is '*'</param>
-        public void RemoveTagged(string tagName, string pattern)
-        {
-            // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                return;
-            }
-
-            // Remove them all
-            var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName, pattern);
-            if (cacheKeys == null)
-                return;
-
-            foreach (var cacheKey in cacheKeys)
-            {
                 _memCache.Remove(cacheKey);
             }
         }
 
         /// <summary>
-        /// Gets all keys associated with the given tag name and given search pattern.
+        /// Removes all serialized objects associated with the given tag names and optionally with keys matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">The search pattern</param>
-        /// <returns>A list of the keys.</returns>
-        public List<byte[]> GetKeysTagged(string tagName, string pattern)
+        /// <param name="tagNames">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        public void RemoveTagged(IEnumerable<string> tagNames, string pattern = "*")
         {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(tagName) || string.IsNullOrWhiteSpace(pattern))
+            if (tagNames == null)
             {
-                _logger.Warn("GetKeysTagged", "tagName or pattern is null or whitespace. sorry I can't be more helpful.");
-                return null;
+                return;
             }
 
-            // Compile a list of the keys
-            var result = new List<byte[]>(10);
-
-            // Get the values
-            var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName);
-            if (cacheKeys == null)
-                return result;
-
-            foreach (var key in cacheKeys)
+            // Enumerate all tag names
+            foreach (var tagName in tagNames)
             {
-                result.Add(DacheProtocolHelper.CommunicationEncoding.GetBytes(key));
-            }
+                var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName, pattern);
+                if (cacheKeys == null || cacheKeys.Count == 0)
+                {
+                    continue;
+                }
 
-            // Return the result
-            return result;
+                // Enumerate all cache keys and remove
+                foreach (var cacheKey in cacheKeys)
+                {
+                    _memCache.Remove(cacheKey);
+                }
+            }
         }
 
         /// <summary>
-        /// Gets all keys matching the specified pattern (supports Regex).
+        /// Gets all cache keys, optionally matching the provided pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
-        /// <param name="pattern">The search pattern</param>
-        /// <returns>A list of the keys matching the search pattern</returns>
-        public List<byte[]> GetKeys(string pattern)
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        public List<byte[]> GetCacheKeys(string pattern = "*")
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(pattern))
             {
-                _logger.Warn("GetKeys", "pattern is null or whitespace");
                 return null;
             }
 
@@ -943,7 +779,49 @@ namespace Dache.Core.Communication
         }
 
         /// <summary>
-        /// Clears the cache
+        /// Gets all cache keys associated with the given tag names and optionally matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="tagName">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        public List<byte[]> GetCacheKeysTagged(IEnumerable<string> tagNames, string pattern = "*")
+        {
+            // Sanitize
+            if (tagNames == null)
+            {
+                return null;
+            }
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                return null;
+            }
+
+            // Compile a list of the keys
+            var result = new List<byte[]>(10);
+
+            // Enumerate all tag names
+            foreach (var tagName in tagNames)
+            {
+                // Get the values
+                var cacheKeys = _tagRoutingTable.GetTaggedCacheKeys(tagName);
+                if (cacheKeys == null || cacheKeys.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (var key in cacheKeys)
+                {
+                    result.Add(DacheProtocolHelper.CommunicationEncoding.GetBytes(key));
+                }
+            }
+
+            // Return the result
+            return result;
+        }
+
+        /// <summary>
+        /// Clears the cache.
         /// </summary>
         public void Clear()
         {

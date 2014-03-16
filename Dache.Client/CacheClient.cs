@@ -147,7 +147,7 @@ namespace Dache.Client
             catch
             {
                 // Log serialization error
-                _logger.Error("Serialization Error", "The object at cache key \"" + cacheKey + "\" could not be deserialized to type " + typeof(T));
+                _logger.Error("Serialization Error", string.Format("The object at cache key \"{0}\" could not be deserialized to type {1}", cacheKey, typeof(T)));
 
                 value = default(T);
                 return false;
@@ -264,7 +264,7 @@ namespace Dache.Client
                 {
                     results.Add(default(T));
                     // Log serialization error
-                    _logger.Error("Serialization Error", "The object returned in a Get call at index " + i + " could not be deserialized to type " + typeof(T));
+                    _logger.Error("Serialization Error", string.Format("The object returned in a Get call at index {0} could not be deserialized to type {1}", i, typeof(T)));
                 }
             }
 
@@ -284,11 +284,9 @@ namespace Dache.Client
             var hash = 0;
             foreach (var cacheKey in cacheKeys)
             {
-                int h = cacheKey.GetHashCode();
-                if (h != 0)
-                    hash = unchecked(hash * h);
+                hash ^= cacheKey.GetHashCode();
             }
-            var orderIndependentCacheKey = "getmany:" + hash.ToString();
+            var orderIndependentCacheKey = string.Format("getmany:{0}", hash);
 
             // Try and get from local cache
             List<T> result = _localCache.Get(orderIndependentCacheKey) as List<T>;
@@ -331,7 +329,7 @@ namespace Dache.Client
 
                 try
                 {
-                    rawResults = client.GetTagged(tagName);
+                    rawResults = client.GetTagged(new[] { tagName });
                     break;
                 }
                 catch
@@ -359,7 +357,7 @@ namespace Dache.Client
                 {
                     results.Add(default(T));
                     // Log serialization error
-                    _logger.Error("Serialization Error", "An object returned in a GetTagged call at index " + i + " could not be deserialized to type " + typeof(T));
+                    _logger.Error("Serialization Error", string.Format("An object returned in a GetTagged call at index {0} could not be deserialized to type {1}", i, typeof(T)));
                 }
             }
 
@@ -376,7 +374,7 @@ namespace Dache.Client
         public List<T> GetTaggedLocal<T>(string tagName)
         {
             // Create a cache key for tag name
-            var cacheKey = "tag:" + tagName;
+            var cacheKey = string.Format("tag:{0}", tagName);
 
             // Try and get from local cache
             List<T> result = _localCache.Get(tagName) as List<T>;
@@ -430,7 +428,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdate(cacheKey, bytes);
+                    client.AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) });
                     break;
                 }
                 catch
@@ -475,7 +473,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdate(cacheKey, bytes, absoluteExpiration);
+                    client.AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, absoluteExpiration);
                     break;
                 }
                 catch
@@ -520,7 +518,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdate(cacheKey, bytes, slidingExpiration);
+                    client.AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, slidingExpiration);
                     break;
                 }
                 catch
@@ -566,7 +564,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateInterned(cacheKey, bytes);
+                    client.AddOrUpdateInterned(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) });
                     break;
                 }
                 catch
@@ -603,13 +601,13 @@ namespace Dache.Client
                     try
                     {
                         // Serialize
-                        // TODO: don't reserialize on a failure
                         bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
                     }
                     catch
                     {
                         // Log serialization error
-                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                        _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
+                        continue;
                     }
 
                     // Get the communication client
@@ -674,13 +672,13 @@ namespace Dache.Client
                     try
                     {
                         // Serialize
-                        // TODO: don't reserialize on a failure
                         bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
                     }
                     catch
                     {
                         // Log serialization error
-                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                        _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
+                        continue;
                     }
 
                     // Get the communication client
@@ -745,13 +743,13 @@ namespace Dache.Client
                     try
                     {
                         // Serialize
-                        // TODO: don't reserialize on a failure
                         bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
                     }
                     catch
                     {
                         // Log serialization error
-                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                        _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
+                        continue;
                     }
 
                     // Get the communication client
@@ -817,13 +815,12 @@ namespace Dache.Client
                     try
                     {
                         // Serialize
-                        // TODO: don't reserialize on a failure
                         bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
                     }
                     catch
                     {
                         // Log serialization error
-                        _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                        _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
                     }
 
                     // Get the communication client
@@ -900,7 +897,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateTagged(cacheKey, bytes, tagName);
+                    client.AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, tagName);
                     break;
                 }
                 catch
@@ -951,7 +948,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateTagged(cacheKey, bytes, tagName, absoluteExpiration);
+                    client.AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, tagName, absoluteExpiration);
                     break;
                 }
                 catch
@@ -1002,7 +999,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateTagged(cacheKey, bytes, tagName, slidingExpiration);
+                    client.AddOrUpdateTagged(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, tagName, slidingExpiration);
                     break;
                 }
                 catch
@@ -1054,7 +1051,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.AddOrUpdateTaggedInterned(cacheKey, bytes, tagName);
+                    client.AddOrUpdateTaggedInterned(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, tagName);
                     break;
                 }
                 catch
@@ -1101,7 +1098,7 @@ namespace Dache.Client
                 catch
                 {
                     // Log serialization error
-                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
                 }
             }
 
@@ -1166,7 +1163,7 @@ namespace Dache.Client
                 catch
                 {
                     // Log serialization error
-                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
                 }
             }
 
@@ -1231,7 +1228,7 @@ namespace Dache.Client
                 catch
                 {
                     // Log serialization error
-                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call  at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call  at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
                 }
             }
 
@@ -1297,7 +1294,7 @@ namespace Dache.Client
                 catch
                 {
                     // Log serialization error
-                    _logger.Error("Serialization Error", "An object added via an AddOrUpdateMany call at cache key \"" + cacheKeyAndObjectKvp.Key + "\" could not be serialized");
+                    _logger.Error("Serialization Error", string.Format("An object added via an AddOrUpdateMany call at cache key \"{0}\" could not be serialized", cacheKeyAndObjectKvp.Key));
                 }
             }
 
@@ -1342,7 +1339,7 @@ namespace Dache.Client
 
                 try
                 {
-                    client.Remove(cacheKey);
+                    client.Remove(new[] { cacheKey });
                     break;
                 }
                 catch
@@ -1405,36 +1402,30 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Removes the objects associated to the given tag name from the cache.
+        /// Removes all serialized objects associated with the given tag name and optionally with keys matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        public void RemoveTagged(string tagName)
-        {
-            RemoveTagged(tagName, "*");
-        }
-
-        /// <summary>
-        /// Removes the objects associated to the given tag name and with keys matching the given pattern from the cache.
-        /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">The key search pattern (regex). Default is '*'</param>
-        /// <exception cref="ArgumentException"></exception>
-        public void RemoveTagged(string tagName, string pattern)
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        public void RemoveTagged(string tagName, string pattern = "*")
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
+            }
 
             do
             {
-                // Cache all tagged items at the same server
                 var client = DetermineClient(tagName);
 
                 try
                 {
-                    client.RemoveTagged(tagName);
+                    client.RemoveTagged(new[] { tagName }, pattern);
                     break;
                 }
                 catch
@@ -1445,127 +1436,248 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets all keys associated with the given tag name and matching the given search pattern
+        /// Removes all serialized objects associated with the given tag names and optionally with keys matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">The search pattern (regex). Default is '*'.</param>
-        /// <returns>A list of the keys.</returns>
-        public IList<string> GetKeysTagged(string tagName, string pattern = "*")
+        /// <param name="tagNames">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        public void RemoveTagged(IEnumerable<string> tagNames, string pattern = "*")
         {
-            if (string.IsNullOrWhiteSpace(tagName))
+            // Sanitize
+            if (tagNames == null)
             {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+                throw new ArgumentNullException("tagNames");
             }
-
-            IList<byte[]> rawResults;
+            if (!tagNames.Any())
+            {
+                throw new ArgumentException("must have at least one element", "tagNames");
+            }
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
+            }
 
             do
             {
-                // Use the tag's client
-                var client = DetermineClient(tagName);
+                // Need to batch up requests
+                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                List<string> clientTagNames = null;
+                foreach (var tagName in tagNames)
+                {
+                    // Get the communication client
+                    var client = DetermineClient(tagName);
+                    if (!routingDictionary.TryGetValue(client, out clientTagNames))
+                    {
+                        clientTagNames = new List<string>(10);
+                        routingDictionary.Add(client, clientTagNames);
+                    }
+
+                    clientTagNames.Add(tagName);
+                }
 
                 try
                 {
-                    rawResults = client.GetKeysTagged(tagName, pattern);
+                    // Now we've batched them, do the work
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        routingDictionaryEntry.Key.RemoveTagged(routingDictionaryEntry.Value, pattern);
+                    }
+
+                    // If we got here we did all of the work successfully
                     break;
                 }
                 catch
                 {
-                    // Try a different cache host if this one could not be reached
+                    // Rebalance and try again if a cache host could not be reached
                 }
             } while (true);
-
-            // If we got nothing back, return null
-            if (rawResults == null)
-            {
-                return null;
-            }
-
-            var results = new List<string>(rawResults.Count);
-
-            // Parse
-            for (int i = 0; i < rawResults.Count; i++)
-            {
-                try
-                {
-                    results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResults[i]));
-                }
-                catch
-                {
-                    // Log parsing error
-                    _logger.Error("Parsing Error", "An object returned in a GetKeysTagged call at index " + i + " could not be decoded");
-                }
-            }
-
-            return results;
         }
 
         /// <summary>
-        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
+        /// Gets all cache keys, optionally matching the provided pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
-        /// <returns>The list of all keys in the cache</returns>
-        public IList<string> Keys()
-        {
-            return Keys("*");
-        }
-
-        /// <summary>
-        /// Gets all the keys in the cache matching the provided pattern. WARNING: this is likely a very expensive operation for large caches. 
-        /// </summary>
-        /// <param name="pattern">The search pattern (regex)</param>
-        /// <returns>The list of keys matching the provided pattern</returns>
-        public IList<string> Keys(string pattern)
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        public List<string> GetCacheKeys(string pattern = "*")
         {
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
             }
 
-            var rawResults = new List<byte[]>();
-
-            foreach (var client in _cacheHostLoadBalancingDistribution)
+            do
             {
-                var keys = client.CacheHost.Keys(pattern);
-                if (keys == null)
-                    continue;
+                List<string> results = new List<string>(100);
 
-                rawResults.AddRange(keys);
-            }
-
-            // If we got nothing back, return null
-            if (rawResults.Count == 0)
-            {
-                return null;
-            }
-
-            var results = new List<string>(rawResults.Count);
-
-            // Parse
-            for (var i = 0; i < rawResults.Count; i++)
-            {
+                // Enumerate all cache hosts
                 try
                 {
-                    results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResults[i]));
+                    foreach (var communicationClient in _cacheHostLoadBalancingDistribution)
+                    {
+                        var rawResults = communicationClient.CacheHost.GetCacheKeys(pattern);
+                        foreach (var rawResult in rawResults)
+                        {
+                            results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResult));
+                        }
+                    }
+
+                    // Ensure we got some results
+                    if (results.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    return results;
                 }
                 catch
                 {
-                    // Log parsing error
-                    _logger.Error("Parsing Error", "An object returned in a Keys call at index " + i + " could not be decoded");
+                    // Rebalance and try again if a cache host could not be reached or the list changed
                 }
-            }
-
-            return results;
+            } while (true);
         }
 
         /// <summary>
-        /// Clears the cache
+        /// Gets all cache keys associated with the given tag name and optionally matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        public List<string> GetCacheKeysTagged(string tagName, string pattern = "*")
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
+            }
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
+            }
+
+            do
+            {
+                List<string> results = new List<string>(100);
+
+                var client = DetermineClient(tagName);
+
+                try
+                {
+                    var rawResults = client.GetCacheKeys(pattern);
+                    foreach (var rawResult in rawResults)
+                    {
+                        results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResult));
+                    }
+
+                    // Ensure we got some results
+                    if (results.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    return results;
+                }
+                catch
+                {
+                    // Try a different cache host if this one could not be reached
+                }
+            } while (true);
+        }
+
+        /// <summary>
+        /// Gets all cache keys associated with the given tag names and optionally matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="tagName">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        public List<string> GetCacheKeysTagged(IEnumerable<string> tagNames, string pattern = "*")
+        {
+            // Sanitize
+            if (tagNames == null)
+            {
+                throw new ArgumentNullException("tagNames");
+            }
+            if (!tagNames.Any())
+            {
+                throw new ArgumentException("must have at least one element", "tagNames");
+            }
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
+            }
+
+            do
+            {
+                List<string> results = new List<string>(100);
+
+                // Need to batch up requests
+                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                List<string> clientTagNames = null;
+                foreach (var tagName in tagNames)
+                {
+                    // Get the communication client
+                    var client = DetermineClient(tagName);
+                    if (!routingDictionary.TryGetValue(client, out clientTagNames))
+                    {
+                        clientTagNames = new List<string>(10);
+                        routingDictionary.Add(client, clientTagNames);
+                    }
+
+                    clientTagNames.Add(tagName);
+                }
+
+                try
+                {
+                    // Now we've batched them, do the work
+                    foreach (var routingDictionaryEntry in routingDictionary)
+                    {
+                        var rawResults = routingDictionaryEntry.Key.GetCacheKeysTagged(routingDictionaryEntry.Value, pattern);
+                        foreach (var rawResult in rawResults)
+                        {
+                            results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResult));
+                        }
+                    }
+
+                    // Ensure we got some results
+                    if (results.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    return results;
+                }
+                catch
+                {
+                    // Rebalance and try again if a cache host could not be reached
+                }
+            } while (true);
+        }
+
+        /// <summary>
+        /// Clears the cache.
         /// </summary>
         public void Clear()
         {
-            foreach (var client in _cacheHostLoadBalancingDistribution)
+            do
             {
-                client.CacheHost.Clear();
-            }
+                // Enumerate all cache hosts
+                try
+                {
+                    foreach (var communicationClient in _cacheHostLoadBalancingDistribution)
+                    {
+                        communicationClient.CacheHost.Clear();
+                    }
+
+                    // If we got here we succeeded
+                    break;
+                }
+                catch
+                {
+                    // Rebalance and try again if a cache host could not be reached or the list changed
+                }   
+            } while (true);
         }
 
         /// <summary>

@@ -202,10 +202,51 @@ namespace Dache.Client
         void Remove(IEnumerable<string> cacheKeys);
 
         /// <summary>
-        /// Removes the objects associated to the given tag name from the cache.
+        /// Removes all serialized objects associated with the given tag name and optionally with keys matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        void RemoveTagged(string tagName);
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        void RemoveTagged(string tagName, string pattern = "*");
+
+        /// <summary>
+        /// Removes all serialized objects associated with the given tag names and optionally with keys matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="tagNames">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        void RemoveTagged(IEnumerable<string> tagNames, string pattern = "*");
+
+        /// <summary>
+        /// Gets all cache keys, optionally matching the provided pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        List<string> GetCacheKeys(string pattern = "*");
+
+        /// <summary>
+        /// Gets all cache keys associated with the given tag name and optionally matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="tagName">The tag name.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        List<string> GetCacheKeysTagged(string tagName, string pattern = "*");
+
+        /// <summary>
+        /// Gets all cache keys associated with the given tag names and optionally matching the given pattern.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
+        /// </summary>
+        /// <param name="tagName">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        List<string> GetCacheKeysTagged(IEnumerable<string> tagNames, string pattern = "*");
+
+        /// <summary>
+        /// Clears the cache.
+        /// </summary>
+        void Clear();
 
         /// <summary>
         /// Event that fires when the cache client is disconnected from a cache host.
