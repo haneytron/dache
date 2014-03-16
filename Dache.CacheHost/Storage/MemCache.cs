@@ -17,6 +17,8 @@ namespace Dache.CacheHost.Storage
     {
         // The underlying memory cache
         private MemoryCache _memoryCache = null;
+        // The memory cache lock
+        private readonly ReaderWriterLockSlim _memoryCacheLock = new ReaderWriterLockSlim();
         // The custom performance counter manager
         private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
         // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
@@ -89,8 +91,17 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("cacheItemPolicy");
             }
 
-            // Add to the cache
-            _memoryCache.Set(key, value, cacheItemPolicy);
+            _memoryCacheLock.EnterReadLock();
+            try
+            {
+                // Add to the cache
+                _memoryCache.Set(key, value, cacheItemPolicy);
+            }
+            finally
+            {
+                _memoryCacheLock.ExitReadLock();
+            }
+
             // Increment the Add counter
             _customPerformanceCounterManager.AddsPerSecond.RawValue++;
             // Increment the Total counter
@@ -133,8 +144,16 @@ namespace Dache.CacheHost.Storage
                     // Check if reference is dead
                     if (referenceCount == 0)
                     {
-                        // Remove actual old object
-                        _memoryCache.Remove(oldHashKey);
+                        _memoryCacheLock.EnterReadLock();
+                        try
+                        {
+                            // Remove actual old object
+                            _memoryCache.Remove(oldHashKey);
+                        }
+                        finally
+                        {
+                            _memoryCacheLock.ExitReadLock();
+                        }
                     }
                 }
                 // Intern the value
@@ -154,7 +173,15 @@ namespace Dache.CacheHost.Storage
             // Now possibly add to MemoryCache
             if (!_memoryCache.Contains(hashKey))
             {
-                _memoryCache.Set(hashKey, value, _internCacheItemPolicy);
+                _memoryCacheLock.EnterReadLock();
+                try
+                {
+                    _memoryCache.Set(hashKey, value, _internCacheItemPolicy);
+                }
+                finally
+                {
+                    _memoryCacheLock.ExitReadLock();
+                }
             }
 
             // Increment the Add counter
@@ -190,7 +217,15 @@ namespace Dache.CacheHost.Storage
                 if (!_internDictionary.TryGetValue(key, out hashKey))
                 {
                     // Not interned
-                    return _memoryCache.Get(key) as byte[];
+                    _memoryCacheLock.EnterReadLock();
+                    try
+                    {
+                        return _memoryCache.Get(key) as byte[];
+                    }
+                    finally
+                    {
+                        _memoryCacheLock.ExitReadLock();
+                    }
                 }
             }
             finally
@@ -198,7 +233,15 @@ namespace Dache.CacheHost.Storage
                 _internDictionaryLock.ExitReadLock();
             }
 
-            return _memoryCache.Get(hashKey) as byte[];
+            _memoryCacheLock.EnterReadLock();
+            try
+            {
+                return _memoryCache.Get(hashKey) as byte[];
+            }
+            finally
+            {
+                _memoryCacheLock.ExitReadLock();
+            }
         }
 
         /// <summary>
@@ -228,7 +271,15 @@ namespace Dache.CacheHost.Storage
                 if (!_internDictionary.TryGetValue(key, out hashKey))
                 {
                     // Not interned, do normal work
-                    return _memoryCache.Remove(key) as byte[];
+                    _memoryCacheLock.EnterReadLock();
+                    try
+                    {
+                        return _memoryCache.Remove(key) as byte[];
+                    }
+                    finally
+                    {
+                        _memoryCacheLock.ExitReadLock();
+                    }
                 }
             }
             finally
@@ -250,7 +301,15 @@ namespace Dache.CacheHost.Storage
                     if (referenceCount == 0)
                     {
                         // Remove actual object
-                        return _memoryCache.Remove(hashKey) as byte[];
+                        _memoryCacheLock.EnterReadLock();
+                        try
+                        {
+                            return _memoryCache.Remove(hashKey) as byte[];
+                        }
+                        finally
+                        {
+                            _memoryCacheLock.ExitReadLock();
+                        }
                     }
                 }
             }
@@ -260,7 +319,15 @@ namespace Dache.CacheHost.Storage
             }
 
             // Interned object still exists, so fake the removal return of the object
-            return _memoryCache.Get(hashKey) as byte[];
+            _memoryCacheLock.EnterReadLock();
+            try
+            {
+                return _memoryCache.Get(hashKey) as byte[];
+            }
+            finally
+            {
+                _memoryCacheLock.ExitReadLock();
+            }
         }
 
         /// <summary>
@@ -268,9 +335,17 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         public void Clear()
         {
-            var oldCache = _memoryCache;
-            _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
-            oldCache.Dispose();
+            _memoryCacheLock.EnterWriteLock();
+            try
+            {
+                var oldCache = _memoryCache;
+                _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
+                oldCache.Dispose();
+            }
+            finally
+            {
+                _memoryCacheLock.ExitWriteLock();
+            }
         }
 
         /// <summary>
@@ -278,15 +353,17 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         public IList<string> Keys(string pattern)
         {
-            var allKeys = _memoryCache.Select(kvp => kvp.Key).ToList();
+            Regex regex = pattern == "*" ? null : new Regex(pattern, RegexOptions.IgnoreCase);
 
-            if (pattern == "*")
+            _memoryCacheLock.EnterWriteLock();
+            try
             {
-                return allKeys;
+                return _memoryCache.Where(kvp => regex == null ? true : regex.IsMatch(kvp.Key)).Select(kvp => kvp.Key).ToList();
             }
-
-            var r = new Regex(pattern, RegexOptions.IgnoreCase);
-            return allKeys.Where(k => r.IsMatch(k)).ToList();
+            finally
+            {
+                _memoryCacheLock.ExitWriteLock();
+            }
         }
 
         /// <summary>
