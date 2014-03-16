@@ -358,7 +358,8 @@ namespace Dache.CacheHost.Storage
             _memoryCacheLock.EnterWriteLock();
             try
             {
-                return _memoryCache.Where(kvp => regex == null ? true : regex.IsMatch(kvp.Key)).Select(kvp => kvp.Key).ToList();
+                // Lock ensures single thread, so parallelize to improve response time
+                return _memoryCache.AsParallel().Where(kvp => regex == null ? true : regex.IsMatch(kvp.Key)).Select(kvp => kvp.Key).ToList();
             }
             finally
             {
