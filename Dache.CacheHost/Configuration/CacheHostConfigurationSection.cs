@@ -57,7 +57,7 @@ namespace Dache.CacheHost.Configuration
         /// <summary>
         /// The cache memory limit, as a percentage of the total system memory. Valid range is 20 to 90.
         /// </summary>
-        [IntegerValidator(MinValue = 20, MaxValue = 90)]
+        [IntegerValidator(MinValue = 5, MaxValue = 90)]
         [ConfigurationProperty("cacheMemoryLimitPercentage", IsRequired = true, DefaultValue = 80)]
         public int CacheMemoryLimitPercentage
         {

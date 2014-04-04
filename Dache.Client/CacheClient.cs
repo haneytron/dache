@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Runtime.Serialization;
@@ -64,7 +65,8 @@ namespace Dache.Client
             var physicalMemoryLimitPercentage = CacheClientConfigurationSection.Settings.LocalCacheMemoryLimitPercentage;
             var cacheConfig = new NameValueCollection();
             cacheConfig.Add("pollingInterval", "00:00:15");
-            cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
+            cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
+            cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
             // Increment the local cache name suffix to avoid overlapping local caches
             int localCacheNameSuffix = Interlocked.Increment(ref _localCacheNameSuffix);
             _localCache = new MemoryCache("Dache Local Cache " + localCacheNameSuffix, cacheConfig);

@@ -59,6 +59,7 @@ namespace Dache.CacheHost.Storage
             _cacheName = cacheName;
             _cacheConfig = new NameValueCollection();
             _cacheConfig.Add("pollingInterval", "00:00:15");
+            _cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
             _cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
 
             _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
