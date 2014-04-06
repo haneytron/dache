@@ -105,11 +105,11 @@ namespace Dache.CacheHost.Storage
             // Compile to function
             _setMemoryCacheLastTrimGen2CountFunc = Expression.Lambda<Action<MemoryCache, int>>(fieldValueAssignmentExpression, targetExpression, valueExpression).Compile();
 
-            // Configure the timer to fire every 15 seconds - same as the polling interval
+            // Configure the timer to fire at half of the polling interval - this ensures the value is different when the MemoryCache code looks at it via polling
             _setMemoryCacheLastTrimGen2CountTimer = new Timer((state) =>
             {
                 _setMemoryCacheLastTrimGen2CountFunc(_memoryCache, _lastTrimGen2Count++ % 10);
-            }, null, 5000, 5000);
+            }, null, 2500, 2500);
         }
 
         /// <summary>
