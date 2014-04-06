@@ -123,7 +123,14 @@ namespace Dache.CacheHost
         {
             _logger.Info("Cache Host is stopping", "Cache Host is stopping");
 
-            _cacheHostEngine.Stop();
+            try
+            {
+                _cacheHostEngine.Stop();
+            }
+            catch
+            {
+                // Ignore it - stopping anyway
+            }
         }
     }
 }

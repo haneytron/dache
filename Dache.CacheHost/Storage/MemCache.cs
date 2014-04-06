@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -34,6 +36,13 @@ namespace Dache.CacheHost.Storage
         // The cache configuration
         private NameValueCollection _cacheConfig;
 
+        // The method that sets the MemoryCache._stats._lastTrimGen2Count
+        private readonly Action<MemoryCache, int> _setMemoryCacheLastTrimGen2CountFunc = null;
+        // The timer that calls the last trim gen 2 count function
+        private readonly Timer _setMemoryCacheLastTrimGen2CountTimer = null;
+        // The integer incremented as the gen 2 count value
+        private int _lastTrimGen2Count = 0;
+
         /// <summary>
         /// The constructor.
         /// </summary>
@@ -58,15 +67,49 @@ namespace Dache.CacheHost.Storage
 
             _cacheName = cacheName;
             _cacheConfig = new NameValueCollection();
-            _cacheConfig.Add("pollingInterval", "00:00:15");
+            _cacheConfig.Add("pollingInterval", "00:00:05");
             _cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
-            _cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
+            //_cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
+            _cacheConfig.Add("physicalMemoryLimitPercentage", "1");
 
             _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
             _internDictionary = new Dictionary<string, string>(100);
             _internReferenceDictionary = new Dictionary<string, int>(100);
 
             _customPerformanceCounterManager = customPerformanceCounterManager;
+
+            // Use lambda expressions to create a set method for MemoryCache._stats._lastTrimGen2Count to circumvent poor functionality of MemoryCache
+            // The default MemoryCache does not check for memory pressure except after a Gen 2 Garbage Collection. We want to do this more often than that.
+            // So this method allows us to reset the field the MemoryCacheStatistics object uses periodically to a new value, to force the trim to be checked.
+
+            // Define the types
+            var memoryCacheType = _memoryCache.GetType();
+            var memoryCacheStatisticsType = memoryCacheType.Assembly.GetType("System.Runtime.Caching.MemoryCacheStatistics", true);
+
+            // Define the _stats field on MemoryCache
+            var statsField = memoryCacheType.GetField("_stats", BindingFlags.Instance | BindingFlags.NonPublic);
+            // Define the _lastTrimGen2Count field on MemoryCacheStatistics
+            var lastTrimGen2CountField = memoryCacheStatisticsType.GetField("_lastTrimGen2Count", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            // Define the parameters to the method
+            var targetExpression = Expression.Parameter(memoryCacheType, "target");
+            var valueExpression = Expression.Parameter(typeof(int), "value");
+
+            // Create the field expressions
+            var statsFieldExpression = Expression.Field(targetExpression, statsField);
+            var lastTrimGen2CountFieldExpression = Expression.Field(statsFieldExpression, lastTrimGen2CountField);
+
+            // Create the field value assignment expression
+            var fieldValueAssignmentExpression = Expression.Assign(lastTrimGen2CountFieldExpression, valueExpression);
+
+            // Compile to function
+            _setMemoryCacheLastTrimGen2CountFunc = Expression.Lambda<Action<MemoryCache, int>>(fieldValueAssignmentExpression, targetExpression, valueExpression).Compile();
+
+            // Configure the timer to fire every 15 seconds - same as the polling interval
+            _setMemoryCacheLastTrimGen2CountTimer = new Timer((state) =>
+            {
+                _setMemoryCacheLastTrimGen2CountFunc(_memoryCache, _lastTrimGen2Count++ % 10);
+            }, null, 5000, 5000);
         }
 
         /// <summary>
