@@ -39,6 +39,9 @@
     <DocumentationFile>bin\Release\Dache.CacheHost.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="SharpMemoryCache">
+      <HintPath>..\packages\SharpMemoryCache.1.0.0\lib\SharpMemoryCache.dll</HintPath>
+    </Reference>
     <Reference Include="SimplSockets">
       <HintPath>..\packages\SimplSockets.1.1.1\lib\SimplSockets.dll</HintPath>
     </Reference>

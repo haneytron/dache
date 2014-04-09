@@ -9,6 +9,7 @@ using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Dache.Core.Performance;
+using SharpMemoryCache;
 
 namespace Dache.CacheHost.Storage
 {
@@ -32,16 +33,9 @@ namespace Dache.CacheHost.Storage
         // The intern dictionary lock
         private readonly ReaderWriterLockSlim _internDictionaryLock = new ReaderWriterLockSlim();
         // The cache name
-        private string _cacheName;
+        private readonly string _cacheName;
         // The cache configuration
-        private NameValueCollection _cacheConfig;
-
-        // The method that sets the MemoryCache._stats._lastTrimGen2Count
-        private readonly Action<MemoryCache, int> _setMemoryCacheLastTrimGen2CountFunc = null;
-        // The timer that calls the last trim gen 2 count function
-        private readonly Timer _setMemoryCacheLastTrimGen2CountTimer = null;
-        // The integer incremented as the gen 2 count value
-        private int _lastTrimGen2Count = 0;
+        private readonly NameValueCollection _cacheConfig;
 
         /// <summary>
         /// The constructor.
@@ -72,44 +66,11 @@ namespace Dache.CacheHost.Storage
             //_cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
             _cacheConfig.Add("physicalMemoryLimitPercentage", "1");
 
-            _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
+            _memoryCache = new TrimmingMemoryCache(_cacheName, _cacheConfig);
             _internDictionary = new Dictionary<string, string>(100);
             _internReferenceDictionary = new Dictionary<string, int>(100);
 
             _customPerformanceCounterManager = customPerformanceCounterManager;
-
-            // Use lambda expressions to create a set method for MemoryCache._stats._lastTrimGen2Count to circumvent poor functionality of MemoryCache
-            // The default MemoryCache does not check for memory pressure except after a Gen 2 Garbage Collection. We want to do this more often than that.
-            // So this method allows us to reset the field the MemoryCacheStatistics object uses periodically to a new value, to force the trim to be checked.
-
-            // Define the types
-            var memoryCacheType = _memoryCache.GetType();
-            var memoryCacheStatisticsType = memoryCacheType.Assembly.GetType("System.Runtime.Caching.MemoryCacheStatistics", true);
-
-            // Define the _stats field on MemoryCache
-            var statsField = memoryCacheType.GetField("_stats", BindingFlags.Instance | BindingFlags.NonPublic);
-            // Define the _lastTrimGen2Count field on MemoryCacheStatistics
-            var lastTrimGen2CountField = memoryCacheStatisticsType.GetField("_lastTrimGen2Count", BindingFlags.Instance | BindingFlags.NonPublic);
-
-            // Define the parameters to the method
-            var targetExpression = Expression.Parameter(memoryCacheType, "target");
-            var valueExpression = Expression.Parameter(typeof(int), "value");
-
-            // Create the field expressions
-            var statsFieldExpression = Expression.Field(targetExpression, statsField);
-            var lastTrimGen2CountFieldExpression = Expression.Field(statsFieldExpression, lastTrimGen2CountField);
-
-            // Create the field value assignment expression
-            var fieldValueAssignmentExpression = Expression.Assign(lastTrimGen2CountFieldExpression, valueExpression);
-
-            // Compile to function
-            _setMemoryCacheLastTrimGen2CountFunc = Expression.Lambda<Action<MemoryCache, int>>(fieldValueAssignmentExpression, targetExpression, valueExpression).Compile();
-
-            // Configure the timer to fire at half of the polling interval - this ensures the value is different when the MemoryCache code looks at it via polling
-            _setMemoryCacheLastTrimGen2CountTimer = new Timer((state) =>
-            {
-                _setMemoryCacheLastTrimGen2CountFunc(_memoryCache, _lastTrimGen2Count++ % 10);
-            }, null, 2500, 2500);
         }
 
         /// <summary>
@@ -383,7 +344,7 @@ namespace Dache.CacheHost.Storage
             try
             {
                 var oldCache = _memoryCache;
-                _memoryCache = new MemoryCache(_cacheName, _cacheConfig);
+                _memoryCache = new TrimmingMemoryCache(_cacheName, _cacheConfig);
                 oldCache.Dispose();
             }
             finally

@@ -12,6 +12,7 @@ using Dache.Client.Exceptions;
 using Dache.Client.Serialization;
 using Dache.Core.Communication;
 using Dache.Core.Logging;
+using SharpMemoryCache;
 
 namespace Dache.Client
 {
@@ -69,7 +70,7 @@ namespace Dache.Client
             cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
             // Increment the local cache name suffix to avoid overlapping local caches
             int localCacheNameSuffix = Interlocked.Increment(ref _localCacheNameSuffix);
-            _localCache = new MemoryCache("Dache Local Cache " + localCacheNameSuffix, cacheConfig);
+            _localCache = new TrimmingMemoryCache("Dache Local Cache " + localCacheNameSuffix, cacheConfig);
 
             _localCacheItemExpirationSeconds = CacheClientConfigurationSection.Settings.LocalCacheAbsoluteExpirationSeconds;
 
