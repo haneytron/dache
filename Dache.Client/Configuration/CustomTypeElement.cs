@@ -10,7 +10,7 @@ namespace Dache.Client.Configuration
         /// <summary>
         /// The custom type.
         /// </summary>
-        [StringValidator(InvalidCharacters = @"\: ")]
+        [StringValidator(InvalidCharacters = @"\:")]
         [ConfigurationProperty("type", IsRequired = true)]
         public string Type
         {
