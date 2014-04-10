@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -63,8 +60,7 @@ namespace Dache.CacheHost.Storage
             _cacheConfig = new NameValueCollection();
             _cacheConfig.Add("pollingInterval", "00:00:05");
             _cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
-            //_cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
-            _cacheConfig.Add("physicalMemoryLimitPercentage", "1");
+            _cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
 
             _memoryCache = new TrimmingMemoryCache(_cacheName, _cacheConfig);
             _internDictionary = new Dictionary<string, string>(100);
