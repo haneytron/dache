@@ -52,7 +52,7 @@ VERSION INFORMATION
 
 - New unit tests (need way more)
 
-***** SPECIAL THANKS TO THE MAJOR CONTRIBUTORS TO THIS BUILD: mmajcica and aweber1 - you rock! :)
+- SPECIAL THANKS TO THE MAJOR CONTRIBUTORS TO THIS BUILD: mmajcica and aweber1 - you rock! :)
 
 
 INSTALLATION INSTRUCTIONS
@@ -74,9 +74,11 @@ not have to be in the same order, but each client's list should contain the same
 Supported built-in custom Loggers and Serializers:
 
 `Dache.Client.Serialization.BinarySerializer, Dache.Client`
+
 `Dache.Client.Serialization.GZipSerializer, Dache.Client`
 
 `Dache.Core.Logging.EventViewerLogger, Dache.Core`
+
 `Dache.Core.Logging.FileLogger, Dache.Core`
 
 
@@ -102,9 +104,11 @@ To uninstall, run `uninstall.bat` or uninstall it manually via .NET 4.0's `insta
 Supported built-in custom MemCaches and Serializers:
 
 `Dache.CacheHost.Storage.MemCache, Dache.CacheHost`
+
 `Dache.CacheHost.Storage.GZipMemCache, Dache.CacheHost`
 
 `Dache.Core.Logging.EventViewerLogger, Dache.Core`
+
 `Dache.Core.Logging.FileLogger, Dache.Core`
 
 
