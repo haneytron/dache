@@ -11,11 +11,12 @@ namespace Dache.Core.Performance
     {
         // The performance counter category name
         private const string _performanceCounterCategoryName = "Dache";
+
         // The performance counters
         private readonly IDictionary<string, PerformanceCounter> _performanceCounters = new Dictionary<string, PerformanceCounter>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// The constructor. Initializes local performance counters.
+        /// Initializes a new instance of the <see cref="CustomPerformanceCounterManager"/> class.
         /// </summary>
         /// <param name="performanceCounterInstanceName">The performance counter instance name.</param>
         /// <param name="readOnly">Whether or not the performance counters are read-only.</param>
@@ -62,7 +63,7 @@ namespace Dache.Core.Performance
         }
 
         /// <summary>
-        /// The constructor. Initializes remote performance counters.
+        /// Initializes a new instance of the <see cref="CustomPerformanceCounterManager"/> class.
         /// </summary>
         /// <param name="machineName">The machine name.</param>
         /// <param name="performanceCounterInstanceName">The performance counter instance name.</param>
@@ -73,6 +74,7 @@ namespace Dache.Core.Performance
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "machineName");
             }
+
             if (string.IsNullOrWhiteSpace(performanceCounterInstanceName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "performanceCounterInstanceName");
@@ -128,9 +130,49 @@ namespace Dache.Core.Performance
         }
 
         /// <summary>
+        /// Gets the number of cached objects.
+        /// </summary>
+        public PerformanceCounter NumberOfCachedObjects { get; private set; }
+
+        /// <summary>
+        /// Gets the total requests per second.
+        /// </summary>
+        public PerformanceCounter TotalRequestsPerSecond { get; private set; }
+
+        /// <summary>
+        /// Gets the cache memory usage percent.
+        /// </summary>
+        public PerformanceCounter CacheMemoryUsagePercent { get; private set; }
+
+        /// <summary>
+        /// Gets the cache memory usage base percent.
+        /// </summary>
+        public PerformanceCounter CacheMemoryUsageBasePercent { get; private set; }
+
+        /// <summary>
+        /// Gets the cache memory usage in megabytes.
+        /// </summary>
+        public PerformanceCounter CacheMemoryUsageMb { get; private set; }
+
+        /// <summary>
+        /// Gets the number of adds per second.
+        /// </summary>
+        public PerformanceCounter AddsPerSecond { get; private set; }
+
+        /// <summary>
+        /// Gets the number of gets per second.
+        /// </summary>
+        public PerformanceCounter GetsPerSecond { get; private set; }
+
+        /// <summary>
+        /// Gets the number of removes per second.
+        /// </summary>
+        public PerformanceCounter RemovesPerSecond { get; private set; }
+
+        /// <summary>
         /// Attempts to get a performance counter by its name.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The performance counter name.</param>
         /// <param name="performanceCounter">The performance counter.</param>
         /// <returns>true if successful, false otherwise.</returns>
         public bool TryGetPerformanceCounter(string name, out PerformanceCounter performanceCounter)
@@ -158,46 +200,6 @@ namespace Dache.Core.Performance
                 performanceCounter.NextValue();
             }
         }
-
-        /// <summary>
-        /// The number of cached objects.
-        /// </summary>
-        public PerformanceCounter NumberOfCachedObjects { get; private set; }
-
-        /// <summary>
-        /// The total requests per second.
-        /// </summary>
-        public PerformanceCounter TotalRequestsPerSecond { get; private set; }
-
-        /// <summary>
-        /// The cache memory usage percent.
-        /// </summary>
-        public PerformanceCounter CacheMemoryUsagePercent { get; private set; }
-        
-        /// <summary>
-        /// The cache memory usage base percent.
-        /// </summary>
-        public PerformanceCounter CacheMemoryUsageBasePercent { get; private set; }
-
-        /// <summary>
-        /// The cache memory usage in megabytes.
-        /// </summary>
-        public PerformanceCounter CacheMemoryUsageMb { get; private set; }
-
-        /// <summary>
-        /// The adds per second.
-        /// </summary>
-        public PerformanceCounter AddsPerSecond { get; private set; }
-        
-        /// <summary>
-        /// The gets per second.
-        /// </summary>
-        public PerformanceCounter GetsPerSecond { get; private set; }
-
-        /// <summary>
-        /// The removes per second.
-        /// </summary>
-        public PerformanceCounter RemovesPerSecond { get; private set; }
 
         /// <summary>
         /// Called when disposed.

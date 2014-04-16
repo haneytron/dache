@@ -15,12 +15,12 @@ namespace Dache.CacheHost.Configuration
         public static ILogger LoadLogger()
         {
             var defaultLogger = new EventViewerLogger("Cache Host", "Dache");
-            //var defaultLogger = new FileLogger();
 
             // Configure custom logging
             try
             {
                 var customLoggerTypeString = CacheHostConfigurationSection.Settings.CustomLogger.Type;
+
                 // Check for custom logger
                 if (string.IsNullOrWhiteSpace(customLoggerTypeString))
                 {
@@ -30,6 +30,7 @@ namespace Dache.CacheHost.Configuration
 
                 // Have a custom logger, attempt to load it and confirm it
                 var customLoggerType = Type.GetType(customLoggerTypeString);
+                
                 // Verify that it implements our ILogger interface
                 if (customLoggerType != null && typeof(ILogger).IsAssignableFrom(customLoggerType))
                 {
@@ -38,8 +39,8 @@ namespace Dache.CacheHost.Configuration
             }
             catch (Exception ex)
             {
-                defaultLogger.Error(ex);
                 // Custom logger load failed - no custom logging
+                defaultLogger.Error(ex);
             }
 
             return defaultLogger;

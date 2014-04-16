@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
@@ -16,26 +17,36 @@ namespace Dache.CacheHost.Storage
     public class MemCache : IMemCache
     {
         // The underlying memory cache
+        [SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:StaticElementsMustAppearBeforeInstanceElements", Justification = "Reviewed. Bug in StyleCop. Reported.")]
+        [SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1215:InstanceReadonlyElementsMustAppearBeforeInstanceNonReadonlyElements", Justification = "Reviewed. Bug in StyleCop. Reported.")]
         private MemoryCache _memoryCache = null;
-        // The memory cache lock
-        private readonly ReaderWriterLockSlim _memoryCacheLock = new ReaderWriterLockSlim();
-        // The custom performance counter manager
-        private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
-        // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
-        private readonly IDictionary<string, string> _internDictionary = null;
-        // The dictionary that serves as an intern reference count, with the key being the hash code and the value being the number of references to the object
-        private readonly IDictionary<string, int> _internReferenceDictionary = null;
+
         // The interned object cache item policy
         private static readonly CacheItemPolicy _internCacheItemPolicy = new CacheItemPolicy { Priority = CacheItemPriority.NotRemovable };
+
+        // The memory cache lock
+        private readonly ReaderWriterLockSlim _memoryCacheLock = new ReaderWriterLockSlim();
+
+        // The custom performance counter manager
+        private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
+
+        // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
+        private readonly IDictionary<string, string> _internDictionary = null;
+
+        // The dictionary that serves as an intern reference count, with the key being the hash code and the value being the number of references to the object
+        private readonly IDictionary<string, int> _internReferenceDictionary = null;
+
         // The intern dictionary lock
         private readonly ReaderWriterLockSlim _internDictionaryLock = new ReaderWriterLockSlim();
+
         // The cache name
         private readonly string _cacheName;
+
         // The cache configuration
         private readonly NameValueCollection _cacheConfig;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="MemCache"/> class.
         /// </summary>
         /// <param name="cacheName">The name of the cache.</param>
         /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of the total system memory.</param>
@@ -47,10 +58,12 @@ namespace Dache.CacheHost.Storage
             {
                 throw new ArgumentNullException("cacheName");
             }
+
             if (physicalMemoryLimitPercentage <= 0)
             {
                 throw new ArgumentException("cannot be <= 0", "physicalMemoryLimitPercentage");
             }
+
             if (customPerformanceCounterManager == null)
             {
                 throw new ArgumentNullException("customPerformanceCounterManager");
@@ -70,6 +83,29 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
+        /// Gets the total number of objects in the cache.
+        /// </summary>
+        public long Count
+        {
+            get
+            {
+                // The total interned keys minus the actual hash keys plus the regular count
+                return _internDictionary.Count - _internReferenceDictionary.Count + _memoryCache.GetCount();
+            }
+        }
+
+        /// <summary>
+        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
+        /// </summary>
+        public long MemoryLimit
+        {
+            get
+            {
+                return _memoryCache.CacheMemoryLimit;
+            }
+        }
+
+        /// <summary>
         /// Inserts or updates a byte array in the cache at the given key with the specified cache item policy.
         /// </summary>
         /// <param name="key">The key of the byte array. Null is not supported.</param>
@@ -82,11 +118,13 @@ namespace Dache.CacheHost.Storage
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "key");
             }
+
             if (value == null)
             {
                 // MemoryCache does not support null values
                 throw new ArgumentNullException("value");
             }
+
             if (cacheItemPolicy == null)
             {
                 throw new ArgumentNullException("cacheItemPolicy");
@@ -105,6 +143,7 @@ namespace Dache.CacheHost.Storage
 
             // Increment the Add counter
             _customPerformanceCounterManager.AddsPerSecond.RawValue++;
+            
             // Increment the Total counter
             _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
         }
@@ -122,6 +161,7 @@ namespace Dache.CacheHost.Storage
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "key");
             }
+
             if (value == null)
             {
                 // MemoryCache does not support null values
@@ -139,6 +179,7 @@ namespace Dache.CacheHost.Storage
                 if (_internDictionary.ContainsKey(key))
                 {
                     var oldHashKey = _internDictionary[key];
+                    
                     // Do a remove to decrement intern reference count
                     referenceCount = --_internReferenceDictionary[oldHashKey];
 
@@ -157,6 +198,7 @@ namespace Dache.CacheHost.Storage
                         }
                     }
                 }
+
                 // Intern the value
                 _internDictionary[key] = hashKey;
                 if (!_internReferenceDictionary.TryGetValue(hashKey, out referenceCount))
@@ -187,6 +229,7 @@ namespace Dache.CacheHost.Storage
 
             // Increment the Add counter
             _customPerformanceCounterManager.AddsPerSecond.RawValue++;
+            
             // Increment the Total counter
             _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
         }
@@ -206,9 +249,9 @@ namespace Dache.CacheHost.Storage
 
             // Increment the Get counter
             _customPerformanceCounterManager.GetsPerSecond.RawValue++;
+
             // Increment the Total counter
             _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
-
 
             // Check for interned
             string hashKey = null;
@@ -260,11 +303,13 @@ namespace Dache.CacheHost.Storage
 
             // Increment the Remove counter
             _customPerformanceCounterManager.RemovesPerSecond.RawValue++;
+
             // Increment the Total counter
             _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
 
             string hashKey = null;
             int referenceCount = 0;
+            
             // Delete this interned key
             _internDictionaryLock.EnterReadLock();
             try
@@ -332,7 +377,7 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
-        /// Clears the cache
+        /// Clears the cache.
         /// </summary>
         public void Clear()
         {
@@ -350,8 +395,12 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
-        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
+        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches.
         /// </summary>
+        /// <param name="pattern">The search pattern (regex).</param>
+        /// <returns>
+        /// The list of keys matching the provided pattern.
+        /// </returns>
         public IList<string> Keys(string pattern)
         {
             Regex regex = pattern == "*" ? null : new Regex(pattern, RegexOptions.IgnoreCase);
@@ -365,29 +414,6 @@ namespace Dache.CacheHost.Storage
             finally
             {
                 _memoryCacheLock.ExitWriteLock();
-            }
-        }
-
-        /// <summary>
-        /// Total number of objects in the cache.
-        /// </summary>
-        public long Count
-        {
-            get
-            {
-                // The total interned keys minus the actual hash keys plus the regular count
-                return _internDictionary.Count - _internReferenceDictionary.Count + _memoryCache.GetCount();
-            }
-        }
-
-        /// <summary>
-        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
-        /// </summary>
-        public long MemoryLimit
-        {
-            get
-            {
-                return _memoryCache.CacheMemoryLimit;
             }
         }
 
@@ -411,7 +437,7 @@ namespace Dache.CacheHost.Storage
             {
                 result = (17 * result) + value[i];
             }
-            
+
             // Return custom intern key
             return string.Format("__InternedCacheKey_{0}", result);
         }

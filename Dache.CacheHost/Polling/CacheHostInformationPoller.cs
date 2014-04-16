@@ -14,17 +14,21 @@ namespace Dache.CacheHost.Polling
     {
         // The mem cache
         private readonly IMemCache _memCache = null;
+
         // The custom performance counter manager
         private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
+
         // The polling interval in milliseconds
         private readonly int _pollingIntervalMilliseconds = 0;
+
         // The cache host information polling timer
         private readonly Timer _cacheHostInformationPollingTimer = null;
+
         // The performance counter for the process' current memory
         private readonly PerformanceCounter _currentMemoryPerformanceCounter = new PerformanceCounter("Process", "Private Bytes", Process.GetCurrentProcess().ProcessName, true);
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="CacheHostInformationPoller"/> class.
         /// </summary>
         /// <param name="memCache">The mem cache.</param>
         /// <param name="customPerformanceCounterManager">The custom performance counter manager.</param>
@@ -36,10 +40,12 @@ namespace Dache.CacheHost.Polling
             {
                 throw new ArgumentNullException("memCache");
             }
+
             if (customPerformanceCounterManager == null)
             {
                 throw new ArgumentNullException("customPerformanceCounterManager");
             }
+
             if (pollingIntervalMilliseconds <= 0)
             {
                 throw new ArgumentException("Interval must be > 0", "pollingIntervalMilliseconds");

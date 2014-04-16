@@ -20,33 +20,54 @@ namespace Dache.Core.Communication
     /// </summary>
     public class CacheHostServer : ICacheHostContract, IRunnable
     {
-        // The mem cache
-        private readonly IMemCache _memCache;
-        // The tag routing table
-        private readonly ITagRoutingTable _tagRoutingTable;
-        // The cache server
-        private readonly ISimplSocketServer _server;
-        // The local end point
-        private readonly IPEndPoint _localEndPoint;
-        // The maximum number of simultaneous connections
-        private readonly int _maximumConnections = 0; //not in use
-        // The message buffer size
-        private readonly int _messageBufferSize = 0; //not in use
-
-        // The default cache item policy
+        /// <summary>
+        /// The default cache item policy.
+        /// </summary>
         private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
 
-        // The logger
+        /// <summary>
+        /// The mem cache.
+        /// </summary>
+        private readonly IMemCache _memCache;
+
+        /// <summary>
+        /// The tag routing table.
+        /// </summary>
+        private readonly ITagRoutingTable _tagRoutingTable;
+
+        /// <summary>
+        /// The cache server.
+        /// </summary>
+        private readonly ISimplSocketServer _server;
+
+        /// <summary>
+        /// The local end point.
+        /// </summary>
+        private readonly IPEndPoint _localEndPoint;
+
+        /// <summary>
+        /// The maximum number of simultaneous connections.
+        /// </summary>
+        private readonly int _maximumConnections = 0; // not in use
+
+        /// <summary>
+        /// The message buffer size.
+        /// </summary>
+        private readonly int _messageBufferSize = 0; // not in use
+
+        /// <summary>
+        /// The logger.
+        /// </summary>
         private readonly ILogger _logger;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="CacheHostServer"/> class.
         /// </summary>
-        /// <param name="memCache">The mem cache.</param>
+        /// <param name="memCache">The memory cache.</param>
         /// <param name="tagRoutingTable">The tag routing table.</param>
-        /// <param name="port">The port.</param>
-        /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
-        /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
+        /// <param name="port">The port number.</param>
+        /// <param name="maximumConnections">The maximum connections.</param>
+        /// <param name="messageBufferSize">Size of the message buffer.</param>
         public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, int port, int maximumConnections, int messageBufferSize)
         {
             // Sanitize
@@ -54,18 +75,22 @@ namespace Dache.Core.Communication
             {
                 throw new ArgumentNullException("memCache");
             }
+
             if (tagRoutingTable == null)
             {
                 throw new ArgumentNullException("tagRoutingTable");
             }
+
             if (port <= 0)
             {
                 throw new ArgumentException("cannot be <= 0", "port");
             }
+
             if (maximumConnections <= 0)
             {
                 throw new ArgumentException("cannot be <= 0", "maximumConnections");
             }
+
             if (messageBufferSize < 256)
             {
                 throw new ArgumentException("cannot be < 256", "messageBufferSize");
@@ -73,6 +98,7 @@ namespace Dache.Core.Communication
 
             // Set the mem cache
             _memCache = memCache;
+
             // Set the tag routing table
             _tagRoutingTable = tagRoutingTable;
 
@@ -82,301 +108,21 @@ namespace Dache.Core.Communication
 
             // Establish the endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry(string.Empty);
+
             // Listen on all interfaces
             _localEndPoint = new IPEndPoint(IPAddress.Any, port);
 
             // Define the server
-            _server = SimplSocket.CreateServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
-                (sender, e) => { /* Ignore it, client's toast */ }, ReceiveMessage, messageBufferSize, maximumConnections, false);
+            _server = SimplSocket.CreateServer(
+                () => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
+                (sender, e) => { /* Ignore it, client's toast */ },
+                ReceiveMessage,
+                messageBufferSize,
+                maximumConnections,
+                false);
 
             // Load custom logging
             _logger = CustomLoggerLoader.LoadLogger();
-        }
-
-        private void ReceiveMessage(object sender, MessageReceivedArgs e)
-        {
-            var command = e.ReceivedMessage.Message;
-            if (command == null || command.Length == 0)
-            {
-                _logger.Error("Dache.CacheHost.Communication.CacheHostServer.ReceiveMessage - command is null or empty", "command variable is null or empty, indicating an empty or invalid message");
-                return;
-            }
-
-            // Parse out the command byte
-            DacheProtocolHelper.MessageType messageType;
-            command.ExtractControlByte(out messageType);
-            // Get the command string skipping our control byte
-            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command, 1, command.Length - 1);
-            var commandResult = ProcessCommand(commandString, messageType);
-            if (commandResult != null)
-            {
-                // Send the result if there is one
-                _server.Reply(commandResult, e.ReceivedMessage);
-            }
-        }
-
-        private byte[] ProcessCommand(string command, DacheProtocolHelper.MessageType messageType)
-        {
-            // Sanitize
-            if (command == null)
-            {
-                return null;
-            }
-            if (string.IsNullOrWhiteSpace(command))
-            {
-                return null;
-            }
-
-            string[] commandParts = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (commandParts.Length == 0)
-            {
-                return null;
-            }
-
-            List<byte[]> results;
-            byte[] commandResult = null;
-
-            switch (messageType)
-            {
-                case DacheProtocolHelper.MessageType.Literal:
-                {
-                    if (string.Equals(commandParts[0], "keys", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Sanitize the command
-                        if (commandParts.Length != 2)
-                        {
-                            return null;
-                        }
-
-                        var pattern = commandParts[1];
-                        results = GetCacheKeys(pattern);
-                        // Structure the results for sending
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            for (int i = 0; i < results.Count; i++)
-                            {
-                                if (i != 0)
-                                {
-                                    memoryStream.WriteSpace();
-                                }
-                                memoryStream.WriteBase64(results[i]);
-                            }
-                            commandResult = memoryStream.ToArray();
-                        }
-                    }
-                    else if (string.Equals(commandParts[0], "clear", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Clear();
-                    }
-
-                    break;
-                }
-                case DacheProtocolHelper.MessageType.RepeatingCacheKeys:
-                {
-                    // Determine command
-                    if (string.Equals(commandParts[0], "get", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Sanitize the command
-                        if (commandParts.Length < 2)
-                        {
-                            return null;
-                        }
-
-                        var cacheKeys = commandParts.Skip(1);
-                        results = Get(cacheKeys);
-                        // Structure the results for sending
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            for (int i = 0; i < results.Count; i++)
-                            {
-                                if (i != 0)
-                                {
-                                    memoryStream.WriteSpace();
-                                }
-                                memoryStream.WriteBase64(results[i]);
-                            }
-                            commandResult = memoryStream.ToArray();
-                        }
-                    }
-                    if (string.Equals(commandParts[0], "get-tag", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Sanitize the command
-                        if (commandParts.Length < 2)
-                        {
-                            return null;
-                        }
-
-                        var tagNames = commandParts.Skip(1);
-                        results = GetTagged(tagNames);
-                        // Structure the results for sending
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            for (int i = 0; i < results.Count; i++)
-                            {
-                                if (i != 0)
-                                {
-                                    memoryStream.WriteSpace();
-                                }
-                                memoryStream.WriteBase64(results[i]);
-                            }
-                            commandResult = memoryStream.ToArray();
-                        }
-                    }
-                    else if (string.Equals(commandParts[0], "del-tag", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // sample commands: 
-                        // del-tag * tagName1
-                        // del-tag * tagName1 tagName2
-                        // del-tag myPrefix* tagName1 tagName2
-
-                        // Sanitize the command
-                        if (commandParts.Length < 3)
-                        {
-                            return null;
-                        }
-
-                        var pattern = commandParts[1];
-                        var tagNames = commandParts.Skip(2);
-                        RemoveTagged(tagNames, pattern);
-                    }
-                    else if (string.Equals(commandParts[0], "del", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Sanitize the command
-                        if (commandParts.Length < 2)
-                        {
-                            return null;
-                        }
-
-                        var cacheKeys = commandParts.Skip(1);
-                        Remove(cacheKeys);
-                    }
-                    else if (string.Equals(commandParts[0], "keys-tag", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Sanitize the command
-                        if (commandParts.Length < 3)
-                        {
-                            return null;
-                        }
-
-                        var pattern = commandParts[1];
-                        var tagNames = commandParts.Skip(2);
-                        results = GetCacheKeysTagged(tagNames, pattern);
-                        // Structure the results for sending
-                        using (var memoryStream = new MemoryStream())
-                        {
-                            for (int i = 0; i < results.Count; i++)
-                            {
-                                if (i != 0)
-                                {
-                                    memoryStream.WriteSpace();
-                                }
-                                memoryStream.WriteBase64(results[i]);
-                            }
-                            commandResult = memoryStream.ToArray();
-                        }
-                    }
-
-                    break;
-                }
-                case DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects:
-                {
-                    // Determine command
-                    IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndObjects;
-                    if (string.Equals(commandParts[0], "set-tag-intern", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Only one method, so call it
-                        if (commandParts.Length == 2)
-                        {
-                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                            AddOrUpdateTaggedInterned(cacheKeysAndObjects, commandParts[1]);
-                        }
-                    }
-                    else if (string.Equals(commandParts[0], "set-intern", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Only one method, so call it
-                        cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
-                        AddOrUpdateInterned(cacheKeysAndObjects);
-                    }
-                    else if (string.Equals(commandParts[0], "set-tag", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // set-tag command should have no less than 4 parts: set-tag tagName keyName keyValue
-                        if (commandParts.Length < 4)
-                        {
-                            return null;
-                        }
-
-                        // Check whether we have absolute or sliding options
-                        if (commandParts.Length % 2 == 0)
-                        {
-                            // Regular set
-                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                            AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1]);
-                        }
-                        else
-                        {
-                            // Get absolute or sliding expiration
-                            int slidingExpiration;
-                            DateTimeOffset absoluteExpiration;
-                            if (int.TryParse(commandParts[2], out slidingExpiration))
-                            {
-                                // Sliding expiration
-                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
-                                AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], TimeSpan.FromSeconds(slidingExpiration));
-                            }
-                            else if (DateTimeOffset.TryParseExact(commandParts[2], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
-                            {
-                                // Absolute expiration
-                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
-                                AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], absoluteExpiration);
-                            }
-                        }
-                    }
-                    else if (string.Equals(commandParts[0], "set", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Check whether we have absolute or sliding options
-                        if (commandParts.Length % 2 == 1)
-                        {
-                            // Regular set
-                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
-                            AddOrUpdate(cacheKeysAndObjects);
-                        }
-                        else
-                        {
-                            // Get absolute or sliding expiration
-                            int slidingExpiration;
-                            DateTimeOffset absoluteExpiration;
-                            if (int.TryParse(commandParts[1], out slidingExpiration))
-                            {
-                                // sliding expiration
-                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                                AddOrUpdate(cacheKeysAndObjects, TimeSpan.FromSeconds(slidingExpiration));
-                            }
-                            else if (DateTimeOffset.TryParseExact(commandParts[1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
-                            {
-                                // absolute expiration
-                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                                AddOrUpdate(cacheKeysAndObjects, absoluteExpiration);
-                            }
-                        }
-                    }
-
-                    break;
-                }
-            }
-
-            // Return the result - may be null if there was no valid message
-            return commandResult;
-        }
-
-        private IEnumerable<KeyValuePair<string, byte[]>> ParseCacheKeysAndObjects(string[] commandParts, int startIndex)
-        {
-            // Regular set
-            var cacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(commandParts.Length / 2);
-            for (int i = startIndex; i < commandParts.Length; i = i + 2)
-            {
-                cacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(commandParts[i], Convert.FromBase64String(commandParts[i + 1])));
-            }
-            return cacheKeysAndObjects;
         }
 
         /// <summary>
@@ -612,7 +358,7 @@ namespace Dache.Core.Communication
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
-            
+
             AddOrUpdate(cacheKeysAndSerializedObjects, absoluteExpiration);
 
             // If a tag name was not sent, ignore it
@@ -792,6 +538,7 @@ namespace Dache.Core.Communication
             {
                 return null;
             }
+
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 return null;
@@ -827,6 +574,309 @@ namespace Dache.Core.Communication
         {
             _memCache.Clear();
         }
+
+        private void ReceiveMessage(object sender, MessageReceivedArgs e)
+        {
+            var command = e.ReceivedMessage.Message;
+            if (command == null || command.Length == 0)
+            {
+                _logger.Error("Dache.CacheHost.Communication.CacheHostServer.ReceiveMessage - command is null or empty", "command variable is null or empty, indicating an empty or invalid message");
+                return;
+            }
+
+            // Parse out the command byte
+            DacheProtocolHelper.MessageType messageType;
+            command.ExtractControlByte(out messageType);
+
+            // Get the command string skipping our control byte
+            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command, 1, command.Length - 1);
+            var commandResult = ProcessCommand(commandString, messageType);
+            if (commandResult != null)
+            {
+                // Send the result if there is one
+                _server.Reply(commandResult, e.ReceivedMessage);
+            }
+        }
+
+        private byte[] ProcessCommand(string command, DacheProtocolHelper.MessageType messageType)
+        {
+            // Sanitize
+            if (command == null)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                return null;
+            }
+
+            string[] commandParts = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (commandParts.Length == 0)
+            {
+                return null;
+            }
+
+            List<byte[]> results;
+            byte[] commandResult = null;
+
+            switch (messageType)
+            {
+                case DacheProtocolHelper.MessageType.Literal:
+                    {
+                        if (string.Equals(commandParts[0], "keys", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Sanitize the command
+                            if (commandParts.Length != 2)
+                            {
+                                return null;
+                            }
+
+                            var pattern = commandParts[1];
+                            results = GetCacheKeys(pattern);
+
+                            // Structure the results for sending
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                for (int i = 0; i < results.Count; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        memoryStream.WriteSpace();
+                                    }
+
+                                    memoryStream.WriteBase64(results[i]);
+                                }
+
+                                commandResult = memoryStream.ToArray();
+                            }
+                        }
+                        else if (string.Equals(commandParts[0], "clear", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Clear();
+                        }
+
+                        break;
+                    }
+
+                case DacheProtocolHelper.MessageType.RepeatingCacheKeys:
+                    {
+                        // Determine command
+                        if (string.Equals(commandParts[0], "get", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Sanitize the command
+                            if (commandParts.Length < 2)
+                            {
+                                return null;
+                            }
+
+                            var cacheKeys = commandParts.Skip(1);
+                            results = Get(cacheKeys);
+
+                            // Structure the results for sending
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                for (int i = 0; i < results.Count; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        memoryStream.WriteSpace();
+                                    }
+
+                                    memoryStream.WriteBase64(results[i]);
+                                }
+
+                                commandResult = memoryStream.ToArray();
+                            }
+                        }
+
+                        if (string.Equals(commandParts[0], "get-tag", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Sanitize the command
+                            if (commandParts.Length < 2)
+                            {
+                                return null;
+                            }
+
+                            var tagNames = commandParts.Skip(1);
+                            results = GetTagged(tagNames);
+
+                            // Structure the results for sending
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                for (int i = 0; i < results.Count; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        memoryStream.WriteSpace();
+                                    }
+
+                                    memoryStream.WriteBase64(results[i]);
+                                }
+
+                                commandResult = memoryStream.ToArray();
+                            }
+                        }
+                        else if (string.Equals(commandParts[0], "del-tag", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // sample commands: 
+                            // del-tag * tagName1
+                            // del-tag * tagName1 tagName2
+                            // del-tag myPrefix* tagName1 tagName2
+
+                            // Sanitize the command
+                            if (commandParts.Length < 3)
+                            {
+                                return null;
+                            }
+
+                            var pattern = commandParts[1];
+                            var tagNames = commandParts.Skip(2);
+                            RemoveTagged(tagNames, pattern);
+                        }
+                        else if (string.Equals(commandParts[0], "del", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Sanitize the command
+                            if (commandParts.Length < 2)
+                            {
+                                return null;
+                            }
+
+                            var cacheKeys = commandParts.Skip(1);
+                            Remove(cacheKeys);
+                        }
+                        else if (string.Equals(commandParts[0], "keys-tag", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Sanitize the command
+                            if (commandParts.Length < 3)
+                            {
+                                return null;
+                            }
+
+                            var pattern = commandParts[1];
+                            var tagNames = commandParts.Skip(2);
+                            results = GetCacheKeysTagged(tagNames, pattern);
+
+                            // Structure the results for sending
+                            using (var memoryStream = new MemoryStream())
+                            {
+                                for (int i = 0; i < results.Count; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        memoryStream.WriteSpace();
+                                    }
+
+                                    memoryStream.WriteBase64(results[i]);
+                                }
+
+                                commandResult = memoryStream.ToArray();
+                            }
+                        }
+
+                        break;
+                    }
+
+                case DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects:
+                    {
+                        // Determine command
+                        IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndObjects;
+                        if (string.Equals(commandParts[0], "set-tag-intern", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Only one method, so call it
+                            if (commandParts.Length == 2)
+                            {
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                                AddOrUpdateTaggedInterned(cacheKeysAndObjects, commandParts[1]);
+                            }
+                        }
+                        else if (string.Equals(commandParts[0], "set-intern", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Only one method, so call it
+                            cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
+                            AddOrUpdateInterned(cacheKeysAndObjects);
+                        }
+                        else if (string.Equals(commandParts[0], "set-tag", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // set-tag command should have no less than 4 parts: set-tag tagName keyName keyValue
+                            if (commandParts.Length < 4)
+                            {
+                                return null;
+                            }
+
+                            // Check whether we have absolute or sliding options
+                            if (commandParts.Length % 2 == 0)
+                            {
+                                // Regular set
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                                AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1]);
+                            }
+                            else
+                            {
+                                // Get absolute or sliding expiration
+                                int slidingExpiration;
+                                DateTimeOffset absoluteExpiration;
+                                if (int.TryParse(commandParts[2], out slidingExpiration))
+                                {
+                                    // Sliding expiration
+                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
+                                    AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], TimeSpan.FromSeconds(slidingExpiration));
+                                }
+                                else if (DateTimeOffset.TryParseExact(commandParts[2], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                                {
+                                    // Absolute expiration
+                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 3);
+                                    AddOrUpdateTagged(cacheKeysAndObjects, commandParts[1], absoluteExpiration);
+                                }
+                            }
+                        }
+                        else if (string.Equals(commandParts[0], "set", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Check whether we have absolute or sliding options
+                            if (commandParts.Length % 2 == 1)
+                            {
+                                // Regular set
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 1);
+                                AddOrUpdate(cacheKeysAndObjects);
+                            }
+                            else
+                            {
+                                // Get absolute or sliding expiration
+                                int slidingExpiration;
+                                DateTimeOffset absoluteExpiration;
+                                if (int.TryParse(commandParts[1], out slidingExpiration))
+                                {
+                                    // sliding expiration
+                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                                    AddOrUpdate(cacheKeysAndObjects, TimeSpan.FromSeconds(slidingExpiration));
+                                }
+                                else if (DateTimeOffset.TryParseExact(commandParts[1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                                {
+                                    // absolute expiration
+                                    cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                                    AddOrUpdate(cacheKeysAndObjects, absoluteExpiration);
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+            }
+
+            // Return the result - may be null if there was no valid message
+            return commandResult;
+        }
+
+        private IEnumerable<KeyValuePair<string, byte[]>> ParseCacheKeysAndObjects(string[] commandParts, int startIndex)
+        {
+            // Regular set
+            var cacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(commandParts.Length / 2);
+            for (int i = startIndex; i < commandParts.Length; i = i + 2)
+            {
+                cacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(commandParts[i], Convert.FromBase64String(commandParts[i + 1])));
+            }
+
+            return cacheKeysAndObjects;
+        }
     }
 }
-

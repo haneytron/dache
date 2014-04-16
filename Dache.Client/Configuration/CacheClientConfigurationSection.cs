@@ -11,7 +11,7 @@ namespace Dache.Client.Configuration
         private static readonly CacheClientConfigurationSection _settings = ConfigurationManager.GetSection("cacheClientSettings") as CacheClientConfigurationSection;
         
         /// <summary>
-        /// The cache host settings.
+        /// Gets the cache host settings.
         /// </summary>
         public static CacheClientConfigurationSection Settings
         {
@@ -22,8 +22,14 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds.
+        /// Gets the host reconnect interval expressed in seconds.
         /// </summary>
+        /// <value>
+        /// The host reconnect interval in seconds.
+        /// </value>
+        /// <remarks>
+        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds.
+        /// </remarks>
         [IntegerValidator(MinValue = 1, MaxValue = 300)]
         [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = true, DefaultValue = 10)]
         public int HostReconnectIntervalSeconds
@@ -35,8 +41,14 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The local cache memory limit, as a percentage of the total system memory. Valid range is 20 to 90.
+        /// Gets the local cache memory limit percentage.
         /// </summary>
+        /// <value>
+        /// The local cache memory limit percentage.
+        /// </value>
+        /// <remarks>
+        /// The local cache memory limit, as a percentage of the total system memory. Valid range is 20 to 90.
+        /// </remarks>
         [IntegerValidator(MinValue = 5, MaxValue = 90)]
         [ConfigurationProperty("localCacheMemoryLimitPercentage", IsRequired = true, DefaultValue = 80)]
         public int LocalCacheMemoryLimitPercentage
@@ -48,8 +60,14 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// When to expire locally cached entries, in seconds.
+        /// Gets the local cache absolute expiration expressed in seconds.
         /// </summary>
+        /// <value>
+        /// The local cache absolute expiration in seconds.
+        /// </value>
+        /// <remarks>
+        /// When to expire locally cached entries, in seconds.
+        /// </remarks>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
         [ConfigurationProperty("localCacheAbsoluteExpirationSeconds", IsRequired = true, DefaultValue = 10)]
         public int LocalCacheAbsoluteExpirationSeconds
@@ -61,8 +79,11 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The custom logger.
+        /// Gets the custom logger.
         /// </summary>
+        /// <value>
+        /// The custom logger.
+        /// </value>
         [ConfigurationProperty("customLogger", IsRequired = false)]
         public CustomTypeElement CustomLogger
         {
@@ -73,8 +94,11 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The custom serializer.
+        /// Gets the custom serializer.
         /// </summary>
+        /// <value>
+        /// The custom serializer.
+        /// </value>
         [ConfigurationProperty("customSerializer", IsRequired = false)]
         public CustomTypeElement CustomSerializer
         {
@@ -85,8 +109,11 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The cache hosts collection.
+        /// Gets the cache hosts collection.
         /// </summary>
+        /// <value>
+        /// The cache hosts collection.
+        /// </value>
         [ConfigurationProperty("cacheHosts", IsDefaultCollection = false)]
         [ConfigurationCollection(typeof(CacheHostsCollection), AddItemName = "add", RemoveItemName = "remove", ClearItemsName = "clear")]
         public CacheHostsCollection CacheHosts

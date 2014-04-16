@@ -42,21 +42,18 @@ namespace Dache.Board
 
             routes.MapRoute(
                 name: "Home",
-                url: "",
-                defaults: new { controller = "Board", action = "Index", pageTitle = "What's Happening" }
-            );
+                url: string.Empty,
+                defaults: new { controller = "Board", action = "Index", pageTitle = "What's Happening" });
 
             routes.MapRoute(
                 "AJAX Cache Info", // Route name
                 "ajax/cacheinfo", // URL with parameters
-                new { controller = "AjaxCacheInfo", action = "CacheInfo" } // Parameter defaults
-            );
+                new { controller = "AjaxCacheInfo", action = "CacheInfo" }); // Parameter defaults
 
             routes.MapRoute(
                 name: "404",
                 url: "{*anything}",
-                defaults: new { controller = "Error", action = "NotFound", pageTitle = "Not Found" }
-            );
+                defaults: new { controller = "Error", action = "NotFound", pageTitle = "Not Found" });
         }
 
         /// <summary>
@@ -73,13 +70,13 @@ namespace Dache.Board
             var address = DacheboardConfigurationSection.Settings.Address;
             var port = DacheboardConfigurationSection.Settings.Port;
             var managerReconnectIntervalMilliseconds = DacheboardConfigurationSection.Settings.ManagerReconnectIntervalMilliseconds;
-            
+
             // Build the endpoint address
             var endpointAddressFormattedString = "net.tcp://{0}:{1}/Dache/Dacheboard";
             var managerAddress = string.Format(endpointAddressFormattedString, address, port);
 
             // TODO: initialize dache board cache host client here?
-            //BoardToManagerClientContainer.Instance = new BoardToManagerClient(managerAddress, managerReconnectIntervalMilliseconds);
+            // BoardToManagerClientContainer.Instance = new BoardToManagerClient(managerAddress, managerReconnectIntervalMilliseconds);
         }
     }
 }

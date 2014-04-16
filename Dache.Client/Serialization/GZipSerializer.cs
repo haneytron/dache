@@ -17,7 +17,6 @@ namespace Dache.Client.Serialization
         /// <returns>
         /// A byte array of the serialized object, or null if the object was null.
         /// </returns>
-        /// <exception cref="System.ArgumentNullException">value;Can't compress null value</exception>
         public byte[] Serialize(object value)
         {
             // Sanitize
@@ -42,7 +41,7 @@ namespace Dache.Client.Serialization
         /// </summary>
         /// <param name="bytes">The byte array that should be decompressed and deserialized.</param>
         /// <returns>
-        /// A deserialized and decomressed object, or null if the byte array was null.
+        /// A deserialized and decompressed object, or null if the byte array was null.
         /// </returns>
         public object Deserialize(byte[] bytes)
         {

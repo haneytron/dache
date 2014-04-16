@@ -13,7 +13,7 @@ namespace Dache.Core.Logging
         private readonly EventLog _eventLog = null;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="EventViewerLogger"/> class.
         /// </summary>
         /// <param name="source">The source name by which the application is registered on the local computer.</param>
         /// <param name="logName">The name of the log the source's entries are written to.</param>
@@ -24,6 +24,7 @@ namespace Dache.Core.Logging
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "source");
             }
+
             if (string.IsNullOrWhiteSpace(logName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "logName");

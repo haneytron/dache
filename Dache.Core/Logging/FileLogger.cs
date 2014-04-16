@@ -13,7 +13,7 @@ namespace Dache.Core.Logging
         private readonly string _filePath = null;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="FileLogger"/> class.
         /// </summary>
         /// <param name="fileName">The name of the log file to write to. Defaults to "log.txt" if not specified.</param>
         public FileLogger(string fileName = "log.txt")

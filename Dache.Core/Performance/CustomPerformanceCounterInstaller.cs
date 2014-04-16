@@ -32,6 +32,7 @@ namespace Dache.Core.Performance
             {
                 PerformanceCounterCategory.Delete(_performanceCounterCategoryName);
             }
+
             // Create performance counter category
             PerformanceCounterCategory.Create(_performanceCounterCategoryName, "Performance counters related to Dache services", PerformanceCounterCategoryType.MultiInstance, counterCreationDataCollection);
         }

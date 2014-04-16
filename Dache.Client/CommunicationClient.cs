@@ -15,56 +15,67 @@ namespace Dache.Client
     /// </summary>
     internal class CommunicationClient : ICacheHostContract
     {
-        // The client socket
-        private ISimplSocketClient _client = null;
-
         // The remote endpoint
         private readonly IPEndPoint _remoteEndPoint = null;
+
         // The cache host reconnect interval, in milliseconds
         private readonly int _hostReconnectIntervalMilliseconds = 0;
-
-        // Whether or not the communication client is connected
-        private volatile bool _isConnected = true;
+        
         // The lock object used for reconnection
         private readonly object _reconnectLock = new object();
+        
         // The timer used to reconnect to the server
         private readonly Timer _reconnectTimer = null;
 
+        // The client socket
+        private ISimplSocketClient _client = null;
+
+        // Whether or not the communication client is connected
+        private volatile bool _isConnected = true;
+        
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="CommunicationClient"/> class.
         /// </summary>
         /// <param name="address">The address.</param>
-        /// <param name="port">The port.</param>
+        /// <param name="port">The host port.</param>
+        /// <param name="hostReconnectIntervalMilliseconds">The cache host reconnect interval, in milliseconds.</param>
         /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
-        /// <param name="hostReconnectIntervalMilliseconds">The cache host reconnect interval, in milliseconds.</param>
         public CommunicationClient(string address, int port, int hostReconnectIntervalMilliseconds, int maximumConnections, int messageBufferSize)
         {
             // Sanitize
-            if (String.IsNullOrWhiteSpace(address))
+            if (string.IsNullOrWhiteSpace(address))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "address");
             }
+
             if (port <= 0)
             {
                 throw new ArgumentException("must be greater than 0", "port");
             }
+
             if (hostReconnectIntervalMilliseconds <= 0)
             {
                 throw new ArgumentException("must be greater than 0", "hostReconnectIntervalMilliseconds");
             }
+
             if (maximumConnections <= 0)
             {
                 throw new ArgumentException("must be greater than 0", "maximumConnections");
             }
+
             if (messageBufferSize <= 256)
             {
                 throw new ArgumentException("cannot be less than 512", "messageBufferSize");
             }
 
             // Define the client
-            _client = SimplSocket.CreateClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
-                (sender, e) => { DisconnectFromServer(); }, messageBufferSize, maximumConnections, false);
+            _client = SimplSocket.CreateClient(
+                () => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
+                (sender, e) => { DisconnectFromServer(); }, 
+                messageBufferSize, 
+                maximumConnections, 
+                false);
 
             // Establish the remote endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry(address);
@@ -79,6 +90,16 @@ namespace Dache.Client
         }
 
         /// <summary>
+        /// Event that fires when the cache client is disconnected from a cache host.
+        /// </summary>
+        public event EventHandler Disconnected;
+
+        /// <summary>
+        /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
+        /// </summary>
+        public event EventHandler Reconnected;
+
+        /// <summary>
         /// Connects to the cache host.
         /// </summary>
         /// <returns>true if successful, false otherwise.</returns>
@@ -90,6 +111,7 @@ namespace Dache.Client
                 // Disconnect the client
                 DisconnectFromServer();
             }
+
             return result;
         }
 
@@ -105,6 +127,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeys");
             }
+
             if (!cacheKeys.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeys");
@@ -120,13 +143,16 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.Write(cacheKey);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+
             // Send and receive
             command = _client.SendReceive(command);
+            
             // Parse string
             var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
 
@@ -153,6 +179,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
+
             if (!tagNames.Any())
             {
                 throw new ArgumentException("must have at least one element", "tagNames");
@@ -168,13 +195,16 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.Write(tagName);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            
             // Send and receive
             command = _client.SendReceive(command);
+            
             // Parse string
             var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
 
@@ -200,6 +230,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
@@ -217,11 +248,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+
             // Send
             _client.Send(command);
         }
@@ -238,6 +271,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
@@ -255,11 +289,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+
             // Send
             _client.Send(command);
         }
@@ -276,6 +312,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
@@ -293,11 +330,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+
             // Send
             _client.Send(command);
         }
@@ -315,6 +354,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
@@ -332,11 +372,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+
             // Send
             _client.Send(command);
         }
@@ -353,10 +395,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -374,11 +418,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            
             // Send
             _client.Send(command);
         }
@@ -396,10 +442,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -417,11 +465,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            
             // Send
             _client.Send(command);
         }
@@ -439,10 +489,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -460,11 +512,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+            
             // Send
             _client.Send(command);
         }
@@ -483,10 +537,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndSerializedObjects");
             }
+
             if (!cacheKeysAndSerializedObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -504,11 +560,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
+
             // Send
             _client.Send(command);
         }
@@ -524,6 +582,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeys");
             }
+
             if (!cacheKeys.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeys");
@@ -539,11 +598,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.Write(cacheKey);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            
             // Send
             _client.Send(command);
         }
@@ -561,10 +622,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
+
             if (!tagNames.Any())
             {
                 throw new ArgumentException("must have at least one element", "tagNames");
             }
+
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -582,11 +645,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.Write(tagName);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            
             // Send
             _client.Send(command);
         }
@@ -596,7 +661,7 @@ namespace Dache.Client
         /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
-        /// <returns>The list of cache keys matching the provided pattern</returns>
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
         public List<byte[]> GetCacheKeys(string pattern = "*")
         {
             // Sanitize
@@ -615,6 +680,7 @@ namespace Dache.Client
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
+
             // Send and receive
             var rawResult = _client.SendReceive(command);
 
@@ -649,10 +715,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
+
             if (!tagNames.Any())
             {
                 throw new ArgumentException("must have at least one element", "tagNames");
             }
+
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -670,11 +738,13 @@ namespace Dache.Client
                     memoryStream.WriteSpace();
                     memoryStream.Write(tagName);
                 }
+
                 command = memoryStream.ToArray();
             }
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
+
             // Send and receive
             var rawResult = _client.SendReceive(command);
 
@@ -711,6 +781,7 @@ namespace Dache.Client
 
             // Set control byte
             command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
+
             // Send
             _client.Send(command);
         }
@@ -725,14 +796,21 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Event that fires when the cache client is disconnected from a cache host.
+        /// Parses the command parts onto byte arrays.
         /// </summary>
-        public event EventHandler Disconnected;
+        /// <param name="commandParts">The command parts.</param>
+        /// <returns>A list of byte arrays.</returns>
+        private static List<byte[]> ParseCacheObjects(string[] commandParts)
+        {
+            // Regular set
+            var cacheObjects = new List<byte[]>(commandParts.Length);
+            for (int i = 0; i < commandParts.Length; i++)
+            {
+                cacheObjects.Add(Convert.FromBase64String(commandParts[i]));
+            }
 
-        /// <summary>
-        /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
-        /// </summary>
-        public event EventHandler Reconnected;
+            return cacheObjects;
+        }
 
         /// <summary>
         /// Makes the client enter the disconnected state.
@@ -827,22 +905,6 @@ namespace Dache.Client
                     reconnected(this, EventArgs.Empty);
                 }
             }
-        }
-
-        /// <summary>
-        /// Parses the command parts onto byte arrays.
-        /// </summary>
-        /// <param name="commandParts">The command parts.</param>
-        /// <returns>A list of byte arrays.</returns>
-        private static List<byte[]> ParseCacheObjects(string[] commandParts)
-        {
-            // Regular set
-            var cacheObjects = new List<byte[]>(commandParts.Length);
-            for (int i = 0; i < commandParts.Length; i++)
-            {
-                cacheObjects.Add(Convert.FromBase64String(commandParts[i]));
-            }
-            return cacheObjects;
         }
     }
 }

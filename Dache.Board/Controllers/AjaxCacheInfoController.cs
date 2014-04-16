@@ -11,7 +11,7 @@ namespace Dache.Board.Controllers
         /// <summary>
         /// Creates a cache info JSON object.
         /// </summary>
-        /// <returns>The JSON.</returns>
+        /// <returns>The response in form of a JSON.</returns>
         public JsonResult CacheInfo()
         {
             // Get the cache info

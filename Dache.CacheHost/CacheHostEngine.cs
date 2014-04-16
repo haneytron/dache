@@ -10,11 +10,12 @@ namespace Dache.CacheHost
     {
         // The cache server
         private readonly IRunnable _cacheServer = null;
+
         // The cache host information poller
         private readonly IRunnable _cacheHostInformationPoller = null;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="CacheHostEngine"/> class.
         /// </summary>
         /// <param name="cacheHostInformationPoller">The cache host information poller.</param>
         /// <param name="cacheHostServer">The cache host server.</param>
@@ -25,6 +26,7 @@ namespace Dache.CacheHost
             {
                 throw new ArgumentNullException("cacheHostInformationPoller");
             }
+
             if (cacheHostServer == null)
             {
                 throw new ArgumentNullException("cacheHostServer");

@@ -12,11 +12,12 @@ namespace Dache.Board.Handlers
     {
         // The timer which updates cache information
         private static readonly Timer _updateCacheInformationTimer = null;
+
         // The current cache information
         private static IList<KeyValuePair<string, PerformanceCounter[]>> _currentCacheInformation = null;
 
         /// <summary>
-        /// Static constructor.
+        /// Initializes static members of the <see cref="CacheInfoHandler"/> class.
         /// </summary>
         static CacheInfoHandler()
         {
@@ -25,6 +26,7 @@ namespace Dache.Board.Handlers
 
             // Get the timer interval from configuration
             var timerInterval = DacheboardConfigurationSection.Settings.InformationPollingIntervalMilliseconds;
+            
             // Configure the timer to fire according to the configuration
             _updateCacheInformationTimer = new Timer(UpdateCacheInformationThread, null, timerInterval, timerInterval);
         }
@@ -45,11 +47,11 @@ namespace Dache.Board.Handlers
         private static void UpdateCacheInformationThread(object state)
         {
             // Lock to prevent concurrent hits if the thread rolls over itself
-            lock (_currentCacheInformation)
-            {
+            // lock (_currentCacheInformation)
+            // {
                 // TODO: get information from the cache hosts
-                //_currentCacheInformation = BoardToManagerClientContainer.Instance.GetPerformanceInformation();
-            }
+                // _currentCacheInformation = BoardToManagerClientContainer.Instance.GetPerformanceInformation();
+            // }
         }
     }
 }

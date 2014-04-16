@@ -8,37 +8,31 @@ namespace Dache.Client.Configuration
     public class CacheHostElement : ConfigurationElement
     {
         /// <summary>
-        /// The cache host address.
+        /// Gets or sets the cache host address.
         /// </summary>
+        /// <value>
+        /// The cache host address.
+        /// </value>
         [StringValidator(InvalidCharacters = @"\:")]
         [ConfigurationProperty("address", IsRequired = true)]
         public string Address
         {
-            get
-            {
-                return (string)this["address"];
-            }
-            set
-            {
-                this["address"] = value;
-            }
+            get { return (string)this["address"]; }
+            set { this["address"] = value; }
         }
 
         /// <summary>
-        /// The cache host port.
+        /// Gets or sets the cache host port.
         /// </summary>
+        /// <value>
+        /// The cache host port.
+        /// </value>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
         [ConfigurationProperty("port", IsRequired = true, DefaultValue = 33333)]
         public int Port
         {
-            get
-            {
-                return (int)this["port"];
-            }
-            set
-            {
-                this["port"] = value;
-            }
+            get { return (int)this["port"]; }
+            set { this["port"] = value; }
         }
     }
 }

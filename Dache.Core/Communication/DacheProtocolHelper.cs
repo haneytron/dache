@@ -10,6 +10,11 @@ namespace Dache.Core.Communication
     public static class DacheProtocolHelper
     {
         /// <summary>
+        /// The absolute expiration format.
+        /// </summary>
+        public const string AbsoluteExpirationFormat = "yyMMddhhmmss";
+
+        /// <summary>
         /// The communication encoding.
         /// </summary>
         public static readonly Encoding CommunicationEncoding = Encoding.UTF8;
@@ -23,11 +28,6 @@ namespace Dache.Core.Communication
         /// The byte that represents a space.
         /// </summary>
         public static readonly byte[] SpaceByte = CommunicationEncoding.GetBytes(" ");
-
-        /// <summary>
-        /// The absolute expiration format.
-        /// </summary>
-        public const string AbsoluteExpirationFormat = "yyMMddhhmmss";
 
         /// <summary>
         /// The message type.
