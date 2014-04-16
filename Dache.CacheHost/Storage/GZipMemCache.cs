@@ -25,6 +25,28 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
+        /// Gets the total number of objects in the cache.
+        /// </summary>
+        public long Count
+        {
+            get
+            {
+                return _memCache.Count;
+            }
+        }
+
+        /// <summary>
+        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
+        /// </summary>
+        public long MemoryLimit
+        {
+            get
+            {
+                return _memCache.MemoryLimit;
+            }
+        }
+
+        /// <summary>
         /// Inserts or updates a byte array in the cache at the given key with the specified cache item policy.
         /// </summary>
         /// <param name="key">The key of the byte array. Null is not supported.</param>
@@ -40,11 +62,13 @@ namespace Dache.CacheHost.Storage
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "key");
             }
+
             if (value == null)
             {
                 // GZipMemCache does not support null values
                 throw new ArgumentNullException("value");
             }
+
             if (cacheItemPolicy == null)
             {
                 throw new ArgumentNullException("cacheItemPolicy");
@@ -69,6 +93,7 @@ namespace Dache.CacheHost.Storage
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "key");
             }
+
             if (value == null)
             {
                 // GZipMemCache does not support null values
@@ -110,7 +135,7 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
-        /// Clears the cache
+        /// Clears the cache.
         /// </summary>
         public void Clear()
         {
@@ -118,33 +143,15 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
-        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
+        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches.
         /// </summary>
+        /// <param name="pattern">The search pattern (regex).</param>
+        /// <returns>
+        /// The list of keys matching the provided pattern.
+        /// </returns>
         public IList<string> Keys(string pattern)
         {
             return _memCache.Keys(pattern);
-        }
-
-        /// <summary>
-        /// Total number of objects in the cache.
-        /// </summary>
-        public long Count
-        {
-            get
-            { 
-                return _memCache.Count;
-            }
-        }
-
-        /// <summary>
-        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
-        /// </summary>
-        public long MemoryLimit
-        {
-            get
-            { 
-                return _memCache.MemoryLimit;
-            }
         }
 
         /// <summary>

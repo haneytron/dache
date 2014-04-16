@@ -10,6 +10,16 @@ namespace Dache.CacheHost.Storage
     public interface IMemCache : IDisposable
     {
         /// <summary>
+        /// Gets the total number of objects in the cache.
+        /// </summary>
+        long Count { get; }
+
+        /// <summary>
+        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
+        /// </summary>
+        long MemoryLimit { get; }
+
+        /// <summary>
         /// Inserts or updates a byte array in the cache at the given key with the specified cache item policy.
         /// </summary>
         /// <param name="key">The key of the byte array.</param>
@@ -40,25 +50,15 @@ namespace Dache.CacheHost.Storage
         byte[] Remove(string key);
 
         /// <summary>
-        /// Clears the cache
+        /// Clears the cache.
         /// </summary>
         void Clear();
 
         /// <summary>
         /// Gets all the keys in the cache matching the provided pattern. WARNING: this is likely a very expensive operation for large caches. 
         /// </summary>
-        /// <param name="pattern">The search pattern (regex)</param>
-        /// <returns>The list of keys matching the provided pattern</returns>
+        /// <param name="pattern">The search pattern (regex).</param>
+        /// <returns>The list of keys matching the provided pattern.</returns>
         IList<string> Keys(string pattern);
-
-        /// <summary>
-        /// Total number of objects in the cache.
-        /// </summary>
-        long Count { get; }
-
-        /// <summary>
-        /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
-        /// </summary>
-        long MemoryLimit { get; }
     }
 }

@@ -24,21 +24,7 @@ namespace Dache.CacheHost
         private IRunnable _cacheHostEngine = null;
 
         /// <summary>
-        /// The main entry point for the application.
-        /// </summary>
-        /// <param name="args">The arguments passed, if any.</param>
-        static void Main(string[] args)
-        {
-            var servicesToRun = new ServiceBase[] 
-            { 
-                new CacheHostService()
-            };
-
-            ServiceBase.Run(servicesToRun);
-        }
-
-        /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="CacheHostService"/> class.
         /// </summary>
         public CacheHostService()
         {
@@ -131,6 +117,20 @@ namespace Dache.CacheHost
             {
                 // Ignore it - stopping anyway
             }
+        }
+
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        /// <param name="args">The arguments passed, if any.</param>
+        private static void Main(string[] args)
+        {
+            var servicesToRun = new ServiceBase[] 
+            { 
+                new CacheHostService()
+            };
+
+            ServiceBase.Run(servicesToRun);
         }
     }
 }

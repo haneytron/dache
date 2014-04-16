@@ -9,6 +9,16 @@ namespace Dache.Client
     public interface ICacheClient
     {
         /// <summary>
+        /// Event that fires when the cache client is disconnected from a cache host.
+        /// </summary>
+        event EventHandler HostDisconnected;
+
+        /// <summary>
+        /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
+        /// </summary>
+        event EventHandler HostReconnected;
+
+        /// <summary>
         /// Gets the object stored at the given cache key from the cache.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
@@ -173,7 +183,7 @@ namespace Dache.Client
         void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, object>> cacheKeysAndObjects, string tagName, DateTimeOffset absoluteExpiration);
 
         /// <summary>
-        /// Adds or updates many objects in the cache at thr given cache keys with the associated tag name.
+        /// Adds or updates many objects in the cache at the given cache keys with the associated tag name.
         /// </summary>
         /// <param name="cacheKeysAndObjects">The cache keys and their associated objects.</param>
         /// <param name="tagName">The tag name.</param>
@@ -247,15 +257,5 @@ namespace Dache.Client
         /// Clears the cache.
         /// </summary>
         void Clear();
-
-        /// <summary>
-        /// Event that fires when the cache client is disconnected from a cache host.
-        /// </summary>
-        event EventHandler HostDisconnected;
-
-        /// <summary>
-        /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
-        /// </summary>
-        event EventHandler HostReconnected;
     }
 }

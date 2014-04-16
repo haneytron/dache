@@ -11,78 +11,63 @@ namespace Dache.Board.Configuration
         private static readonly DacheboardConfigurationSection _settings = ConfigurationManager.GetSection("dacheboardSettings") as DacheboardConfigurationSection;
 
         /// <summary>
-        /// The Dacheboard settings.
+        /// Gets Dacheboard settings.
         /// </summary>
         public static DacheboardConfigurationSection Settings
         {
-            get
-            {
-                return _settings;
-            }
+            get { return _settings; }
         }
 
         /// <summary>
-        /// The Dacheboard address.
+        /// Gets or sets Dacheboard address.
         /// </summary>
         [StringValidator(InvalidCharacters = @"\:")]
         [ConfigurationProperty("address", IsRequired = true)]
         public string Address
         {
-            get
-            {
-                return (string)this["address"];
-            }
-            set
-            {
-                this["address"] = value;
-            }
+            get { return (string)this["address"]; }
+            set { this["address"] = value; }
         }
 
         /// <summary>
-        /// The Dacheboard port.
+        /// Gets or sets Dacheboard port.
         /// </summary>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
         [ConfigurationProperty("port", IsRequired = true, DefaultValue = 33333)]
         public int Port
         {
-            get
-            {
-                return (int)this["port"];
-            }
-            set
-            {
-                this["port"] = value;
-            }
+            get { return (int)this["port"]; }
+            set { this["port"] = value; }
         }
 
         /// <summary>
-        /// How often to attempt to re-establish the connection to the disconnected cache manager, in milliseconds.
+        /// Gets the manager reconnect interval in milliseconds.
         /// </summary>
+        /// <value>
+        /// The manager reconnect interval milliseconds.
+        /// </value>
+        /// <remarks>
+        /// How often to attempt to re-establish the connection to the disconnected cache manager, in milliseconds.
+        /// </remarks>
         [IntegerValidator(MinValue = 1000, MaxValue = 60000)]
         [ConfigurationProperty("managerReconnectIntervalMilliseconds", IsRequired = true, DefaultValue = 5000)]
         public int ManagerReconnectIntervalMilliseconds
         {
-            get
-            {
-                return (int)this["managerReconnectIntervalMilliseconds"];
-            }
+            get { return (int)this["managerReconnectIntervalMilliseconds"]; }
         }
 
         /// <summary>
-        /// The Dacheboard information polling interval in milliseconds. Valid range is 1000 to 60000.
+        /// Gets or sets the information polling interval in milliseconds.
         /// </summary>
+        /// <value>
+        /// The Dacheboard information polling interval in milliseconds. Valid range is 1000 to 60000.
+        /// </value>
         [IntegerValidator(MinValue = 1000, MaxValue = 60000)]
         [ConfigurationProperty("informationPollingIntervalMilliseconds", IsRequired = true, DefaultValue = 1000)]
         public int InformationPollingIntervalMilliseconds
         {
-            get
-            {
-                return (int)this["informationPollingIntervalMilliseconds"];
-            }
-            set
-            {
-                this["informationPollingIntervalMilliseconds"] = value;
-            }
+            get { return (int)this["informationPollingIntervalMilliseconds"]; }
+            set { this["informationPollingIntervalMilliseconds"] = value; }
         }
     }
 }

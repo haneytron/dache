@@ -15,19 +15,23 @@ namespace Dache.CacheHost
     [RunInstaller(true)]
     public class CustomInstaller : Installer
     {
-        // The service installer
-        private ServiceInstaller _serviceInstaller = new ServiceInstaller();
-        // The service process installer
-        private ServiceProcessInstaller _serviceProcessInstaller = new ServiceProcessInstaller();
-        // The service version
-        private Version _serviceVersion = null;
         // The settings file name
         private const string _settingsFileName = "settings";
+        
         // A line of stars for the console output
         private const string _consoleLineOfStars = "******************************************************************************";
+        
+        // The service installer
+        private ServiceInstaller _serviceInstaller = new ServiceInstaller();
+        
+        // The service process installer
+        private ServiceProcessInstaller _serviceProcessInstaller = new ServiceProcessInstaller();
+        
+        // The service version
+        private Version _serviceVersion = null;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="CustomInstaller"/> class.
         /// </summary>
         public CustomInstaller()
         {
@@ -36,12 +40,13 @@ namespace Dache.CacheHost
             _serviceVersion = Assembly.GetExecutingAssembly().GetName().Version;
 
             // Set some service information
-            _serviceInstaller.DisplayName = serviceName; //+ " " + _serviceVersion;
-            _serviceInstaller.ServiceName = serviceName; //+ " " + _serviceVersion;
+            _serviceInstaller.DisplayName = serviceName; // + " " + _serviceVersion;
+            _serviceInstaller.ServiceName = serviceName; // + " " + _serviceVersion;
             _serviceInstaller.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
 
             // Perform install customizations
             BeforeInstall += CustomInstaller_BeforeInstall;
+            
             // Perform rollback uninstall
             AfterRollback += CustomInstaller_BeforeUninstall;
 
@@ -112,6 +117,7 @@ namespace Dache.CacheHost
             {
                 var installPath = Path.Combine(new FileInfo(System.Reflection.Assembly.GetExecutingAssembly().Location).DirectoryName, _settingsFileName);
                 settings = File.ReadAllText(installPath);
+                
                 // Delete this file
                 File.Delete(installPath);
             }

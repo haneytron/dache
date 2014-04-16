@@ -8,20 +8,14 @@ namespace Dache.Client.Configuration
     public class CustomTypeElement : ConfigurationElement
     {
         /// <summary>
-        /// The custom type.
+        /// Gets or sets the custom type.
         /// </summary>
         [StringValidator(InvalidCharacters = @"\:")]
         [ConfigurationProperty("type", IsRequired = true)]
         public string Type
         {
-            get
-            {
-                return (string)this["type"];
-            }
-            set
-            {
-                this["type"] = value;
-            }
+            get { return (string)this["type"]; }
+            set { this["type"] = value; }
         }
     }
 }

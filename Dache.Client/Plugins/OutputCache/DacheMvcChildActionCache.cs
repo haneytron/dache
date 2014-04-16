@@ -5,17 +5,18 @@ namespace Dache.Client.Plugins.OutputCache
 {
     /// <summary>
     /// The Dache output cache provider for MVC child action caching.
-    /// TODO: make more generic, so that we also have a MemoryCache provider
+    /// TODO: make more generic, so that we also have a MemoryCache provider.
     /// </summary>
     public class DacheMvcChildActionCache : MemoryCache
     {
         // The cache key
         private const string _cacheKey = "__DacheCustomMvcChildActionOutputCaching_CacheKey:{0}";
+
         // The cache client
         private readonly ICacheClient _cacheClient = null;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="DacheMvcChildActionCache"/> class.
         /// </summary>
         /// <param name="cacheClient">The cache client.</param>
         public DacheMvcChildActionCache(ICacheClient cacheClient) 
@@ -36,7 +37,7 @@ namespace Dache.Client.Plugins.OutputCache
         /// <param name="key">A unique identifier for the cache entry.</param>
         /// <param name="value">The object to insert.</param>
         /// <param name="absoluteExpiration">The fixed date and time at which the cache entry will expire.</param>
-        /// <param name="regionName">Ignored.</param>
+        /// <param name="regionName">Ignored parameter.</param>
         /// <returns>true if insertion succeeded, false otherwise.</returns>
         public override bool Add(string key, object value, DateTimeOffset absoluteExpiration, string regionName = null)
         {
@@ -45,6 +46,7 @@ namespace Dache.Client.Plugins.OutputCache
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "key");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
@@ -61,7 +63,7 @@ namespace Dache.Client.Plugins.OutputCache
         /// Gets the specified cache entry from the cache as an object.
         /// </summary>
         /// <param name="key">A unique identifier for the cache entry to get.</param>
-        /// <param name="regionName">Ignored.</param>
+        /// <param name="regionName">Ignored parameter.</param>
         /// <returns>The cache entry that is identified by key.</returns>
         public override object Get(string key, string regionName = null)
         {

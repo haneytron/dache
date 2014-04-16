@@ -10,7 +10,7 @@ namespace Dache.Board.Controllers
         /// <summary>
         /// Creates the index view.
         /// </summary>
-        /// <returns>The view.</returns>
+        /// <returns>BoardController index view.</returns>
         public ActionResult Index()
         {
             return View();

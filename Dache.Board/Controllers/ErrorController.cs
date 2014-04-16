@@ -10,7 +10,7 @@ namespace Dache.Board.Controllers
         /// <summary>
         /// Creates the 404 not found view.
         /// </summary>
-        /// <returns>The view.</returns>
+        /// <returns>The error view.</returns>
         public ActionResult NotFound()
         {
             return View();

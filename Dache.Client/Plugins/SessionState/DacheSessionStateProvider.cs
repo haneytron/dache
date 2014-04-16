@@ -15,11 +15,13 @@ namespace Dache.Client.Plugins.SessionState
     {
         // The cache key
         private const string _cacheKey = "__DacheCustomSessionState_SessionID:{0}_ApplicationName:{1}";
+
         // The cache client
         private readonly ICacheClient _cacheClient = new CacheClient();
 
         // The application name
         private string _applicationName = null;
+
         // The session state config
         private SessionStateSection _sessionStateSection = null;
 
@@ -85,19 +87,21 @@ namespace Dache.Client.Plugins.SessionState
         {
             var now = DateTime.Now;
 
-            _cacheClient.AddOrUpdate(string.Format(_cacheKey, id, _applicationName), new DacheSessionState
-            {
-                SessionId = id,
-                ApplicationName = _applicationName,
-                Created = now,
-                Expires = now,
-                LockDate = now,
-                LockId = 0,
-                Timeout = timeout,
-                Locked = false,
-                SessionItems = new byte[0],
-                Flags = SessionStateActions.InitializeItem
-            });
+            _cacheClient.AddOrUpdate(
+                string.Format(_cacheKey, id, _applicationName),
+                new DacheSessionState
+                    {
+                        SessionId = id,
+                        ApplicationName = _applicationName,
+                        Created = now,
+                        Expires = now,
+                        LockDate = now,
+                        LockId = 0,
+                        Timeout = timeout,
+                        Locked = false,
+                        SessionItems = new byte[0],
+                        Flags = SessionStateActions.InitializeItem
+                    });
         }
 
         /// <summary>
@@ -138,8 +142,10 @@ namespace Dache.Client.Plugins.SessionState
 
             // String to hold serialized SessionStateItemCollection
             byte[] serializedItems = null;
+
             // True if a record is found in the database
             bool foundRecord = false;
+
             // Timeout value from the data store
             int timeout = 0;
 
@@ -156,6 +162,7 @@ namespace Dache.Client.Plugins.SessionState
                 {
                     // The record was expired - mark it as not locked
                     locked = false;
+
                     // Delete the current session
                     _cacheClient.Remove(cacheKey);
                 }
@@ -225,7 +232,7 @@ namespace Dache.Client.Plugins.SessionState
             _cacheClient.TryGet<DacheSessionState>(cacheKey, out currentSession);
 
             // Obtain a lock if possible. Ignore the record if it is expired.
-                
+
             // Set locked to true if the record was not updated and false if it was
             locked = !(currentSession != null && !currentSession.Locked && currentSession.Expires > now);
 
@@ -320,7 +327,7 @@ namespace Dache.Client.Plugins.SessionState
         /// <param name="id">The session identifier for the current request.</param>
         /// <param name="item">The SessionStateStoreData object that contains the current session values to be stored.</param>
         /// <param name="lockId">The lock identifier for the current request.</param>
-        /// <param name="newItem">true to identify the session item as a new item; false to identify the session item as an existing item.</param>
+        /// <param name="newItem">True to identify the session item as a new item; false to identify the session item as an existing item.</param>
         public override void SetAndReleaseItemExclusive(HttpContext context, string id, SessionStateStoreData item, object lockId, bool newItem)
         {
             // Serialize the SessionStateItemCollection as a string
@@ -343,19 +350,21 @@ namespace Dache.Client.Plugins.SessionState
             _cacheClient.TryGet<DacheSessionState>(cacheKey, out currentSession);
 
             // Create or update the session item
-            _cacheClient.AddOrUpdate(cacheKey, new DacheSessionState
-            {
-                SessionId = id,
-                ApplicationName = _applicationName,
-                Created = currentSession != null ? currentSession.Created : now,
-                Expires = now.AddMinutes(item.Timeout),
-                LockDate = currentSession != null ? currentSession.LockDate : now,
-                LockId = currentSession != null ? currentSession.LockId : 0,
-                Timeout = currentSession != null ? currentSession.Timeout : item.Timeout,
-                Locked = false,
-                SessionItems = serializedItems,
-                Flags = currentSession != null ? currentSession.Flags : SessionStateActions.None
-            });
+            _cacheClient.AddOrUpdate(
+                cacheKey, 
+                new DacheSessionState
+                    {
+                        SessionId = id,
+                        ApplicationName = _applicationName,
+                        Created = currentSession != null ? currentSession.Created : now,
+                        Expires = now.AddMinutes(item.Timeout),
+                        LockDate = currentSession != null ? currentSession.LockDate : now,
+                        LockId = currentSession != null ? currentSession.LockId : 0,
+                        Timeout = currentSession != null ? currentSession.Timeout : item.Timeout,
+                        Locked = false,
+                        SessionItems = serializedItems,
+                        Flags = currentSession != null ? currentSession.Flags : SessionStateActions.None
+                    });
         }
 
         /// <summary>

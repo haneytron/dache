@@ -8,23 +8,28 @@ namespace Dache.Client.Configuration
     public class CacheHostsCollection : ConfigurationElementCollection
     {
         /// <summary>
-        /// Creates a new cache host element.
+        /// Gets the number of cache host elements.
         /// </summary>
-        /// <returns>A new cache host element.</returns>
-        protected override ConfigurationElement CreateNewElement()
+        public new int Count
         {
-            return new CacheHostElement();
+            get
+            {
+                return base.Count;
+            }
         }
 
         /// <summary>
-        /// Gets the key of a given configuration element.
+        /// Gets a value indicating whether or not the cache host element collection is read only.
         /// </summary>
-        /// <param name="element">The configuration element.</param>
-        /// <returns>The key.</returns>
-        protected override object GetElementKey(ConfigurationElement element)
+        /// <value>
+        /// <c>true</c> if the cache host element collection is read only; otherwise, <c>false</c>.
+        /// </value>
+        public new bool IsReadOnly
         {
-            CacheHostElement service = (CacheHostElement)element;
-            return service.Address + ":" + service.Port;
+            get
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -34,11 +39,12 @@ namespace Dache.Client.Configuration
         /// <returns>The cache host element.</returns>
         public CacheHostElement this[int index]
         {
-            get
-            {
-                return (CacheHostElement)BaseGet(index);
+            get 
+            { 
+                return (CacheHostElement)BaseGet(index); 
             }
-            set
+
+            set 
             {
                 if (BaseGet(index) != null)
                 {
@@ -59,17 +65,6 @@ namespace Dache.Client.Configuration
             get
             {
                 return (CacheHostElement)BaseGet(name);
-            }
-        }
-
-        /// <summary>
-        /// Gets the number of cache host elements.
-        /// </summary>
-        public new int Count
-        {
-            get
-            {
-                return base.Count;
             }
         }
 
@@ -130,17 +125,6 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// Whether or not the cache host element collection is read only.
-        /// </summary>
-        public new bool IsReadOnly
-        {
-            get
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
         /// Removes a cache host element from the collection.
         /// </summary>
         /// <param name="item">The cache host element.</param>
@@ -154,6 +138,26 @@ namespace Dache.Client.Configuration
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Creates a new cache host element.
+        /// </summary>
+        /// <returns>A new cache host element.</returns>
+        protected override ConfigurationElement CreateNewElement()
+        {
+            return new CacheHostElement();
+        }
+
+        /// <summary>
+        /// Gets the key of a given configuration element.
+        /// </summary>
+        /// <param name="element">The configuration element.</param>
+        /// <returns>The element key.</returns>
+        protected override object GetElementKey(ConfigurationElement element)
+        {
+            CacheHostElement service = (CacheHostElement)element;
+            return service.Address + ":" + service.Port;
         }
     }
 }

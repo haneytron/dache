@@ -21,27 +21,32 @@ namespace Dache.Client
     /// </summary>
     public class CacheClient : ICacheClient
     {
+        // The local cache name suffix - all instances of this class share the value to avoid duplication
+        private static int _localCacheNameSuffix = 0;
+
         // The list of cache clients
         private readonly List<CacheHostBucket> _cacheHostLoadBalancingDistribution = new List<CacheHostBucket>(10);
+
         // The cache host bucket comparer
         private readonly IComparer<CacheHostBucket> _cacheHostBucketComparer = new CacheHostBucketComparer();
+        
         // The lock used to ensure state
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
         // The local cache
         private readonly MemoryCache _localCache = null;
+        
         // The local cache item absolute expiration seconds
         private readonly int _localCacheItemExpirationSeconds = 0;
-        // The local cache name suffix - all instances of this class share the value to avoid duplication
-        private static int _localCacheNameSuffix = 0;
 
         // The binary serializer
         private readonly IBinarySerializer _binarySerializer = null;
+        
         // The logger
         private readonly ILogger _logger = null;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="CacheClient"/> class.
         /// </summary>
         public CacheClient()
         {
@@ -53,6 +58,7 @@ namespace Dache.Client
 
             // Get the cache hosts from configuration
             var cacheHosts = CacheClientConfigurationSection.Settings.CacheHosts;
+
             // Get the cache host reconnect interval from configuration
             var hostReconnectIntervalSeconds = CacheClientConfigurationSection.Settings.HostReconnectIntervalSeconds;
 
@@ -68,6 +74,7 @@ namespace Dache.Client
             cacheConfig.Add("pollingInterval", "00:00:15");
             cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
             cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
+            
             // Increment the local cache name suffix to avoid overlapping local caches
             int localCacheNameSuffix = Interlocked.Increment(ref _localCacheNameSuffix);
             _localCache = new TrimmingMemoryCache("Dache Local Cache " + localCacheNameSuffix, cacheConfig);
@@ -103,6 +110,16 @@ namespace Dache.Client
         }
 
         /// <summary>
+        /// Event that fires when the cache client is disconnected from a cache host.
+        /// </summary>
+        public event EventHandler HostDisconnected;
+
+        /// <summary>
+        /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
+        /// </summary>
+        public event EventHandler HostReconnected;
+
+        /// <summary>
         /// Gets the object stored at the given cache key from the cache.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
@@ -132,7 +149,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
 
             // If we got nothing back, return false and the default value for the type;
             if (rawValues == null || rawValues.Count == 0)
@@ -201,6 +219,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeys");
             }
+
             if (!cacheKeys.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeys");
@@ -236,6 +255,7 @@ namespace Dache.Client
                             rawResults = routingDictionaryEntry.Key.Get(routingDictionaryEntry.Value);
                             continue;
                         }
+
                         rawResults.AddRange(routingDictionaryEntry.Key.Get(routingDictionaryEntry.Value));
                     }
 
@@ -246,7 +266,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            } 
+            while (true);
 
             // If we got nothing back, return null
             if (rawResults == null)
@@ -266,6 +287,7 @@ namespace Dache.Client
                 catch
                 {
                     results.Add(default(T));
+
                     // Log serialization error
                     _logger.Error("Serialization Error", string.Format("The object returned in a Get call at index {0} could not be deserialized to type {1}", i, typeof(T)));
                 }
@@ -289,6 +311,7 @@ namespace Dache.Client
             {
                 hash ^= cacheKey.GetHashCode();
             }
+
             var orderIndependentCacheKey = string.Format("getmany:{0}", hash);
 
             // Try and get from local cache
@@ -339,7 +362,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
 
             // If we got nothing back, return null
             if (rawResults == null)
@@ -359,6 +383,7 @@ namespace Dache.Client
                 catch
                 {
                     results.Add(default(T));
+
                     // Log serialization error
                     _logger.Error("Serialization Error", string.Format("An object returned in a GetTagged call at index {0} could not be deserialized to type {1}", i, typeof(T)));
                 }
@@ -409,6 +434,7 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
@@ -438,7 +464,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -454,6 +481,7 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
@@ -483,7 +511,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -499,6 +528,7 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
@@ -528,7 +558,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -545,6 +576,7 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
@@ -574,7 +606,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -588,6 +621,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             if (!cacheKeysAndObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
@@ -644,7 +678,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -659,6 +694,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             if (!cacheKeysAndObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
@@ -715,7 +751,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -730,6 +767,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             if (!cacheKeysAndObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
@@ -786,7 +824,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -802,6 +841,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             if (!cacheKeysAndObjects.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
@@ -857,7 +897,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -873,10 +914,12 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -907,7 +950,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -924,10 +968,12 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -958,7 +1004,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -975,10 +1022,12 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -1009,7 +1058,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1027,10 +1077,12 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (value == null)
             {
                 throw new ArgumentNullException("value");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -1061,7 +1113,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1076,11 +1129,13 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             var count = cacheKeysAndObjects.Count();
             if (count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -1095,6 +1150,7 @@ namespace Dache.Client
                 {
                     // Serialize
                     bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+
                     // Add to list
                     list.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
                 }
@@ -1125,7 +1181,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1141,11 +1198,13 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             var count = cacheKeysAndObjects.Count();
             if (count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -1160,6 +1219,7 @@ namespace Dache.Client
                 {
                     // Serialize
                     bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+
                     // Add to list
                     list.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
                 }
@@ -1190,7 +1250,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1206,11 +1267,14 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             var count = cacheKeysAndObjects.Count();
+
             if (count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -1225,6 +1289,7 @@ namespace Dache.Client
                 {
                     // Serialize
                     bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+
                     // Add to list
                     list.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
                 }
@@ -1255,7 +1320,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1272,11 +1338,13 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeysAndObjects");
             }
+
             var count = cacheKeysAndObjects.Count();
             if (count == 0)
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -1291,6 +1359,7 @@ namespace Dache.Client
                 {
                     // Serialize
                     bytes = _binarySerializer.Serialize(cacheKeyAndObjectKvp.Value);
+
                     // Add to list
                     list.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
                 }
@@ -1321,7 +1390,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1349,7 +1419,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1363,6 +1434,7 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("cacheKeys");
             }
+
             if (!cacheKeys.Any())
             {
                 throw new ArgumentException("must have at least one element", "cacheKeys");
@@ -1401,7 +1473,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1417,6 +1490,7 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
+
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -1435,7 +1509,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1451,10 +1526,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
+
             if (!tagNames.Any())
             {
                 throw new ArgumentException("must have at least one element", "tagNames");
             }
+
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -1493,7 +1570,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1537,7 +1615,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached or the list changed
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1554,6 +1633,7 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
+
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -1585,7 +1665,8 @@ namespace Dache.Client
                 {
                     // Try a different cache host if this one could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1602,10 +1683,12 @@ namespace Dache.Client
             {
                 throw new ArgumentNullException("tagNames");
             }
+
             if (!tagNames.Any())
             {
                 throw new ArgumentException("must have at least one element", "tagNames");
             }
+
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
@@ -1655,7 +1738,8 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached
                 }
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
@@ -1680,18 +1764,29 @@ namespace Dache.Client
                 {
                     // Rebalance and try again if a cache host could not be reached or the list changed
                 }   
-            } while (true);
+            }
+            while (true);
         }
 
         /// <summary>
-        /// Event that fires when the cache client is disconnected from a cache host.
+        /// Computes an integer hash code for a cache key.
         /// </summary>
-        public event EventHandler HostDisconnected;
+        /// <param name="cacheKey">The cache key.</param>
+        /// <returns>A hash code.</returns>
+        private static int ComputeHashCode(string cacheKey)
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (char c in cacheKey)
+                {
+                    // Multiply by c to add greater variation
+                    hash = ((hash * 23) + c) * c;
+                }
 
-        /// <summary>
-        /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
-        /// </summary>
-        public event EventHandler HostReconnected;
+                return hash;
+            }
+        }
 
         /// <summary>
         /// Triggered when a client is disconnected from a cache host.
@@ -1784,6 +1879,7 @@ namespace Dache.Client
             _cacheHostLoadBalancingDistribution.Sort(_cacheHostBucketComparer);
 
             int x = 0;
+
             // Iterate all cache hosts in the load balancing distribution
             for (int i = 0; i < _cacheHostLoadBalancingDistribution.Count; i++)
             {
@@ -1792,12 +1888,14 @@ namespace Dache.Client
 
                 // Determine current range
                 int currentMinimum = (int)((long)(x * uint.MaxValue) / registeredCacheHostCount) - int.MaxValue - 1;
+
                 // If not first iteration
                 if (x > 0)
                 {
                     // Add 1
                     currentMinimum++;
                 }
+
                 x++;
                 int currentMaximum = (int)((long)(x * uint.MaxValue) / registeredCacheHostCount) - int.MaxValue - 1;
 
@@ -1837,25 +1935,6 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Computes an integer hash code for a cache key.
-        /// </summary>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <returns>A hash code.</returns>
-        private static int ComputeHashCode(string cacheKey)
-        {
-            unchecked
-            {
-                int hash = 17;
-                foreach (char c in cacheKey)
-                {
-                    // Multiply by c to add greater variation
-                    hash = (hash * 23 + c) * c;
-                }
-                return hash;
-            }
-        }
-
-        /// <summary>
         /// Binary searches the cache host load balancing distribution for the index of the matching cache host.
         /// </summary>
         /// <param name="hashCode">The hash code.</param>
@@ -1864,6 +1943,7 @@ namespace Dache.Client
         {
             // Find the middle of the list, rounded down
             var middleIndex = _cacheHostLoadBalancingDistribution.Count / 2;
+
             // Do the binary search recursively
             return BinarySearchRecursive(hashCode, middleIndex);
         }
@@ -1882,6 +1962,7 @@ namespace Dache.Client
                 // Go left
                 return BinarySearchRecursive(hashCode, currentIndex / 2);
             }
+
             if (currentCacheHost.MaxValue < hashCode)
             {
                 // Go right
@@ -1899,23 +1980,32 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Provides cache host and bucket range information
+        /// Provides cache host and bucket range information.
         /// </summary>
         private class CacheHostBucket
         {
             /// <summary>
-            /// The cache host.
+            /// Gets or sets the cache host.
             /// </summary>
+            /// <value>
+            /// The cache host.
+            /// </value>
             public CommunicationClient CacheHost { get; set; }
 
             /// <summary>
-            /// The minimum value of the range.
+            /// Gets or sets the minimum value of the range.
             /// </summary>
+            /// <value>
+            /// The minimum value.
+            /// </value>
             public int MinValue { get; set; }
 
             /// <summary>
-            /// The maximum value of the range.
+            /// Gets or sets the maximum value of the range.
             /// </summary>
+            /// <value>
+            /// The maximum value.
+            /// </value>
             public int MaxValue { get; set; }
         }
 
@@ -1929,7 +2019,7 @@ namespace Dache.Client
             /// </summary>
             /// <param name="x">The first cache host bucket.</param>
             /// <param name="y">The second cache host bucket.</param>
-            /// <returns>-1 if x is less than y, 1 is x is greater than x, or 1 if x equals y.</returns>
+            /// <returns>An integer, -1 if x is less than y, 1 is x is greater than x, or 1 if x equals y.</returns>
             public int Compare(CacheHostBucket x, CacheHostBucket y)
             {
                 return string.Compare(x.CacheHost.ToString(), y.CacheHost.ToString());

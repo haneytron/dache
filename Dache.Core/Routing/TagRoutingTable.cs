@@ -13,13 +13,15 @@ namespace Dache.Core.Routing
     {
         // The tagged cache keys: key is tag name, value is cache keys
         private readonly IDictionary<string, HashSet<string>> _taggedCacheKeys;
+
         // The cache keys and their associated tags: key is cache key, value is tag name
         private readonly IDictionary<string, string> _cacheKeyTags;
+        
         // The lock used to ensure thread safety
         private readonly ReaderWriterLockSlim _lock;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="TagRoutingTable"/> class.
         /// </summary>
         public TagRoutingTable()
         {
@@ -41,6 +43,7 @@ namespace Dache.Core.Routing
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
+
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
@@ -68,7 +71,7 @@ namespace Dache.Core.Routing
         /// <summary>
         /// Removes the given cache key from the routing table.
         /// </summary>
-        /// <param name="cacheKey">the cache key.</param>
+        /// <param name="cacheKey">The cache key.</param>
         public void Remove(string cacheKey)
         {
             // Sanitize
@@ -134,9 +137,10 @@ namespace Dache.Core.Routing
                 }
 
                 var r = new Regex(pattern, RegexOptions.IgnoreCase);
+
                 // Return a copy of the cache keys
                 return cacheKeys.Where(k => r.IsMatch(k)).ToList();
-            }// no catch block?
+            }
             finally
             {
                 _lock.ExitReadLock();

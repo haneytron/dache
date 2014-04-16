@@ -13,7 +13,7 @@ namespace Dache.Core.Comparers
         private readonly Func<T, T, int> _comparerFunc = null;
 
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="GenericComparer{T}"/> class.
         /// </summary>
         /// <param name="comparerFunc">The function which compares two objects.</param>
         public GenericComparer(Func<T, T, int> comparerFunc)
@@ -32,7 +32,7 @@ namespace Dache.Core.Comparers
         /// </summary>
         /// <param name="x">The first object.</param>
         /// <param name="y">The second object.</param>
-        /// <returns>-1 if x is less than y, 1 if x is greater than y, and 0 if the two are equal.</returns>
+        /// <returns>An integer, -1 if x is less than y, 1 if x is greater than y, and 0 if the two are equal.</returns>
         public int Compare(T x, T y)
         {
             return _comparerFunc(x, y);

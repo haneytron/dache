@@ -18,7 +18,7 @@ namespace Dache.Core.Routing
         /// <summary>
         /// Removes the given cache key from the routing table.
         /// </summary>
-        /// <param name="cacheKey">the cache key.</param>
+        /// <param name="cacheKey">The cache key.</param>
         void Remove(string cacheKey);
 
         /// <summary>
