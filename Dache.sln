@@ -24,6 +24,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.Tests", "Dache.Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dache.PerformanceTests", "Dache.PerformanceTests\Dache.PerformanceTests.csproj", "{873B44C2-D7DA-4040-8605-30D6795D669D}"
 EndProject
+Project("{CC5FD16D-436D-48AD-A40C-5A424C6E3E79}") = "AzureWorker", "AzureWorker\AzureWorker.ccproj", "{D74CD595-DC0F-44ED-B3E4-8A104B5537F1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkerRole1", "WorkerRole1\WorkerRole1.csproj", "{39D2281F-4866-4EF5-A1C4-B86D1E455E20}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +58,14 @@ Global
 		{873B44C2-D7DA-4040-8605-30D6795D669D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{873B44C2-D7DA-4040-8605-30D6795D669D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{873B44C2-D7DA-4040-8605-30D6795D669D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D74CD595-DC0F-44ED-B3E4-8A104B5537F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D74CD595-DC0F-44ED-B3E4-8A104B5537F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D74CD595-DC0F-44ED-B3E4-8A104B5537F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D74CD595-DC0F-44ED-B3E4-8A104B5537F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39D2281F-4866-4EF5-A1C4-B86D1E455E20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39D2281F-4866-4EF5-A1C4-B86D1E455E20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39D2281F-4866-4EF5-A1C4-B86D1E455E20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39D2281F-4866-4EF5-A1C4-B86D1E455E20}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
