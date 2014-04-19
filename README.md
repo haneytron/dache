@@ -10,6 +10,8 @@ fast, scalable distributed caching with meaningful performance metrics for your 
 
 **EMAIL:** info@getdache.net
 
+**NUGET:** http://www.nuget.org/packages/Dache.Client
+
 
 VERSION INFORMATION
 ============================================
