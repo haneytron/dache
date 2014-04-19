@@ -18,12 +18,13 @@ namespace Dache.PerformanceTests.InfiniteAdd
             cacheClient.HostDisconnected += (sender, e) => { Console.WriteLine("*** Host disconnected"); };
             cacheClient.HostReconnected += (sender, e) => { Console.WriteLine("*** Host reconnected"); };
 
+            // Add test1 to test1000
             int i = 1;
             while (true)
             {
                 cacheClient.AddOrUpdate("test" + i, value);
                 i++;
-                if (i == 1000)
+                if (i == 1001)
                 {
                     i = 1;
                 }
