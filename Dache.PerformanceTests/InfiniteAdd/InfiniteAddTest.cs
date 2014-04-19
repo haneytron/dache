@@ -25,7 +25,7 @@ namespace Dache.PerformanceTests.InfiniteAdd
                 i++;
                 if (i == 1000)
                 {
-                    i = 0;
+                    i = 1;
                 }
             }
         }

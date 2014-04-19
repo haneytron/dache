@@ -38,7 +38,7 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The cache host port.
+        /// The cache host port. Valid range is > 0.
         /// </summary>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
         [ConfigurationProperty("port", IsRequired = true, DefaultValue = 33333)]
@@ -51,6 +51,23 @@ namespace Dache.CacheHost.Configuration
             set
             {
                 this["port"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The maximum connections. Valid range is > 0.
+        /// </summary>
+        [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("maximumConnections", IsRequired = true, DefaultValue = 20)]
+        public int MaximumConnections
+        {
+            get
+            {
+                return (int)this["maximumConnections"];
+            }
+            set
+            {
+                this["maximumConnections"] = value;
             }
         }
 

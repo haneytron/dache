@@ -71,9 +71,9 @@ namespace Dache.CacheHost
 
                 // Initialize the mem cache container instance
                 var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
+                
                 IMemCache memCache;
-
-                MemCache memoryCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                var memoryCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
 
                 if (CacheHostConfigurationSection.Settings.StorageProvider == typeof(GZipMemCache))
                 {
@@ -88,7 +88,8 @@ namespace Dache.CacheHost
                 var tagRoutingTable = new TagRoutingTable();
 
                 // Initialize the cache host server
-                var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, port, 1000, 4096);
+                var maximumConnections = CacheHostConfigurationSection.Settings.MaximumConnections;
+                var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, port, maximumConnections, 1024);
 
                 // Initialize the cache host information poller
                 var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, customPerformanceCounterManager, 1000);
