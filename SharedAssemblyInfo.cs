@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyCompany("Dache")]
+[assembly: AssemblyCompany("Imperative Bytes, LLC")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
