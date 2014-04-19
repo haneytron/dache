@@ -10,7 +10,7 @@ namespace Dache.CacheHost.Storage
     /// <summary>
     /// Encapsulates a memory cache that can compress and store byte arrays. This type is thread safe.
     /// </summary>
-    public class GZipMemCache : IMemCache
+    public sealed class GZipMemCache : IMemCache
     {
         // The underlying mem cache
         private MemCache _memCache = null;
@@ -50,7 +50,7 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("cacheItemPolicy");
             }
 
-            _memCache.Add(key, Compress(value).Result, cacheItemPolicy);
+            _memCache.Add(key, Compress(value), cacheItemPolicy);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("value");
             }
 
-            _memCache.AddInterned(key, Compress(value).Result);
+            _memCache.AddInterned(key, Compress(value));
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace Dache.CacheHost.Storage
                 return null;
             }
 
-            return Decompress(_memCache.Get(key)).Result;
+            return Decompress(_memCache.Get(key));
         }
 
         /// <summary>
@@ -163,7 +163,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// <see cref="GZipStream"/> is used for compression tasks.
         /// </remarks>
-        protected async Task<byte[]> Compress(byte[] value)
+        private byte[] Compress(byte[] value)
         {
             // Sanitize
             if (value == null)
@@ -171,15 +171,11 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("value", "Can't compress null value.");
             }
 
-            using (MemoryStream originalStream = new MemoryStream(value))
+            using (var compressedStream = new MemoryStream())
             {
-                using (MemoryStream compressedStream = new MemoryStream())
+                using (var compressionStream = new GZipStream(compressedStream, CompressionMode.Compress))
                 {
-                    using (GZipStream compressionStream = new GZipStream(compressedStream, CompressionMode.Compress))
-                    {
-                        await originalStream.CopyToAsync(compressionStream);
-                    }
-
+                    compressionStream.Write(value, 0, value.Length);
                     return compressedStream.ToArray();
                 }
             }
@@ -193,7 +189,7 @@ namespace Dache.CacheHost.Storage
         /// <remarks>
         /// <see cref="GZipStream"/> is used for decompression tasks.
         /// </remarks>
-        protected async Task<byte[]> Decompress(byte[] value)
+        private byte[] Decompress(byte[] value)
         {
             // Sanitize
             if (value == null)
@@ -201,15 +197,11 @@ namespace Dache.CacheHost.Storage
                 return null;
             }
 
-            using (MemoryStream originalStream = new MemoryStream(value))
+            using (var decompressedStream = new MemoryStream())
             {
-                using (MemoryStream decompressedStream = new MemoryStream())
+                using (var decompressionStream = new GZipStream(decompressedStream, CompressionMode.Decompress))
                 {
-                    using (GZipStream decompressionStream = new GZipStream(originalStream, CompressionMode.Decompress))
-                    {
-                        await decompressionStream.CopyToAsync(decompressedStream);
-                    }
-
+                    decompressionStream.Write(value, 0, value.Length);
                     return decompressedStream.ToArray();
                 }
             }

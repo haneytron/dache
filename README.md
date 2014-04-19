@@ -22,7 +22,7 @@ VERSION INFORMATION
 
 - Fixed Garbage Collection issue with Cache Host: memory usage has dropped SUBSTANTIALLY as a result! Infinite add test now uses ~ 6 megabytes total (was > 250 megabytes)!
 
-- Downgraded projects to .NET 4.0 because it allows more people to use Dache. Included Microsoft.Bcl.Async package to enable async/await on .NET 4.0
+- Downgraded projects to .NET 4.0 because it allows more people to use Dache.
 
 - Added configurable maximum connections to Cache Host (specified in the .config file)
 
