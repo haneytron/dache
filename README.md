@@ -18,7 +18,7 @@ VERSION INFORMATION
 1.3.1
 ------------------
 
-***** NOTE: it is STRONGLY recommended that you IMMEDIATELY upgrade to this version as it has important memory usage fixes (memory usage reduced by a factor of 90-95%) *****
+** NOTE: it is STRONGLY recommended that you IMMEDIATELY upgrade to this version as it has important memory usage fixes (memory usage reduced by a factor of 90-95%) **
 
 - Fixed Garbage Collection issue with Cache Host: memory usage has dropped SUBSTANTIALLY as a result! Infinite add test now uses ~ 6 megabytes total (was > 250 megabytes)!
 
