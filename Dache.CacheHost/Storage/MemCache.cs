@@ -404,7 +404,7 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="value">The byte array.</param>
         /// <returns>The resulting hash value.</returns>
-        private string CalculateHash(byte[] value)
+        private static string CalculateHash(byte[] value)
         {
             int result = 13 * value.Length;
             for (int i = 0; i < value.Length; i++)
