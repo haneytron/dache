@@ -68,7 +68,7 @@ namespace Dache.Client
 
             // Establish the remote endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry(address);
-            var ipAddress = ipHostInfo.AddressList.First(i => i.AddressFamily == AddressFamily.InterNetwork);
+            var ipAddress = ipHostInfo.AddressList.FirstOrDefault(i => i.AddressFamily == AddressFamily.InterNetwork) ?? IPAddress.Parse(address);
             _remoteEndPoint = new IPEndPoint(ipAddress, port);
 
             // Set the cache host reconnect interval
