@@ -345,17 +345,17 @@ namespace Dache.Core.Communication
                             // Get absolute or sliding expiration
                             int slidingExpiration;
                             DateTimeOffset absoluteExpiration;
-                            if (int.TryParse(commandParts[1], out slidingExpiration))
-                            {
-                                // sliding expiration
-                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
-                                AddOrUpdate(cacheKeysAndObjects, TimeSpan.FromSeconds(slidingExpiration));
-                            }
-                            else if (DateTimeOffset.TryParseExact(commandParts[1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
+                            if (DateTimeOffset.TryParseExact(commandParts[1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out absoluteExpiration))
                             {
                                 // absolute expiration
                                 cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
                                 AddOrUpdate(cacheKeysAndObjects, absoluteExpiration);
+                            }
+                            else if (int.TryParse(commandParts[1], out slidingExpiration))
+                            {
+                                // sliding expiration
+                                cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, 2);
+                                AddOrUpdate(cacheKeysAndObjects, TimeSpan.FromSeconds(slidingExpiration));
                             }
                         }
                     }

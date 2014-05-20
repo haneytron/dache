@@ -261,7 +261,7 @@ namespace Dache.Client
             using (var memoryStream = new MemoryStream())
             {
                 memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set {0}", absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
+                memoryStream.Write("set {0}", absoluteExpiration.UtcDateTime.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
                 foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
                     memoryStream.WriteSpace();

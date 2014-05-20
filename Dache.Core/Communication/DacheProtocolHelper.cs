@@ -27,7 +27,7 @@ namespace Dache.Core.Communication
         /// <summary>
         /// The absolute expiration format.
         /// </summary>
-        public const string AbsoluteExpirationFormat = "yyMMddhhmmss";
+        public const string AbsoluteExpirationFormat = "yyMMddHHmmss";
 
         /// <summary>
         /// The message type.
