@@ -59,7 +59,7 @@ namespace Dache.Client
             }
             if (messageBufferSize <= 256)
             {
-                throw new ArgumentException("cannot be less than 512", "messageBufferSize");
+                throw new ArgumentException("cannot be less than 256", "messageBufferSize");
             }
 
             // Define the client
@@ -67,8 +67,22 @@ namespace Dache.Client
                 (sender, e) => { DisconnectFromServer(); }, messageBufferSize, maximumConnections, false);
 
             // Establish the remote endpoint for the socket
-            var ipHostInfo = Dns.GetHostEntry(address);
-            var ipAddress = ipHostInfo.AddressList.First(i => i.AddressFamily == AddressFamily.InterNetwork);
+            IPAddress ipAddress = null;
+            if (!IPAddress.TryParse(address, out ipAddress))
+            {
+                // Try and get DNS value
+                var ipHostInfo = Dns.GetHostEntry(address);
+                ipAddress = ipHostInfo.AddressList.FirstOrDefault(i =>
+                    i.AddressFamily == AddressFamily.InterNetwork
+                    // ignore link-local addresses (the 169.254.* is documented in IETF RFC 3927 => http://www.ietf.org/rfc/rfc3927.txt)
+                    && !i.ToString().StartsWith("169.254."));
+                
+                if (ipAddress == null)
+                {
+                    throw new ArgumentException("must be a valid host name or IP address", "address");
+                }
+            }
+
             _remoteEndPoint = new IPEndPoint(ipAddress, port);
 
             // Set the cache host reconnect interval
