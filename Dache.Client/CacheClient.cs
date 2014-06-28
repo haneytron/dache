@@ -207,6 +207,7 @@ namespace Dache.Client
             }
 
             List<byte[]> rawResults = null;
+
             do
             {
                 // Need to batch up requests
@@ -1519,16 +1520,18 @@ namespace Dache.Client
                     foreach (var communicationClient in _cacheHostLoadBalancingDistribution)
                     {
                         var rawResults = communicationClient.CacheHost.GetCacheKeys(pattern);
+
+                        // Ensure we got some results
+                        if (rawResults == null)
+                        {
+                            // Skip client
+                            continue;
+                        }
+
                         foreach (var rawResult in rawResults)
                         {
                             results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResult));
                         }
-                    }
-
-                    // Ensure we got some results
-                    if (results.Count == 0)
-                    {
-                        return null;
                     }
 
                     return results;
@@ -1561,22 +1564,23 @@ namespace Dache.Client
 
             do
             {
-                List<string> results = new List<string>(100);
-
                 var client = DetermineClient(tagName);
 
                 try
                 {
                     var rawResults = client.GetCacheKeys(pattern);
+
+                    // Ensure we got some results
+                    if (rawResults == null)
+                    {
+                        return null;
+                    }
+
+                    List<string> results = new List<string>(100);
+
                     foreach (var rawResult in rawResults)
                     {
                         results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResult));
-                    }
-
-                    // Ensure we got some results
-                    if (results.Count == 0)
-                    {
-                        return null;
                     }
 
                     return results;
@@ -1637,6 +1641,14 @@ namespace Dache.Client
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
                         var rawResults = routingDictionaryEntry.Key.GetCacheKeysTagged(routingDictionaryEntry.Value, pattern);
+
+                        // Ensure we got some results for this host
+                        if (rawResults == null)
+                        {
+                            // Skip host
+                            continue;
+                        }
+
                         foreach (var rawResult in rawResults)
                         {
                             results.Add(DacheProtocolHelper.CommunicationEncoding.GetString(rawResult));
