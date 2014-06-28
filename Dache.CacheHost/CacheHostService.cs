@@ -3,12 +3,12 @@ using System.ServiceProcess;
 using System.Threading;
 using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Polling;
+using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
 using Dache.Core.Communication;
 using Dache.Core.Interfaces;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
-using Dache.Core.Routing;
 
 namespace Dache.CacheHost
 {

@@ -76,6 +76,8 @@
     <Compile Include="CustomInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Routing\ITagRoutingTable.cs" />
+    <Compile Include="Routing\TagRoutingTable.cs" />
     <Compile Include="Storage\GZipMemCache.cs" />
     <Compile Include="Storage\IMemCache.cs" />
     <Compile Include="Storage\MemCache.cs" />

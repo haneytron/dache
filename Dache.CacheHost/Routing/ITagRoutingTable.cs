@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Dache.Core.Routing
+namespace Dache.CacheHost.Routing
 {
     /// <summary>
     /// Represents a routing table that indicates which tags contain which cache keys.

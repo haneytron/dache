@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace Dache.Core.Routing
+namespace Dache.CacheHost.Routing
 {
     /// <summary>
     /// The routing table that indicates which tags contain which cache keys. Thread safe.

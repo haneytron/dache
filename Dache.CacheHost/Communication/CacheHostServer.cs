@@ -7,10 +7,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Caching;
 using Dache.CacheHost.Configuration;
+using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
 using Dache.Core.Interfaces;
 using Dache.Core.Logging;
-using Dache.Core.Routing;
 using SimplSockets;
 
 namespace Dache.Core.Communication
