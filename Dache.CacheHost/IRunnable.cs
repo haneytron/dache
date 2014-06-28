@@ -1,4 +1,4 @@
-﻿namespace Dache.Core.Interfaces
+﻿namespace Dache.CacheHost
 {
     /// <summary>
     /// Represents a runnable object.

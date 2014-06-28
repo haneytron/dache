@@ -65,6 +65,7 @@
       <Link>Configuration\CustomTypeElement.cs</Link>
     </Compile>
     <Compile Include="Configuration\CustomLoggerLoader.cs" />
+    <Compile Include="IRunnable.cs" />
     <Compile Include="Persistence\DiskDataPersister.cs" />
     <Compile Include="Persistence\IDataPersister.cs" />
     <Compile Include="Persistence\PersistedItem.cs" />

@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading;
 using Dache.CacheHost.Storage;
-using Dache.Core.Interfaces;
 using Dache.Core.Performance;
 
 namespace Dache.CacheHost.Polling

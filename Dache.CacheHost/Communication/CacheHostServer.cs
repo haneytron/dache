@@ -6,10 +6,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Caching;
+using Dache.CacheHost;
 using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
-using Dache.Core.Interfaces;
 using Dache.Core.Logging;
 using SimplSockets;
 
