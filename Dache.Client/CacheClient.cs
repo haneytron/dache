@@ -381,7 +381,7 @@ namespace Dache.Client
             var cacheKey = string.Format("tag:{0}", tagName);
 
             // Try and get from local cache
-            List<T> result = _localCache.Get(tagName) as List<T>;
+            List<T> result = _localCache.Get(cacheKey) as List<T>;
             if (result != null)
             {
                 return result;
