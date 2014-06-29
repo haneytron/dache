@@ -20,5 +20,4 @@ clear
 -Clear tag from TagRoutingTable memory when removing all tagged items from host
 -Introduce of Sorted Sets/Lists with weights
 -Create integer storage methods and increment/decrement methods?
--Azure host
 -Build NHibernate second level cache provider plugin

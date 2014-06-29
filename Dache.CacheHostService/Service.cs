@@ -1,10 +1,10 @@
 ﻿using System;
 using System.ServiceProcess;
 using System.Threading;
-using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Polling;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
+using Dache.CacheHostService.Configuration;
 using Dache.Core.Communication;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
@@ -14,13 +14,13 @@ namespace Dache.CacheHost
     /// <summary>
     /// The cache host windows service. Responsible for initializing, starting, and stopping the cache host functionality.
     /// </summary>
-    internal class CacheHostService : ServiceBase
+    internal class Service : ServiceBase
     {
         // The logger
         private readonly ILogger _logger = null;
 
         // The cache host engine that does the actual work
-        private IRunnable _cacheHostEngine = null;
+        private CacheHostEngine _cacheHostEngine = null;
 
         /// <summary>
         /// The main entry point for the application.
@@ -30,7 +30,7 @@ namespace Dache.CacheHost
         {
             var servicesToRun = new ServiceBase[] 
             { 
-                new CacheHostService()
+                new Service()
             };
 
             ServiceBase.Run(servicesToRun);
@@ -39,7 +39,7 @@ namespace Dache.CacheHost
         /// <summary>
         /// The constructor.
         /// </summary>
-        public CacheHostService()
+        public Service()
         {
             // Set the host name
             ServiceName = "Dache Cache Host";
@@ -63,16 +63,17 @@ namespace Dache.CacheHost
 
             try
             {
+                // Gather settings
                 var port = CacheHostConfigurationSection.Settings.Port;
+                var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
+                var maximumConnections = CacheHostConfigurationSection.Settings.MaximumConnections;
 
                 // Configure the custom performance counter manager
-                var customPerformanceCounterManager = new CustomPerformanceCounterManager(string.Format("port:{0}", port), false);
-
-                // Initialize the mem cache container instance
-                var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
+                var customPerformanceCounterManager = new CustomPerformanceCounterManager(port, false);
                 
+                // Determine the MemCache to use
                 IMemCache memCache;
-                var memoryCache = new MemCache("Dache", physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                var memoryCache = new MemCache(physicalMemoryLimitPercentage, customPerformanceCounterManager);
 
                 if (CacheHostConfigurationSection.Settings.StorageProvider == typeof(GZipMemCache))
                 {
@@ -83,18 +84,8 @@ namespace Dache.CacheHost
                     memCache = memoryCache;
                 }
 
-                // Initialize the tag routing table
-                var tagRoutingTable = new TagRoutingTable();
-
-                // Initialize the cache host server
-                var maximumConnections = CacheHostConfigurationSection.Settings.MaximumConnections;
-                var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, port, maximumConnections, 1024);
-
-                // Initialize the cache host information poller
-                var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, customPerformanceCounterManager, 1000);
-
                 // Instantiate the cache host engine
-                _cacheHostEngine = new CacheHostEngine(cacheHostInformationPoller, cacheHostServer);
+                _cacheHostEngine = new CacheHostEngine(memCache, _logger, port, physicalMemoryLimitPercentage, maximumConnections);
             }
             catch (Exception ex)
             {

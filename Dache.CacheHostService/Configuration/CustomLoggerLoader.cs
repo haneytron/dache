@@ -1,7 +1,7 @@
 ﻿using System;
 using Dache.Core.Logging;
 
-namespace Dache.CacheHost.Configuration
+namespace Dache.CacheHostService.Configuration
 {
     /// <summary>
     /// Loads custom logger from configuration.

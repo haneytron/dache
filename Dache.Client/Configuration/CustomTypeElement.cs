@@ -1,6 +1,6 @@
 ﻿using System.Configuration;
 
-namespace Dache.Client.Configuration
+namespace Dache.CacheHostService.Configuration
 {
     /// <summary>
     /// Provides a custom type element for configuration.

@@ -10,25 +10,6 @@ namespace Dache.Core.Performance
     public interface ICustomPerformanceCounterManager : IDisposable
     {
         /// <summary>
-        /// Attempts to get a performance counter by its name.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="performanceCounter">The performance counter.</param>
-        /// <returns>true if successful, false otherwise.</returns>
-        bool TryGetPerformanceCounter(string name, out PerformanceCounter performanceCounter);
-
-        /// <summary>
-        /// Gets all custom performance counters.
-        /// </summary>
-        /// <returns>The custom performance counters.</returns>
-        IEnumerable<PerformanceCounter> GetAll();
-
-        /// <summary>
-        /// Updates all performance counters.
-        /// </summary>
-        void UpdateAll();
-
-        /// <summary>
         /// The number of cached objects.
         /// </summary>
         PerformanceCounter NumberOfCachedObjects { get; }

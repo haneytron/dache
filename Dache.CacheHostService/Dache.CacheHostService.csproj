@@ -4,14 +4,13 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{1B9FCBF1-DFCA-4911-8A2D-345D45C77FE6}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{498965ED-D26A-4B01-8E89-79F4EBBE8033}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Dache.CacheHost</RootNamespace>
-    <AssemblyName>Dache.CacheHost</AssemblyName>
+    <RootNamespace>Dache.CacheHostService</RootNamespace>
+    <AssemblyName>Dache.CacheHostService</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -22,9 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <UseVSHostingProcess>true</UseVSHostingProcess>
-    <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>bin\Debug\Dache.CacheHost.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\Dache.CacheHostService.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -34,54 +31,54 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <UseVSHostingProcess>false</UseVSHostingProcess>
-    <Prefer32Bit>false</Prefer32Bit>
-    <DocumentationFile>bin\Release\Dache.CacheHost.xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
+    <DocumentationFile>bin\Release\Dache.CacheHostService.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="SharpMemoryCache">
-      <HintPath>..\packages\SharpMemoryCache.1.0.0\lib\SharpMemoryCache.dll</HintPath>
-    </Reference>
-    <Reference Include="SimplSockets, Version=1.1.2.34198, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\SimplSockets.1.1.2\lib\SimplSockets.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Net" />
-    <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
     <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CacheHostEngine.cs" />
-    <Compile Include="CacheHostRunner.cs" />
-    <Compile Include="Communication\CacheHostServer.cs" />
-    <Compile Include="IRunnable.cs" />
-    <Compile Include="Persistence\DiskDataPersister.cs" />
-    <Compile Include="Persistence\IDataPersister.cs" />
-    <Compile Include="Persistence\PersistedItem.cs" />
-    <Compile Include="Polling\CacheHostInformationPoller.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="..\SharedAssemblyInfo.cs">
-      <Link>Properties\SharedAssemblyInfo.cs</Link>
+    <Compile Include="..\dache.client\configuration\CustomTypeElement.cs">
+      <Link>Configuration\CustomTypeElement.cs</Link>
     </Compile>
-    <Compile Include="Routing\ITagRoutingTable.cs" />
-    <Compile Include="Routing\TagRoutingTable.cs" />
-    <Compile Include="Storage\GZipMemCache.cs" />
-    <Compile Include="Storage\IMemCache.cs" />
-    <Compile Include="Storage\MemCache.cs" />
+    <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
+    <Compile Include="Configuration\CustomLoggerLoader.cs" />
+    <Compile Include="Service.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="CustomInstaller.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Dache.CacheHost\Dache.CacheHost.csproj">
+      <Project>{1b9fcbf1-dfca-4911-8a2d-345d45c77fe6}</Project>
+      <Name>Dache.CacheHost</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Dache.Core\Dache.Core.csproj">
       <Project>{e304662c-ac30-4427-9ca0-f63297f37694}</Project>
       <Name>Dache.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="install.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="uninstall.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

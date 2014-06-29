@@ -9,7 +9,7 @@ namespace Dache.CacheHost.Polling
     /// <summary>
     /// Polls cache hosts for information.
     /// </summary>
-    public class CacheHostInformationPoller : IRunnable
+    internal class CacheHostInformationPoller : IRunnable
     {
         // The mem cache
         private readonly IMemCache _memCache = null;

@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents a runnable object.
     /// </summary>
-    public interface IRunnable
+    internal interface IRunnable
     {
         /// <summary>
         /// Starts running.

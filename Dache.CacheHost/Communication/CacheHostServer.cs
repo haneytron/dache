@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Caching;
 using Dache.CacheHost;
-using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
 using Dache.Core.Logging;
@@ -18,7 +17,7 @@ namespace Dache.Core.Communication
     /// <summary>
     /// The server for client to cache communication.
     /// </summary>
-    public class CacheHostServer : ICacheHostContract, IRunnable
+    internal class CacheHostServer : ICacheHostContract, IRunnable
     {
         // The mem cache
         private readonly IMemCache _memCache;
@@ -44,10 +43,11 @@ namespace Dache.Core.Communication
         /// </summary>
         /// <param name="memCache">The mem cache.</param>
         /// <param name="tagRoutingTable">The tag routing table.</param>
+        /// <param name="logger">The logger.</param>
         /// <param name="port">The port.</param>
         /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
-        public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, int port, int maximumConnections, int messageBufferSize)
+        public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, ILogger logger, int port, int maximumConnections, int messageBufferSize)
         {
             // Sanitize
             if (memCache == null)
@@ -57,6 +57,10 @@ namespace Dache.Core.Communication
             if (tagRoutingTable == null)
             {
                 throw new ArgumentNullException("tagRoutingTable");
+            }
+            if (logger == null)
+            {
+                throw new ArgumentNullException("logger");
             }
             if (port <= 0)
             {
@@ -75,6 +79,8 @@ namespace Dache.Core.Communication
             _memCache = memCache;
             // Set the tag routing table
             _tagRoutingTable = tagRoutingTable;
+            // Set the logger
+            _logger = logger;
 
             // Set maximum connections and message buffer size
             _maximumConnections = maximumConnections;
@@ -88,9 +94,6 @@ namespace Dache.Core.Communication
             // Define the server
             _server = SimplSocket.CreateServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
                 (sender, e) => { /* Ignore it, client's toast */ }, ReceiveMessage, messageBufferSize, maximumConnections, false);
-
-            // Load custom logging
-            _logger = CustomLoggerLoader.LoadLogger();
         }
 
         private void ReceiveMessage(object sender, MessageReceivedArgs e)

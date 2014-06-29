@@ -18,7 +18,6 @@ namespace Dache.Core.Performance
             // Create custom performance counters and counter category
             var counterCreationDataCollection = new CounterCreationDataCollection();
             counterCreationDataCollection.Add(new CounterCreationData("Number of Cached Objects", "The number of objects being stored in the cache", PerformanceCounterType.NumberOfItems64));
-            counterCreationDataCollection.Add(new CounterCreationData("Cache Expirations and Evictions per Second", "The number of objects that are expired and evicted from the cache per second", PerformanceCounterType.NumberOfItems64));
             counterCreationDataCollection.Add(new CounterCreationData("Cache Memory Usage %", "The percentage of memory used by the cache", PerformanceCounterType.RawFraction));
             counterCreationDataCollection.Add(new CounterCreationData("Cache Memory Usage Base %", "The base percentage of memory used by the cache", PerformanceCounterType.RawBase));
             counterCreationDataCollection.Add(new CounterCreationData("Cache Memory Usage MB", "The amount of memory used by the cache", PerformanceCounterType.NumberOfItems32));

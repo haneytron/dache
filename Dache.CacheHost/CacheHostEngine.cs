@@ -1,63 +1,91 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Dache.CacheHost.Polling;
+using Dache.CacheHost.Routing;
+using Dache.CacheHost.Storage;
+using Dache.Core.Communication;
+using Dache.Core.Logging;
+using Dache.Core.Performance;
 
 namespace Dache.CacheHost
 {
     /// <summary>
-    /// The engine which runs the cache host.
+    /// The cache host engine. Instantiate this to host an instance of the cache host within your own process.
     /// </summary>
-    public class CacheHostEngine : IRunnable
+    public class CacheHostEngine
     {
-        // The cache server
-        private readonly IRunnable _cacheServer = null;
-        // The cache host information poller
-        private readonly IRunnable _cacheHostInformationPoller = null;
+        // The cache host runner
+        private readonly IRunnable _cacheHostRunner = null;
 
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="cacheHostInformationPoller">The cache host information poller.</param>
-        /// <param name="cacheHostServer">The cache host server.</param>
-        public CacheHostEngine(IRunnable cacheHostInformationPoller, IRunnable cacheHostServer)
+        /// <param name="memCache">The mem cache to use.</param>
+        /// <param name="logger">The logger to use.</param>
+        /// <param name="port">The port to open.</param>
+        /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of physical memory.</param>
+        /// <param name="maximumConnections">The maximum number of simultaneous connections permitted to the cache host.</param>
+        /// <param name="messageBufferSize">The message buffer size.</param>
+        public CacheHostEngine(IMemCache memCache, ILogger logger, int port, int physicalMemoryLimitPercentage = 85, int maximumConnections = 20, int messageBufferSize = 1024)
         {
             // Sanitize
-            if (cacheHostInformationPoller == null)
+            if (memCache == null)
             {
-                throw new ArgumentNullException("cacheHostInformationPoller");
+                throw new ArgumentNullException("memCache");
             }
-            if (cacheHostServer == null)
+            if (logger == null)
             {
-                throw new ArgumentNullException("cacheHostServer");
+                throw new ArgumentNullException("logger");
+            }
+            if (port <= 0)
+            {
+                throw new ArgumentException("cannot be <= 0", "port");
+            }
+            if (physicalMemoryLimitPercentage < 5 || physicalMemoryLimitPercentage > 90)
+            {
+                throw new ArgumentException("must be >= 5 and <= 90", "physicalMemoryLimitPercentage");
+            }
+            if (maximumConnections <= 0)
+            {
+                throw new ArgumentException("cannot be <= 0", "maximumConnections");
+            }
+            if (messageBufferSize < 32 || messageBufferSize > 32768)
+            {
+                throw new ArgumentException("must be >= 32 and <= 32768", "messageBufferSize");
             }
 
-            // Set the cache host information poller
-            _cacheHostInformationPoller = cacheHostInformationPoller;
+            // Configure the custom performance counter manager
+            var customPerformanceCounterManager = new CustomPerformanceCounterManager(port, false);
 
-            // Initialize the serer
-            _cacheServer = cacheHostServer;
+            // Initialize the tag routing table
+            var tagRoutingTable = new TagRoutingTable();
+
+            // Initialize the cache host server
+            var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, logger, port, maximumConnections, messageBufferSize);
+
+            // Initialize the cache host information poller
+            var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, customPerformanceCounterManager, 1000);
+
+            // Instantiate the cache host runner
+            _cacheHostRunner = new CacheHostRunner(cacheHostInformationPoller, cacheHostServer);
         }
 
         /// <summary>
-        /// Starts the cache host engine.
+        /// Starts the cache host.
         /// </summary>
         public void Start()
         {
-            // Begin listening for requests
-            _cacheServer.Start();
-
-            // Start the cache host information poller
-            _cacheHostInformationPoller.Start();
+            _cacheHostRunner.Start();
         }
 
         /// <summary>
-        /// Stops the cache host engine.
+        /// Stops the cache host.
         /// </summary>
         public void Stop()
         {
-            // Stop listening for requests
-            _cacheServer.Stop();
-
-            // Stop the cache host information poller
-            _cacheHostInformationPoller.Stop();
+            _cacheHostRunner.Stop();
         }
     }
 }

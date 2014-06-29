@@ -11,17 +11,22 @@ namespace Dache.Core.Performance
     {
         // The performance counter category name
         private const string _performanceCounterCategoryName = "Dache";
-        // The performance counters
-        private readonly IDictionary<string, PerformanceCounter> _performanceCounters = new Dictionary<string, PerformanceCounter>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// The constructor. Initializes local performance counters.
         /// </summary>
-        /// <param name="performanceCounterInstanceName">The performance counter instance name.</param>
+        /// <param name="port">The port.</param>
         /// <param name="readOnly">Whether or not the performance counters are read-only.</param>
-        public CustomPerformanceCounterManager(string performanceCounterInstanceName, bool readOnly)
+        public CustomPerformanceCounterManager(int port, bool readOnly)
         {
             // Sanitize
+            if (port <= 0)
+            {
+                throw new ArgumentException("cannot be <= 0", "port");
+            }
+
+            string performanceCounterInstanceName = string.Format("port:{0}", port);
+
             if (string.IsNullOrWhiteSpace(performanceCounterInstanceName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "performanceCounterInstanceName");
@@ -29,35 +34,27 @@ namespace Dache.Core.Performance
 
             // Add the counters
             var performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Number of Cached Objects", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             NumberOfCachedObjects = performanceCounter;
 
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Total Requests per Second", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             TotalRequestsPerSecond = performanceCounter;
 
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Cache Memory Usage %", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             CacheMemoryUsagePercent = performanceCounter;
 
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Cache Memory Usage Base %", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             CacheMemoryUsageBasePercent = performanceCounter;
 
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Cache Memory Usage MB", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             CacheMemoryUsageMb = performanceCounter;
 
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Adds per Second", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             AddsPerSecond = performanceCounter;
 
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Gets per Second", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             GetsPerSecond = performanceCounter;
 
             performanceCounter = new PerformanceCounter(_performanceCounterCategoryName, "Removes per Second", performanceCounterInstanceName, readOnly);
-            _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
             RemovesPerSecond = performanceCounter;
         }
 
@@ -90,8 +87,6 @@ namespace Dache.Core.Performance
             // Add the counters
             foreach (var performanceCounter in performanceCounters)
             {
-                _performanceCounters.Add(performanceCounter.CounterName, performanceCounter);
-
                 if (string.Equals(performanceCounter.CounterName, "Number of Cached Objects", StringComparison.OrdinalIgnoreCase))
                 {
                     NumberOfCachedObjects = performanceCounter;
@@ -124,38 +119,11 @@ namespace Dache.Core.Performance
                 {
                     RemovesPerSecond = performanceCounter;
                 }
-            }
-        }
-
-        /// <summary>
-        /// Attempts to get a performance counter by its name.
-        /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="performanceCounter">The performance counter.</param>
-        /// <returns>true if successful, false otherwise.</returns>
-        public bool TryGetPerformanceCounter(string name, out PerformanceCounter performanceCounter)
-        {
-            return _performanceCounters.TryGetValue(name, out performanceCounter);
-        }
-
-        /// <summary>
-        /// Gets all custom performance counters.
-        /// </summary>
-        /// <returns>The custom performance counters.</returns>
-        public IEnumerable<PerformanceCounter> GetAll()
-        {
-            return _performanceCounters.Values;
-        }
-
-        /// <summary>
-        /// Updates all performance counters.
-        /// </summary>
-        public void UpdateAll()
-        {
-            foreach (var performanceCounter in _performanceCounters.Values)
-            {
-                // Do the update
-                performanceCounter.NextValue();
+                else
+                {
+                    // Dispose the ones we aren't using
+                    performanceCounter.Dispose();
+                }
             }
         }
 

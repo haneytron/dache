@@ -2,9 +2,8 @@
 using System.ComponentModel;
 using System.Configuration;
 using Dache.CacheHost.Storage;
-using Dache.Client.Configuration;
 
-namespace Dache.CacheHost.Configuration
+namespace Dache.CacheHostService.Configuration
 {
     /// <summary>
     /// An application configuration section that allows a user to specify cache host settings.
@@ -72,7 +71,7 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The cache memory limit, as a percentage of the total system memory. Valid range is 20 to 90.
+        /// The cache memory limit, as a percentage of the total system memory. Valid range is 5 to 90.
         /// </summary>
         [IntegerValidator(MinValue = 5, MaxValue = 90)]
         [ConfigurationProperty("cacheMemoryLimitPercentage", IsRequired = true, DefaultValue = 80)]

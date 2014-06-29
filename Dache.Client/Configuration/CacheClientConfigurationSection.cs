@@ -1,4 +1,5 @@
 ﻿using System.Configuration;
+using Dache.CacheHostService.Configuration;
 
 namespace Dache.Client.Configuration
 {

@@ -37,16 +37,11 @@ namespace Dache.CacheHost.Storage
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="cacheName">The name of the cache.</param>
         /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of the total system memory.</param>
         /// <param name="customPerformanceCounterManager">The custom performance counter manager.</param>
-        public MemCache(string cacheName, int physicalMemoryLimitPercentage, ICustomPerformanceCounterManager customPerformanceCounterManager)
+        public MemCache(int physicalMemoryLimitPercentage, ICustomPerformanceCounterManager customPerformanceCounterManager)
         {
             // Sanitize
-            if (string.IsNullOrWhiteSpace(cacheName))
-            {
-                throw new ArgumentNullException("cacheName");
-            }
             if (physicalMemoryLimitPercentage <= 0)
             {
                 throw new ArgumentException("cannot be <= 0", "physicalMemoryLimitPercentage");
@@ -56,7 +51,7 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("customPerformanceCounterManager");
             }
 
-            _cacheName = cacheName;
+            _cacheName = "Dache";
             _cacheConfig = new NameValueCollection();
             _cacheConfig.Add("pollingInterval", "00:00:05");
             _cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
