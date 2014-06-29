@@ -20,15 +20,15 @@ LICENSE INFORMATION
 Dache software is dual licensed. You must choose which license you 
 would like to use Dache under from the following 2 options:
 
-The GNU General Public License Version 3 available for review 
-at <http://www.gnu.org/copyleft/gpl.html> and also included below.
+The **GNU General Public License Version 3** available for review 
+at http://www.gnu.org/copyleft/gpl.html
 
 -or-
 
-The Commercial Dache License, which must be purchased directly 
+The **Commercial Dache License**, which must be purchased directly 
 from Imperative Bytes, LLC - the Limited Liability Company which 
 owns the Dache source code. You may purchase the Commercial Dache 
-License by contacting us at <mailto:info@getdache.net>.
+License by contacting us at [info@getdache.net](mailto:info@getdache.net).
 
 Please see `LICENSE.txt` for more information.
 
