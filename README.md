@@ -10,7 +10,7 @@ fast, scalable distributed caching with meaningful performance metrics for your 
 
 **EMAIL:** [info@getdache.net](mailto:info@getdache.net)
 
-**NUGET:** http://www.nuget.org/packages/Dache.Client and http://www.nuget.org/packages/Dache.CacheHost
+**NUGET:** [Dache.Client](http://www.nuget.org/packages/Dache.Client) and [Dache.CacheHost](http://www.nuget.org/packages/Dache.CacheHost)
 
 
 LICENSE INFORMATION
@@ -147,11 +147,3 @@ Board
 
 
 Not yet completed. Feel free to contribute! :)
-
-
-Individual Contributor License
---------
-
-
-If you'd like to contribute code to Dache, you must complete the **Dache Individual Contributor License Agreement** available in the `LICENSE.txt` file of the 
-Dache source code.
