@@ -110,7 +110,7 @@ Host
 
 The host is the actual process that does the caching work. You have 2 options for hosting Dache. 
 You can either use the Windows service provided with the code, or you can include `Dache.CacheHost.dll` 
-in your code (([NuGet](http://www.nuget.org/packages/Dache.CacheHost)) and host it in your own process 
+in your code ([NuGet](http://www.nuget.org/packages/Dache.CacheHost)) and host it in your own process 
 (such as an Azure worker role). The choice is yours!
 
 To host it yourself, instantiate a `Dache.CacheHost.CacheHostEngine` with your desired mem cache 
