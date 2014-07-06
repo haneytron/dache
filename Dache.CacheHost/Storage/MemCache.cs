@@ -326,7 +326,7 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
-        /// Clears the cache
+        /// Clears the cache.
         /// </summary>
         public void Clear()
         {
@@ -344,7 +344,8 @@ namespace Dache.CacheHost.Storage
         }
 
         /// <summary>
-        /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
+        /// Gets all the keys in the cache.
+        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
         public IList<string> Keys(string pattern)

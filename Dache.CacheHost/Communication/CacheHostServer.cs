@@ -681,7 +681,7 @@ namespace Dache.Core.Communication
         /// Gets all cache keys, optionally matching the provided pattern.
         /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
-        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
         /// <returns>The list of cache keys matching the provided pattern.</returns>
         public List<byte[]> GetCacheKeys(string pattern = "*")
         {
