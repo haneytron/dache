@@ -22,18 +22,11 @@ namespace Dache.CacheHost.Routing
         void Remove(string cacheKey);
 
         /// <summary>
-        /// Gets the tagged cache keys for a given tag.
-        /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <returns>The tagged cache keys, or null if none were found.</returns>
-        IList<string> GetTaggedCacheKeys(string tagName);
-
-        /// <summary>
         /// Gets the tagged cache keys for a given tag and matching the given search pattern.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">The search pattern. If no pattern is provided, default '*' (all) is used.</param>
+        /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
         /// <returns>The tagged cache keys, or null if none were found.</returns>
-        IList<string> GetTaggedCacheKeys(string tagName, string pattern);
+        IList<string> GetTaggedCacheKeys(string tagName, string pattern = "*");
     }
 }

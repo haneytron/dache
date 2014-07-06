@@ -346,9 +346,22 @@ namespace Dache.CacheHost.Storage
         /// <summary>
         /// Gets all the keys in the cache. WARNING: this is likely a very expensive operation for large caches. 
         /// </summary>
+        /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
         public IList<string> Keys(string pattern)
         {
-            Regex regex = pattern == "*" ? null : new Regex(pattern, RegexOptions.IgnoreCase);
+            Regex regex = null;
+            // Check if we have a pattern
+            if (!string.IsNullOrWhiteSpace(pattern) && pattern != "*")
+            {
+                try
+                {
+                    regex = new Regex(pattern, RegexOptions.IgnoreCase);
+                }
+                catch (ArgumentException)
+                {
+                    return null;
+                }
+            }
 
             _memoryCacheLock.EnterWriteLock();
             try

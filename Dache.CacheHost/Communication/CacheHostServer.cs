@@ -483,18 +483,7 @@ namespace Dache.Core.Communication
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
         {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-
-            // Iterate all cache keys and associated serialized objects
-            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-            {
-                // Place object in cache
-                _memCache.Add(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, _defaultCacheItemPolicy);
-            }
+            AddOrUpdate(cacheKeysAndSerializedObjects, null, _defaultCacheItemPolicy);
         }
 
         /// <summary>
@@ -504,24 +493,7 @@ namespace Dache.Core.Communication
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, DateTimeOffset absoluteExpiration)
         {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-
-            // Define the cache item policy
-            var cacheItemPolicy = new CacheItemPolicy
-            {
-                AbsoluteExpiration = absoluteExpiration
-            };
-
-            // Iterate all cache keys and associated serialized objects
-            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-            {
-                // Place object in cache
-                _memCache.Add(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, cacheItemPolicy);
-            }
+            AddOrUpdate(cacheKeysAndSerializedObjects, null, new CacheItemPolicy { AbsoluteExpiration = absoluteExpiration });
         }
 
         /// <summary>
@@ -531,24 +503,7 @@ namespace Dache.Core.Communication
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, TimeSpan slidingExpiration)
         {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-
-            // Define the cache item policy
-            var cacheItemPolicy = new CacheItemPolicy
-            {
-                SlidingExpiration = slidingExpiration
-            };
-
-            // Iterate all cache keys and associated serialized objects
-            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-            {
-                // Place object in cache
-                _memCache.Add(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, cacheItemPolicy);
-            }
+            AddOrUpdate(cacheKeysAndSerializedObjects, null, new CacheItemPolicy { SlidingExpiration = slidingExpiration });
         }
 
         /// <summary>
@@ -580,26 +535,7 @@ namespace Dache.Core.Communication
         /// <param name="tagName">The tag name.</param>
         public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
         {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-
-            AddOrUpdate(cacheKeysAndSerializedObjects);
-
-            // If a tag name was not sent, ignore it
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                return;
-            }
-
-            // Iterate all cache keys and associated serialized objects
-            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-            {
-                // Add to the local tag routing table
-                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
-            }
+            AddOrUpdate(cacheKeysAndSerializedObjects, tagName, _defaultCacheItemPolicy);
         }
 
         /// <summary>
@@ -610,26 +546,7 @@ namespace Dache.Core.Communication
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, DateTimeOffset absoluteExpiration)
         {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            
-            AddOrUpdate(cacheKeysAndSerializedObjects, absoluteExpiration);
-
-            // If a tag name was not sent, ignore it
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                return;
-            }
-
-            // Iterate all cache keys and associated serialized objects
-            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-            {
-                // Add to the local tag routing table
-                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
-            }
+            AddOrUpdate(cacheKeysAndSerializedObjects, tagName, new CacheItemPolicy { AbsoluteExpiration = absoluteExpiration });
         }
 
         /// <summary>
@@ -640,26 +557,7 @@ namespace Dache.Core.Communication
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, TimeSpan slidingExpiration)
         {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-
-            AddOrUpdate(cacheKeysAndSerializedObjects, slidingExpiration);
-
-            // If a tag name was not sent, ignore it
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                return;
-            }
-
-            // Iterate all cache keys and associated serialized objects
-            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-            {
-                // Add to the local tag routing table
-                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
-            }
+            AddOrUpdate(cacheKeysAndSerializedObjects, tagName, new CacheItemPolicy { SlidingExpiration = slidingExpiration });
         }
 
         /// <summary>
@@ -700,6 +598,35 @@ namespace Dache.Core.Communication
             }
         }
 
+        private void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, CacheItemPolicy cacheItemPolicy)
+        {
+            // Sanitize
+            if (cacheKeysAndSerializedObjects == null)
+            {
+                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
+            }
+            if (cacheItemPolicy == null)
+            {
+                throw new ArgumentNullException("cacheItemPolicy");
+            }
+
+            // Iterate all cache keys and associated serialized objects
+            foreach (var cacheKeysAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+            {
+                // Place object in cache
+                _memCache.Add(cacheKeysAndSerializedObjectKvp.Key, cacheKeysAndSerializedObjectKvp.Value, cacheItemPolicy);
+
+                // Check if adding tag
+                if (string.IsNullOrWhiteSpace(tagName))
+                {
+                    continue;
+                }
+
+                // Add to the local tag routing table
+                _tagRoutingTable.AddOrUpdate(cacheKeysAndSerializedObjectKvp.Key, tagName);
+            }
+        }
+
         /// <summary>
         /// Removes the serialized objects at the given cache keys from the cache.
         /// </summary>
@@ -724,7 +651,7 @@ namespace Dache.Core.Communication
         /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="tagNames">The tag names.</param>
-        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
+        /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
         public void RemoveTagged(IEnumerable<string> tagNames, string pattern = "*")
         {
             // Sanitize

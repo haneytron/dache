@@ -90,32 +90,17 @@ namespace Dache.CacheHost.Routing
         }
 
         /// <summary>
-        /// Gets the tagged cache keys for a given tag.
-        /// </summary>
-        /// <param name="tagName">The tag name.</param>
-        /// <returns>The tagged cache keys, or null if none were found.</returns>
-        public IList<string> GetTaggedCacheKeys(string tagName)
-        {
-            return GetTaggedCacheKeys(tagName, "*");
-        }
-
-        /// <summary>
         /// Gets the tagged cache keys for a given tag and matching the given search pattern.
         /// </summary>
         /// <param name="tagName">The tag name.</param>
-        /// <param name="pattern">The search pattern. If no pattern is provided, default '*' (all) is used.</param>
+        /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
         /// <returns>The tagged cache keys, or null if none were found.</returns>
-        public IList<string> GetTaggedCacheKeys(string tagName, string pattern)
+        public IList<string> GetTaggedCacheKeys(string tagName, string pattern = "*")
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            if (string.IsNullOrWhiteSpace(pattern))
-            {
-                pattern = "*";
             }
 
             _lock.EnterReadLock();
@@ -128,15 +113,24 @@ namespace Dache.CacheHost.Routing
                     return null;
                 }
 
-                if (pattern == "*")
+                if (string.IsNullOrWhiteSpace(pattern) || pattern == "*")
                 {
                     return new List<string>(cacheKeys);
                 }
 
-                var r = new Regex(pattern, RegexOptions.IgnoreCase);
+                Regex regex = null;
+                try
+                {
+                    regex = new Regex(pattern, RegexOptions.IgnoreCase);
+                }
+                catch (ArgumentException)
+                {
+                    return null;
+                }
+
                 // Return a copy of the cache keys
-                return cacheKeys.Where(k => r.IsMatch(k)).ToList();
-            }// no catch block?
+                return cacheKeys.Where(k => regex.IsMatch(k)).ToList();
+            }
             finally
             {
                 _lock.ExitReadLock();
