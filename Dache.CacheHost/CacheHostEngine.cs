@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Dache.CacheHost.Polling;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
 using Dache.Core.Communication;
@@ -56,20 +55,14 @@ namespace Dache.CacheHost
                 throw new ArgumentException("must be >= 32 and <= 32768", "messageBufferSize");
             }
 
-            // Configure the custom performance counter manager
-            var customPerformanceCounterManager = new CustomPerformanceCounterManager(port, false);
-
             // Initialize the tag routing table
             var tagRoutingTable = new TagRoutingTable();
 
             // Initialize the cache host server
             var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, logger, port, maximumConnections, messageBufferSize);
 
-            // Initialize the cache host information poller
-            var cacheHostInformationPoller = new CacheHostInformationPoller(memCache, customPerformanceCounterManager, 1000);
-
             // Instantiate the cache host runner
-            _cacheHostRunner = new CacheHostRunner(cacheHostInformationPoller, cacheHostServer);
+            _cacheHostRunner = new CacheHostRunner(cacheHostServer);
         }
 
         /// <summary>

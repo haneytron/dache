@@ -36,7 +36,7 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The local cache memory limit, as a percentage of the total system memory. Valid range is 20 to 90.
+        /// The local cache memory limit, as a percentage of the total system memory. Valid range is 5 to 90.
         /// </summary>
         [IntegerValidator(MinValue = 5, MaxValue = 90)]
         [ConfigurationProperty("localCacheMemoryLimitPercentage", IsRequired = true, DefaultValue = 80)]

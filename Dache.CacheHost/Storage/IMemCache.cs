@@ -59,6 +59,6 @@ namespace Dache.CacheHost.Storage
         /// <summary>
         /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
         /// </summary>
-        long MemoryLimit { get; }
+        int MemoryLimit { get; }
     }
 }

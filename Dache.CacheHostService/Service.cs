@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ServiceProcess;
 using System.Threading;
-using Dache.CacheHost.Polling;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
 using Dache.CacheHostService.Configuration;
@@ -68,12 +67,12 @@ namespace Dache.CacheHost
                 var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
                 var maximumConnections = CacheHostConfigurationSection.Settings.MaximumConnections;
 
-                // Configure the custom performance counter manager
-                var customPerformanceCounterManager = new CustomPerformanceCounterManager(port, false);
+                // Configure the performance counter data manager
+                var performanceDataManager = new PerformanceCounterPerformanceDataManager(port);
                 
                 // Determine the MemCache to use
                 IMemCache memCache;
-                var memoryCache = new MemCache(physicalMemoryLimitPercentage, customPerformanceCounterManager);
+                var memoryCache = new MemCache(physicalMemoryLimitPercentage, performanceDataManager);
 
                 if (CacheHostConfigurationSection.Settings.StorageProvider == typeof(GZipMemCache))
                 {

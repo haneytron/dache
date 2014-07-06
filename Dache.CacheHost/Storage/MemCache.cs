@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
@@ -19,8 +20,8 @@ namespace Dache.CacheHost.Storage
         private MemoryCache _memoryCache = null;
         // The memory cache lock
         private readonly ReaderWriterLockSlim _memoryCacheLock = new ReaderWriterLockSlim();
-        // The custom performance counter manager
-        private readonly ICustomPerformanceCounterManager _customPerformanceCounterManager = null;
+        // The performance data manager
+        private readonly PerformanceDataManager _performanceDataManager = null;
         // The dictionary that serves as an intern set, with the key being the cache key and the value being a hash code to a potentially shared object
         private readonly IDictionary<string, string> _internDictionary = null;
         // The dictionary that serves as an intern reference count, with the key being the hash code and the value being the number of references to the object
@@ -33,22 +34,26 @@ namespace Dache.CacheHost.Storage
         private readonly string _cacheName;
         // The cache configuration
         private readonly NameValueCollection _cacheConfig;
+        // The performance counter for the current memory of the process
+        private readonly PerformanceCounter _currentMemoryPerformanceCounter = new PerformanceCounter("Process", "Private Bytes", Process.GetCurrentProcess().ProcessName, true);
+        // The per second timer
+        private readonly Timer _perSecondTimer = null;
 
         /// <summary>
         /// The constructor.
         /// </summary>
         /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of the total system memory.</param>
-        /// <param name="customPerformanceCounterManager">The custom performance counter manager.</param>
-        public MemCache(int physicalMemoryLimitPercentage, ICustomPerformanceCounterManager customPerformanceCounterManager)
+        /// <param name="performanceDataManager">The performance data manager.</param>
+        public MemCache(int physicalMemoryLimitPercentage, PerformanceDataManager performanceDataManager)
         {
             // Sanitize
             if (physicalMemoryLimitPercentage <= 0)
             {
                 throw new ArgumentException("cannot be <= 0", "physicalMemoryLimitPercentage");
             }
-            if (customPerformanceCounterManager == null)
+            if (performanceDataManager == null)
             {
-                throw new ArgumentNullException("customPerformanceCounterManager");
+                throw new ArgumentNullException("performanceDataManager");
             }
 
             _cacheName = "Dache";
@@ -61,7 +66,10 @@ namespace Dache.CacheHost.Storage
             _internDictionary = new Dictionary<string, string>(100);
             _internReferenceDictionary = new Dictionary<string, int>(100);
 
-            _customPerformanceCounterManager = customPerformanceCounterManager;
+            _performanceDataManager = performanceDataManager;
+
+            // Configure per second timer to fire every 1000 ms starting 1000ms from now
+            _perSecondTimer = new Timer(PerSecondOperations, null, 1000, 1000);
         }
 
         /// <summary>
@@ -98,10 +106,8 @@ namespace Dache.CacheHost.Storage
                 _memoryCacheLock.ExitReadLock();
             }
 
-            // Increment the Add counter
-            _customPerformanceCounterManager.AddsPerSecond.RawValue++;
-            // Increment the Total counter
-            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
+            // Increment the Adds
+            _performanceDataManager.IncrementAddsPerSecond();
         }
 
         /// <summary>
@@ -180,10 +186,8 @@ namespace Dache.CacheHost.Storage
                 }
             }
 
-            // Increment the Add counter
-            _customPerformanceCounterManager.AddsPerSecond.RawValue++;
-            // Increment the Total counter
-            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
+            // Increment the Adds
+            _performanceDataManager.IncrementAddsPerSecond();
         }
 
         /// <summary>
@@ -199,11 +203,8 @@ namespace Dache.CacheHost.Storage
                 return null;
             }
 
-            // Increment the Get counter
-            _customPerformanceCounterManager.GetsPerSecond.RawValue++;
-            // Increment the Total counter
-            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
-
+            // Increment the Gets
+            _performanceDataManager.IncrementGetsPerSecond();
 
             // Check for interned
             string hashKey = null;
@@ -253,10 +254,8 @@ namespace Dache.CacheHost.Storage
                 return null;
             }
 
-            // Increment the Remove counter
-            _customPerformanceCounterManager.RemovesPerSecond.RawValue++;
-            // Increment the Total counter
-            _customPerformanceCounterManager.TotalRequestsPerSecond.RawValue++;
+            // Increment the Removes
+            _performanceDataManager.IncrementRemovesPerSecond();
 
             string hashKey = null;
             int referenceCount = 0;
@@ -378,11 +377,11 @@ namespace Dache.CacheHost.Storage
         /// <summary>
         /// Gets the amount of memory on the computer, in megabytes, that can be used by the cache.
         /// </summary>
-        public long MemoryLimit
+        public int MemoryLimit
         {
             get
             {
-                return _memoryCache.CacheMemoryLimit;
+                return (int)(((double)_memoryCache.PhysicalMemoryLimit / 100) * _memoryCache.CacheMemoryLimit) / 1048576; // bytes / (1024 * 1024) for MB;
             }
         }
 
@@ -391,7 +390,27 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         public void Dispose()
         {
+            _currentMemoryPerformanceCounter.Dispose();
             _memoryCache.Dispose();
+        }
+
+        /// <summary>
+        /// Performs per second operations.
+        /// </summary>
+        /// <param name="state">The state. Ignored but required for timer callback methods. Pass null.</param>
+        private void PerSecondOperations(object state)
+        {
+            // Lock to ensure atomicity (no overlap)
+            lock (_perSecondTimer)
+            {
+                // Update performance data
+                _performanceDataManager.NumberOfCachedObjects = Count;
+                var usedMemoryMb = (int)(_currentMemoryPerformanceCounter.RawValue / 1048576); // bytes / (1024 * 1024) for MB
+
+                _performanceDataManager.CacheMemoryUsageMb = usedMemoryMb;
+                _performanceDataManager.CacheMemoryUsageLimitMb = MemoryLimit;
+                _performanceDataManager.CacheMemoryUsagePercent = (int)(usedMemoryMb * 100 / MemoryLimit);
+            }
         }
 
         /// <summary>
