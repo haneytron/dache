@@ -42,6 +42,7 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="SharpMemoryCache">
       <HintPath>..\packages\SharpMemoryCache.1.0.0\lib\SharpMemoryCache.dll</HintPath>
     </Reference>

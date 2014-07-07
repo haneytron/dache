@@ -7,6 +7,7 @@ using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Dache.Core.Performance;
+using Microsoft.VisualBasic.Devices;
 using SharpMemoryCache;
 
 namespace Dache.CacheHost.Storage
@@ -56,10 +57,12 @@ namespace Dache.CacheHost.Storage
                 throw new ArgumentNullException("performanceDataManager");
             }
 
+            var cacheMemoryLimitMegabytes = (int)(((double)physicalMemoryLimitPercentage / 100) * (new ComputerInfo().TotalPhysicalMemory / 1048576)); // bytes / (1024 * 1024) for MB;
+
             _cacheName = "Dache";
             _cacheConfig = new NameValueCollection();
             _cacheConfig.Add("pollingInterval", "00:00:05");
-            _cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
+            _cacheConfig.Add("cacheMemoryLimitMegabytes", cacheMemoryLimitMegabytes.ToString());
             _cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString());
 
             _memoryCache = new TrimmingMemoryCache(_cacheName, _cacheConfig);
@@ -395,7 +398,7 @@ namespace Dache.CacheHost.Storage
         {
             get
             {
-                return (int)(((double)_memoryCache.PhysicalMemoryLimit / 100) * _memoryCache.CacheMemoryLimit) / 1048576; // bytes / (1024 * 1024) for MB;
+                return (int)(_memoryCache.CacheMemoryLimit / 1048576); // bytes / (1024 * 1024) for MB
             }
         }
 
