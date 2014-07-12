@@ -130,7 +130,7 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                if (!cacheClient.TryGetLocal("test" + i, out value))
+                if (!cacheClient.TryGet("test" + i, out value, true))
                 {
                     Console.WriteLine("Get failed for cache key: " + "test" + i);
                 }
@@ -144,7 +144,7 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                if (!cacheClient.TryGetLocal("test" + i, out value))
+                if (!cacheClient.TryGet("test" + i, out value, true))
                 {
                     Console.WriteLine("Get failed for cache key: " + "test" + i);
                 }
@@ -236,7 +236,7 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                cacheClient.TryGetLocal("testabsolutecomplex" + i, out myObject);
+                cacheClient.TryGet("testabsolutecomplex" + i, out myObject, true);
             }
             stopwatch.Stop();
 
@@ -247,7 +247,7 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                cacheClient.TryGetLocal("testabsolutecomplex" + i, out myObject);
+                cacheClient.TryGet("testabsolutecomplex" + i, out myObject, true);
             }
             stopwatch.Stop();
 

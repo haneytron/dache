@@ -23,8 +23,8 @@ namespace Dache.Core.Communication
         private readonly IMemCache _memCache;
         // The tag routing table
         private readonly ITagRoutingTable _tagRoutingTable;
-        // The cache server
-        private readonly ISimplSocketServer _server;
+        // The cache server socket
+        private readonly ISimplSocket _server;
         // The local end point
         private readonly IPEndPoint _localEndPoint;
         // The maximum number of simultaneous connections
@@ -33,7 +33,7 @@ namespace Dache.Core.Communication
         private readonly int _messageBufferSize = 0; //not in use
 
         // The default cache item policy
-        private static readonly CacheItemPolicy _defaultCacheItemPolicy = new CacheItemPolicy();
+        private readonly CacheItemPolicy _defaultCacheItemPolicy = null;
 
         // The logger
         private readonly ILogger _logger;
@@ -75,6 +75,9 @@ namespace Dache.Core.Communication
                 throw new ArgumentException("cannot be < 256", "messageBufferSize");
             }
 
+            // Set the default cache item policy
+            _defaultCacheItemPolicy = new CacheItemPolicy { RemovedCallback = CacheItemRemoved };
+
             // Set the mem cache
             _memCache = memCache;
             // Set the tag routing table
@@ -92,8 +95,10 @@ namespace Dache.Core.Communication
             _localEndPoint = new IPEndPoint(IPAddress.Any, port);
 
             // Define the server
-            _server = SimplSocket.CreateServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
-                (sender, e) => { /* Ignore it, client's toast */ }, ReceiveMessage, messageBufferSize, maximumConnections, false);
+            _server = new SimplSocket(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
+
+            // Hook into received message event
+            _server.MessageReceived += ReceiveMessage;
         }
 
         private void ReceiveMessage(object sender, MessageReceivedArgs e)
@@ -382,6 +387,24 @@ namespace Dache.Core.Communication
             return cacheKeysAndObjects;
         }
 
+        private void CacheItemRemoved(CacheEntryRemovedArguments args)
+        {
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.WriteControlBytePlaceHolder();
+                memoryStream.Write("expire");
+                memoryStream.WriteSpace();
+                memoryStream.Write(args.CacheItem.Key);
+                command = memoryStream.ToArray();
+            }
+
+            // Set control byte
+            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
+            // Notify all clients
+            _server.Send(command);
+        }
+
         /// <summary>
         /// Starts the cache server.
         /// </summary>
@@ -493,7 +516,7 @@ namespace Dache.Core.Communication
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, DateTimeOffset absoluteExpiration)
         {
-            AddOrUpdate(cacheKeysAndSerializedObjects, null, new CacheItemPolicy { AbsoluteExpiration = absoluteExpiration });
+            AddOrUpdate(cacheKeysAndSerializedObjects, null, new CacheItemPolicy { AbsoluteExpiration = absoluteExpiration, RemovedCallback = CacheItemRemoved });
         }
 
         /// <summary>
@@ -503,7 +526,7 @@ namespace Dache.Core.Communication
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, TimeSpan slidingExpiration)
         {
-            AddOrUpdate(cacheKeysAndSerializedObjects, null, new CacheItemPolicy { SlidingExpiration = slidingExpiration });
+            AddOrUpdate(cacheKeysAndSerializedObjects, null, new CacheItemPolicy { SlidingExpiration = slidingExpiration, RemovedCallback = CacheItemRemoved });
         }
 
         /// <summary>
@@ -546,7 +569,7 @@ namespace Dache.Core.Communication
         /// <param name="absoluteExpiration">The absolute expiration.</param>
         public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, DateTimeOffset absoluteExpiration)
         {
-            AddOrUpdate(cacheKeysAndSerializedObjects, tagName, new CacheItemPolicy { AbsoluteExpiration = absoluteExpiration });
+            AddOrUpdate(cacheKeysAndSerializedObjects, tagName, new CacheItemPolicy { AbsoluteExpiration = absoluteExpiration, RemovedCallback = CacheItemRemoved });
         }
 
         /// <summary>
@@ -557,7 +580,7 @@ namespace Dache.Core.Communication
         /// <param name="slidingExpiration">The sliding expiration.</param>
         public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, TimeSpan slidingExpiration)
         {
-            AddOrUpdate(cacheKeysAndSerializedObjects, tagName, new CacheItemPolicy { SlidingExpiration = slidingExpiration });
+            AddOrUpdate(cacheKeysAndSerializedObjects, tagName, new CacheItemPolicy { SlidingExpiration = slidingExpiration, RemovedCallback = CacheItemRemoved });
         }
 
         /// <summary>

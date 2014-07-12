@@ -9,57 +9,38 @@ namespace Dache.Client
     public interface ICacheClient
     {
         /// <summary>
-        /// Gets the object stored at the given cache key from the cache.
+        /// Gets the object stored at the given cache key from the cache. If cacheLocally is set to true, 
+        /// this will first look in the local cache. If the key is not found in the local cache, the object 
+        /// is retrieved remotely and cached locally for subsequent local lookups.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKey">The cache key.</param>
         /// <param name="value">The value or default for that type if the method returns false.</param>
+        /// <param name="cacheLocally">Whether or not to look for and cache the result locally.</param>
         /// <returns>true if successful, false otherwise.</returns>
-        bool TryGet<T>(string cacheKey, out T value);
+        bool TryGet<T>(string cacheKey, out T value, bool cacheLocally = false);
 
         /// <summary>
-        /// Gets the object stored at the given cache key from the local cache. If it is not found in the local 
-        /// cache, the object is retrieved remotely and cached locally for subsequent local lookups.
-        /// </summary>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="value">The value or default for that type if the method returns false.</param>
-        /// <returns>true if successful, false otherwise.</returns>
-        bool TryGetLocal<T>(string cacheKey, out T value);
-
-        /// <summary>
-        /// Gets the objects stored at the given cache keys from the cache.
+        /// Gets the objects stored at the given cache keys from the cache. If cacheLocally is set to true, 
+        /// this will first look in the local cache. If the keys are not found in the local cache, the objects 
+        /// are retrieved remotely and cached locally for subsequent local lookups.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKeys">The cache keys.</param>
+        /// <param name="cacheLocally">Whether or not to look for and cache the result locally.</param>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        List<T> Get<T>(IEnumerable<string> cacheKeys);
+        List<T> Get<T>(IEnumerable<string> cacheKeys, bool cacheLocally = false);
 
         /// <summary>
-        /// Gets the objects stored at the given cache keys from the local cache. If they are not found in the local 
-        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
-        /// </summary>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <param name="cacheKeys">The cache keys.</param>
-        /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        List<T> GetLocal<T>(IEnumerable<string> cacheKeys);
-
-        /// <summary>
-        /// Gets the objects stored at the given tag name from the cache.
+        /// Gets the objects stored at the given tag name from the cache. If cacheLocally is set to true, 
+        /// this will first look in the local cache. If the tagged objects are not found in the local cache, 
+        /// the objects are retrieved remotely and cached locally for subsequent local lookups.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="tagName">The tag name.</param>
+        /// <param name="cacheLocally">Whether or not to look for and cache the result locally.</param>
         /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
-        List<T> GetTagged<T>(string tagName);
-
-        /// <summary>
-        /// Gets the objects stored at the given tag name from the local cache. If they are not found in the local 
-        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
-        /// </summary>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <param name="tagName">The tag name.</param>
-        /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
-        List<T> GetTaggedLocal<T>(string tagName);
+        List<T> GetTagged<T>(string tagName, bool cacheLocally = false);
 
         /// <summary>
         /// Adds or updates an object in the cache at the given cache key.
@@ -257,5 +238,10 @@ namespace Dache.Client
         /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
         /// </summary>
         event EventHandler HostReconnected;
+
+        /// <summary>
+        /// Event that fires when a cached item has expired out of the cache.
+        /// </summary>
+        event EventHandler<CacheItemExpiredArgs> CacheItemExpired;
     }
 }

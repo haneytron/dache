@@ -16,7 +16,7 @@ namespace Dache.Client
     internal class CommunicationClient : ICacheHostContract
     {
         // The client socket
-        private ISimplSocketClient _client = null;
+        private ISimplSocket _client = null;
 
         // The remote endpoint
         private readonly IPEndPoint _remoteEndPoint = null;
@@ -63,8 +63,18 @@ namespace Dache.Client
             }
 
             // Define the client
-            _client = SimplSocket.CreateClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp),
-                (sender, e) => { DisconnectFromServer(); }, messageBufferSize, maximumConnections, false);
+            _client = new SimplSocket(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
+
+            // Wire into events
+            _client.MessageReceived += (sender, e) =>
+            {
+                var messageReceived = MessageReceived;
+                if (messageReceived != null)
+                {
+                    messageReceived(sender, e);
+                }
+            };
+            _client.Error += (sender, e) => { DisconnectFromServer(); };
 
             // Establish the remote endpoint for the socket
             IPAddress ipAddress = null;
@@ -747,6 +757,11 @@ namespace Dache.Client
         /// Event that fires when the cache client is successfully reconnected to a disconnected cache host.
         /// </summary>
         public event EventHandler Reconnected;
+
+        /// <summary>
+        /// An event that is fired whenever a message is received from the cache host.
+        /// </summary>
+        public event EventHandler<MessageReceivedArgs> MessageReceived;
 
         /// <summary>
         /// Makes the client enter the disconnected state.

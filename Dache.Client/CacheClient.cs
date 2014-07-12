@@ -13,6 +13,7 @@ using Dache.Client.Serialization;
 using Dache.Core.Communication;
 using Dache.Core.Logging;
 using SharpMemoryCache;
+using SimplSockets;
 
 namespace Dache.Client
 {
@@ -84,6 +85,9 @@ namespace Dache.Client
                 clientContainer.Disconnected += OnClientDisconnected;
                 clientContainer.Reconnected += OnClientReconnected;
 
+                // Hook up the message receive event
+                clientContainer.MessageReceived += ReceiveMessage;
+
                 // Attempt to connect
                 if (!clientContainer.Connect())
                 {
@@ -103,13 +107,16 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets the object stored at the given cache key from the cache.
+        /// Gets the object stored at the given cache key from the cache. If cacheLocally is set to true, 
+        /// this will first look in the local cache. If the key is not found in the local cache, the object 
+        /// is retrieved remotely and cached locally for subsequent local lookups.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKey">The cache key.</param>
         /// <param name="value">The value or default for that type if the method returns false.</param>
+        /// <param name="cacheLocally">Whether or not to look for and cache the result locally.</param>
         /// <returns>true if successful, false otherwise.</returns>
-        public bool TryGet<T>(string cacheKey, out T value)
+        public bool TryGet<T>(string cacheKey, out T value, bool cacheLocally = false)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(cacheKey))
@@ -117,6 +124,22 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
 
+            string localCacheKey = null;
+
+            if (cacheLocally)
+            {
+                localCacheKey = "cachekey:" + cacheKey;
+
+                // Try and get from local cache
+                object result = _localCache.Get(localCacheKey);
+                if (result != null)
+                {
+                    value = (T)result;
+                    return true;
+                }
+            }
+
+            // Do remote work
             List<byte[]> rawValues = null;
 
             do
@@ -145,6 +168,13 @@ namespace Dache.Client
             try
             {
                 value = (T)_binarySerializer.Deserialize(rawValues[0]);
+
+                if (cacheLocally)
+                {
+                    // Cache locally
+                    _localCache.Add(localCacheKey, value, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
+                }
+
                 return true;
             }
             catch
@@ -158,43 +188,15 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets the object stored at the given cache key from the local cache. If it is not found in the local 
-        /// cache, the object is retrieved remotely and cached locally for subsequent local lookups.
-        /// </summary>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <param name="cacheKey">The cache key.</param>
-        /// <param name="value">The value or default for that type if the method returns false.</param>
-        /// <returns>true if successful, false otherwise.</returns>
-        public bool TryGetLocal<T>(string cacheKey, out T value)
-        {
-            var localCacheKey = "cachekey:" + cacheKey;
-
-            // Try and get from local cache
-            object result = _localCache.Get(localCacheKey);
-            if (result != null)
-            {
-                value = (T)result;
-                return true;
-            }
-
-            // Call usual TryGet
-            bool boolResult = TryGet(cacheKey, out value);
-            if (boolResult)
-            {
-                // Cache locally
-                _localCache.Add(localCacheKey, value, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
-            }
-
-            return boolResult;
-        }
-
-        /// <summary>
-        /// Gets the objects stored at the given cache keys from the cache.
+        /// Gets the objects stored at the given cache keys from the cache. If cacheLocally is set to true, 
+        /// this will first look in the local cache. If the keys are not found in the local cache, the objects 
+        /// are retrieved remotely and cached locally for subsequent local lookups.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKeys">The cache keys.</param>
+        /// <param name="cacheLocally">Whether or not to look for and cache the result locally.</param>
         /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        public List<T> Get<T>(IEnumerable<string> cacheKeys)
+        public List<T> Get<T>(IEnumerable<string> cacheKeys, bool cacheLocally = false)
         {
             // Sanitize
             if (cacheKeys == null)
@@ -206,6 +208,27 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeys");
             }
 
+            string orderIndependentCacheKey = null;
+
+            if (cacheLocally)
+            {
+                // Create a cache key that is a unique order-independent hash code of all cache keys
+                var hash = 0;
+                foreach (var cacheKey in cacheKeys)
+                {
+                    hash ^= cacheKey.GetHashCode();
+                }
+                orderIndependentCacheKey = string.Format("getmany:{0}", hash);
+
+                // Try and get from local cache
+                List<T> result = _localCache.Get(orderIndependentCacheKey) as List<T>;
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+
+            // Do remote work
             List<byte[]> rawResults = null;
 
             do
@@ -272,51 +295,25 @@ namespace Dache.Client
                 }
             }
 
+            if (cacheLocally)
+            {
+                // Cache locally
+                _localCache.Add(orderIndependentCacheKey, results, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
+            }
+
             return results;
         }
 
         /// <summary>
-        /// Gets the objects stored at the given cache keys from the local cache. If they are not found in the local 
-        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
-        /// </summary>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <param name="cacheKeys">The cache keys.</param>
-        /// <returns>A list of the objects stored at the cache keys, or null if none were found.</returns>
-        public List<T> GetLocal<T>(IEnumerable<string> cacheKeys)
-        {
-            // Create a cache key that is a unique order-independent hash code of all cache keys
-            var hash = 0;
-            foreach (var cacheKey in cacheKeys)
-            {
-                hash ^= cacheKey.GetHashCode();
-            }
-            var orderIndependentCacheKey = string.Format("getmany:{0}", hash);
-
-            // Try and get from local cache
-            List<T> result = _localCache.Get(orderIndependentCacheKey) as List<T>;
-            if (result != null)
-            {
-                return result;
-            }
-
-            // Call usual Get
-            result = Get<T>(cacheKeys);
-            if (result != null)
-            {
-                // Cache locally
-                _localCache.Add(orderIndependentCacheKey, result, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Gets the objects stored at the given tag name from the cache.
+        /// Gets the objects stored at the given tag name from the cache. If cacheLocally is set to true, 
+        /// this will first look in the local cache. If the tagged objects are not found in the local cache, 
+        /// the objects are retrieved remotely and cached locally for subsequent local lookups.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="tagName">The tag name.</param>
+        /// <param name="cacheLocally">Whether or not to look for and cache the result locally.</param>
         /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
-        public List<T> GetTagged<T>(string tagName)
+        public List<T> GetTagged<T>(string tagName, bool cacheLocally = false)
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(tagName))
@@ -324,6 +321,22 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
 
+            string cacheKey = null;
+
+            if (cacheLocally)
+            {
+                // Create a cache key for tag name
+                cacheKey = string.Format("tag:{0}", tagName);
+
+                // Try and get from local cache
+                List<T> result = _localCache.Get(cacheKey) as List<T>;
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+
+            // Do remote work
             IList<byte[]> rawResults = null;
 
             do
@@ -365,37 +378,13 @@ namespace Dache.Client
                 }
             }
 
-            return results;
-        }
-
-        /// <summary>
-        /// Gets the objects stored at the given tag name from the local cache. If they are not found in the local 
-        /// cache, the objects are retrieved remotely and cached locally for subsequent local lookups.
-        /// </summary>
-        /// <typeparam name="T">The expected type.</typeparam>
-        /// <param name="tagName">The tag name.</param>
-        /// <returns>A list of the objects stored at the tag name, or null if none were found.</returns>
-        public List<T> GetTaggedLocal<T>(string tagName)
-        {
-            // Create a cache key for tag name
-            var cacheKey = string.Format("tag:{0}", tagName);
-
-            // Try and get from local cache
-            List<T> result = _localCache.Get(cacheKey) as List<T>;
-            if (result != null)
-            {
-                return result;
-            }
-
-            // Call usual GetTagged
-            result = GetTagged<T>(tagName);
-            if (result != null)
+            if (cacheLocally)
             {
                 // Cache locally
-                _localCache.Add(cacheKey, result, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
+                _localCache.Add(cacheKey, results, new CacheItemPolicy { AbsoluteExpiration = DateTime.Now.AddSeconds(_localCacheItemExpirationSeconds) });
             }
 
-            return result;
+            return results;
         }
 
         /// <summary>
@@ -1706,6 +1695,11 @@ namespace Dache.Client
         public event EventHandler HostReconnected;
 
         /// <summary>
+        /// Event that fires when a cached item has expired out of the cache.
+        /// </summary>
+        public event EventHandler<CacheItemExpiredArgs> CacheItemExpired;
+
+        /// <summary>
         /// Triggered when a client is disconnected from a cache host.
         /// </summary>
         /// <param name="sender">The sender.</param>
@@ -1908,6 +1902,73 @@ namespace Dache.Client
 
             // If we got here it doesn't exist, return the one's complement of where we are which will be negative
             return ~currentIndex;
+        }
+
+        private void ReceiveMessage(object sender, MessageReceivedArgs e)
+        {
+            var command = e.ReceivedMessage.Message;
+            if (command == null || command.Length == 0)
+            {
+                throw new InvalidOperationException("Dache.CacheHost.Communication.CacheHostServer.ReceiveMessage - command variable is null or empty, indicating an empty or invalid message");
+            }
+
+            // Parse out the command byte
+            DacheProtocolHelper.MessageType messageType;
+            command.ExtractControlByte(out messageType);
+            // Get the command string skipping our control byte
+            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command, 1, command.Length - 1);
+
+            // Right now this is only used for invalidating cache keys, so there will never be a reply
+            ProcessCommand(commandString, messageType);
+        }
+
+        private void ProcessCommand(string command, DacheProtocolHelper.MessageType messageType)
+        {
+            // Sanitize
+            if (command == null)
+            {
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                return;
+            }
+
+            string[] commandParts = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (commandParts.Length == 0)
+            {
+                return;
+            }
+
+            switch (messageType)
+            {
+                case DacheProtocolHelper.MessageType.RepeatingCacheKeys:
+                {
+                    // Determine command
+                    if (string.Equals(commandParts[0], "expire", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Sanitize the command
+                        if (commandParts.Length < 2)
+                        {
+                            return;
+                        }
+
+                        // Invalidate local cache keys
+                        foreach (var cacheKey in commandParts.Skip(1))
+                        {
+                            _localCache.Remove(cacheKey);
+
+                            // Fire the cache item expired event
+                            var cacheItemExpired = CacheItemExpired;
+                            if (cacheItemExpired != null)
+                            {
+                                cacheItemExpired(this, new CacheItemExpiredArgs(cacheKey));
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
         }
 
         /// <summary>
