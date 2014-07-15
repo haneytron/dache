@@ -52,7 +52,7 @@ namespace Dache.Client.Configuration
         /// When to expire locally cached entries, in seconds.
         /// </summary>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("localCacheAbsoluteExpirationSeconds", IsRequired = true, DefaultValue = 10)]
+        [ConfigurationProperty("localCacheAbsoluteExpirationSeconds", IsRequired = true, DefaultValue = 3600)]
         public int LocalCacheAbsoluteExpirationSeconds
         {
             get
