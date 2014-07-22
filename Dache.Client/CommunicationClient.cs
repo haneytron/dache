@@ -134,43 +134,16 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeys");
             }
 
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("get");
-                foreach (var cacheKey in cacheKeys)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKey);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-            // Send and receive
-            command = _client.SendReceive(command);
-            // Parse string
-            var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
-
-            // Verify that we got something
-            if (commandResult == null)
-            {
-                return null;
-            }
-
-            // Parse command from bytes
-            var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return ParseCacheObjects(commandResultParts);
+            return SendGet(cacheKeys);
         }
 
         /// <summary>
         /// Gets all serialized objects associated with the given tag name.
         /// </summary>
         /// <param name="tagNames">The tag names.</param>
+        /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
         /// <returns>A list of the serialized objects.</returns>
-        public List<byte[]> GetTagged(IEnumerable<string> tagNames)
+        public List<byte[]> GetTagged(IEnumerable<string> tagNames, string pattern = "*")
         {
             // Sanitize
             if (tagNames == null)
@@ -182,187 +155,7 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "tagNames");
             }
 
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("get-tag");
-                foreach (var tagName in tagNames)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(tagName);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-            // Send and receive
-            command = _client.SendReceive(command);
-            // Parse string
-            var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
-
-            // Verify that we got something
-            if (commandResult == null)
-            {
-                return null;
-            }
-
-            // Parse command from bytes
-            var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return ParseCacheObjects(commandResultParts);
-        }
-
-        /// <summary>
-        /// Adds or updates the serialized objects in the cache at the given cache keys.
-        /// </summary>
-        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
-        {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            if (!cacheKeysAndSerializedObjects.Any())
-            {
-                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
-            }
-
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set");
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
-        }
-
-        /// <summary>
-        /// Adds or updates the serialized objects in the cache at the given cache keys.
-        /// </summary>
-        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, DateTimeOffset absoluteExpiration)
-        {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            if (!cacheKeysAndSerializedObjects.Any())
-            {
-                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
-            }
-
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set {0}", absoluteExpiration.UtcDateTime.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
-        }
-
-        /// <summary>
-        /// Adds or updates the serialized objects in the cache at the given cache keys.
-        /// </summary>
-        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, TimeSpan slidingExpiration)
-        {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            if (!cacheKeysAndSerializedObjects.Any())
-            {
-                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
-            }
-
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set {0}", (int)slidingExpiration.TotalSeconds);
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
-        }
-
-        /// <summary>
-        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
-        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
-        /// You must remove them manually when appropriate or else you may face a memory leak.
-        /// </summary>
-        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        public void AddOrUpdateInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects)
-        {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            if (!cacheKeysAndSerializedObjects.Any())
-            {
-                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
-            }
-
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set-intern");
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
+            return SendGet(tagNames, isTagNames: true, pattern: pattern);
         }
 
         /// <summary>
@@ -370,7 +163,13 @@ namespace Dache.Client
         /// </summary>
         /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
         /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
+        /// <param name="absoluteExpiration">The absolute expiration. NOTE: if both absolute and sliding expiration are set, sliding expiration will be ignored.</param>
+        /// <param name="slidingExpiration">The sliding expiration. NOTE: if both absolute and sliding expiration are set, sliding expiration will be ignored.</param>
+        /// <param name="notifyRemoved">Whether or not to notify the client when the cached item is removed from the cache.</param>
+        /// <param name="isInterned">Whether or not to intern the objects. NOTE: interned objects use significantly less memory when 
+        /// placed in the cache multiple times however cannot expire or be evicted. You must remove them manually when appropriate 
+        /// or else you will face a memory leak. If specified, absoluteExpiration, slidingExpiration, and notifyRemoved are ignored.</param>
+        public void AddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName = null, DateTimeOffset? absoluteExpiration = null, TimeSpan? slidingExpiration = null, bool notifyRemoved = false, bool isInterned = false)
         {
             // Sanitize
             if (cacheKeysAndSerializedObjects == null)
@@ -381,160 +180,8 @@ namespace Dache.Client
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
             }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
 
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set-tag {0}", tagName);
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
-        }
-
-        /// <summary>
-        /// Adds or updates the serialized objects in the cache at the given cache keys.
-        /// </summary>
-        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="absoluteExpiration">The absolute expiration.</param>
-        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, DateTimeOffset absoluteExpiration)
-        {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            if (!cacheKeysAndSerializedObjects.Any())
-            {
-                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
-            }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set-tag {0} {1}", tagName, absoluteExpiration.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
-        }
-
-        /// <summary>
-        /// Adds or updates the serialized objects in the cache at the given cache keys.
-        /// </summary>
-        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="tagName">The tag name.</param>
-        /// <param name="slidingExpiration">The sliding expiration.</param>
-        public void AddOrUpdateTagged(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName, TimeSpan slidingExpiration)
-        {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            if (!cacheKeysAndSerializedObjects.Any())
-            {
-                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
-            }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set-tag {0} {1}", tagName, (int)slidingExpiration.TotalSeconds);
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
-        }
-
-        /// <summary>
-        /// Adds or updates the interned serialized objects in the cache at the given cache keys.
-        /// NOTE: interned objects use significantly less memory when placed in the cache multiple times however cannot expire or be evicted. 
-        /// You must remove them manually when appropriate or else you may face a memory leak.
-        /// </summary>
-        /// <param name="cacheKeysAndSerializedObjects">The cache keys and associated serialized objects.</param>
-        /// <param name="tagName">The tag name.</param>
-        public void AddOrUpdateTaggedInterned(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName)
-        {
-            // Sanitize
-            if (cacheKeysAndSerializedObjects == null)
-            {
-                throw new ArgumentNullException("cacheKeysAndSerializedObjects");
-            }
-            if (!cacheKeysAndSerializedObjects.Any())
-            {
-                throw new ArgumentException("must have at least one element", "cacheKeysAndSerializedObjects");
-            }
-            if (string.IsNullOrWhiteSpace(tagName))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "tagName");
-            }
-
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("set-tag-intern {0}", tagName);
-                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeysAndObjects);
-            // Send
-            _client.Send(command);
+            SendAddOrUpdate(cacheKeysAndSerializedObjects, tagName: tagName, absoluteExpiration: absoluteExpiration, slidingExpiration: slidingExpiration, notifyRemoved: notifyRemoved, isInterned: isInterned);
         }
 
         /// <summary>
@@ -553,28 +200,11 @@ namespace Dache.Client
                 throw new ArgumentException("must have at least one element", "cacheKeys");
             }
 
-            byte[] command = null;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("del");
-                foreach (var cacheKey in cacheKeys)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKey);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-            // Send
-            _client.Send(command);
+            SendRemove(cacheKeys);
         }
 
         /// <summary>
         /// Removes all serialized objects associated with the given tag names and optionally with keys matching the given pattern.
-        /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE TAG CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="tagNames">The tag names.</param>
         /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
@@ -594,25 +224,7 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
             }
 
-            byte[] command;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("del-tag");
-                memoryStream.WriteSpace();
-                memoryStream.Write(pattern);
-                foreach (var tagName in tagNames)
-                {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(tagName);
-                }
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.RepeatingCacheKeys);
-            // Send
-            _client.Send(command);
+            SendRemove(tagNames, isTagNames: true, pattern: pattern);
         }
 
         /// <summary>
@@ -620,8 +232,8 @@ namespace Dache.Client
         /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
-        /// <returns>The list of cache keys matching the provided pattern</returns>
-        public List<byte[]> GetCacheKeys(string pattern = "*")
+        /// <returns>The list of cache keys matching the provided pattern.</returns>
+        public List<string> GetCacheKeys(string pattern = "*")
         {
             // Sanitize
             if (string.IsNullOrWhiteSpace(pattern))
@@ -629,35 +241,7 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
             }
 
-            byte[] command;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("keys {0}", pattern);
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
-            // Send and receive
-            var rawResult = _client.SendReceive(command);
-
-            // Verify that we got something
-            if (rawResult == null)
-            {
-                return null;
-            }
-
-            // Parse string
-            var decodedResult = DacheProtocolHelper.CommunicationEncoding.GetString(rawResult);
-            if (string.IsNullOrWhiteSpace(decodedResult))
-            {
-                return null;
-            }
-
-            // Parse command from bytes
-            var commandResultParts = decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return ParseCacheObjects(commandResultParts);
+            return SendGetCacheKeys(pattern: pattern);
         }
 
         /// <summary>
@@ -667,7 +251,7 @@ namespace Dache.Client
         /// <param name="tagNames">The tag names.</param>
         /// <param name="pattern">The search pattern (RegEx). Optional. If not specified, the default of "*" is used to indicate match all.</param>
         /// <returns>The list of cache keys matching the provided pattern.</returns>
-        public List<byte[]> GetCacheKeysTagged(IEnumerable<string> tagNames, string pattern = "*")
+        public List<string> GetCacheKeysTagged(IEnumerable<string> tagNames, string pattern = "*")
         {
             if (tagNames == null)
             {
@@ -682,23 +266,167 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
             }
 
+            return SendGetCacheKeys(tagNames: tagNames, pattern: pattern);
+        }
+
+        /// <summary>
+        /// Clears the cache.
+        /// </summary>
+        public void Clear()
+        {
             byte[] command;
             using (var memoryStream = new MemoryStream())
             {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("keys-tag");
-                memoryStream.WriteSpace();
-                memoryStream.Write(pattern);
-                foreach (var tagName in tagNames)
+                memoryStream.Write("clear");
+                command = memoryStream.ToArray();
+            }
+
+            // Send
+            _client.Send(command);
+        }
+
+        private List<byte[]> SendGet(IEnumerable<string> cacheKeysOrTagNames, bool isTagNames = false, string pattern = null)
+        {
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.Write("get");
+
+                if (isTagNames)
+                {
+                    if (pattern != null)
+                    {
+                        memoryStream.WriteSpace();
+                        memoryStream.Write(pattern);
+                        memoryStream.WriteSpace();
+                    }
+
+                    memoryStream.WriteSpace();
+                    memoryStream.Write("-t");
+                }
+
+                foreach (var cacheKeysOrTagName in cacheKeysOrTagNames)
                 {
                     memoryStream.WriteSpace();
-                    memoryStream.Write(tagName);
+                    memoryStream.Write(cacheKeysOrTagName);
                 }
                 command = memoryStream.ToArray();
             }
 
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
+            // Send and receive
+            command = _client.SendReceive(command);
+            // Parse string
+            var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
+
+            // Verify that we got something
+            if (commandResult == null)
+            {
+                return null;
+            }
+
+            // Parse command from bytes
+            var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            return ParseCacheObjects(commandResultParts);
+        }
+
+        private void SendAddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName = null,
+            DateTimeOffset? absoluteExpiration = null, TimeSpan? slidingExpiration = null, bool notifyRemoved = false, bool isInterned = false)
+        {
+            byte[] command = null;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.Write("set");
+
+                if (isInterned)
+                {
+                    // If interned, expirations and callback notifications are ignored
+                    memoryStream.Write(" -i");
+                }
+                else
+                {
+                    // Absolute expiration
+                    if (absoluteExpiration.HasValue)
+                    {
+                        memoryStream.Write(" -a {0}", absoluteExpiration.Value.UtcDateTime.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
+                    }
+                    // Sliding expiration
+                    else if (slidingExpiration.HasValue)
+                    {
+                        memoryStream.Write(" -s {0}", (int)slidingExpiration.Value.TotalSeconds);
+                    }
+
+                    // Notify removed
+                    if (notifyRemoved)
+                    {
+                        memoryStream.Write(" -c");
+                    }
+                }
+
+                // Tag name
+                if (!string.IsNullOrWhiteSpace(tagName))
+                {
+                    memoryStream.Write(" -t {0}", tagName);
+                }
+
+                foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
+                {
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.WriteSpace();
+                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
+                }
+                command = memoryStream.ToArray();
+            }
+
+            // Send
+            _client.Send(command);
+        }
+
+        private void SendRemove(IEnumerable<string> cacheKeysOrTagNames, bool isTagNames = false, string pattern = "*")
+        {
+            byte[] command;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.Write("del ");
+
+                if (isTagNames)
+                {
+                    memoryStream.Write("{0} -t ", pattern);
+                }
+
+                foreach (var cacheKeysOrTagName in cacheKeysOrTagNames)
+                {
+                    memoryStream.WriteSpace();
+                    memoryStream.Write(cacheKeysOrTagName);
+                }
+                command = memoryStream.ToArray();
+            }
+
+            // Send
+            _client.Send(command);
+        }
+
+        private List<string> SendGetCacheKeys(IEnumerable<string> tagNames = null, string pattern = "*")
+        {
+            byte[] command;
+            using (var memoryStream = new MemoryStream())
+            {
+                memoryStream.Write("keys {0}", pattern);
+
+                if (tagNames != null)
+                {
+                    memoryStream.Write(" -t");
+
+                    foreach (var tagName in tagNames)
+                    {
+                        memoryStream.WriteSpace();
+                        memoryStream.Write(tagName);
+                    }
+                }
+
+                command = memoryStream.ToArray();
+            }
+
             // Send and receive
             var rawResult = _client.SendReceive(command);
 
@@ -715,28 +443,7 @@ namespace Dache.Client
                 return null;
             }
 
-            // Parse command from bytes
-            var commandResultParts = decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return ParseCacheObjects(commandResultParts);
-        }
-
-        /// <summary>
-        /// Clears the cache.
-        /// </summary>
-        public void Clear()
-        {
-            byte[] command;
-            using (var memoryStream = new MemoryStream())
-            {
-                memoryStream.WriteControlBytePlaceHolder();
-                memoryStream.Write("clear");
-                command = memoryStream.ToArray();
-            }
-
-            // Set control byte
-            command.SetControlByte(DacheProtocolHelper.MessageType.Literal);
-            // Send
-            _client.Send(command);
+            return new List<string>(decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
         }
 
         /// <summary>

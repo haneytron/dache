@@ -30,7 +30,7 @@ namespace Dache.Client.Plugins.OutputCache
                 return value;
             }
 
-            _cacheClient.AddOrUpdate(cacheKey, entry, utcExpiry);
+            _cacheClient.AddOrUpdate(cacheKey, entry, absoluteExpiration: utcExpiry);
             return entry;
         }
         
@@ -69,7 +69,7 @@ namespace Dache.Client.Plugins.OutputCache
         {
             var cacheKey = string.Format(_cacheKey, key);
 
-            _cacheClient.AddOrUpdate(cacheKey, entry, utcExpiry);
+            _cacheClient.AddOrUpdate(cacheKey, entry, absoluteExpiration: utcExpiry);
         }
     }
 }

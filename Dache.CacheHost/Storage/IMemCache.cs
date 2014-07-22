@@ -49,7 +49,7 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="pattern">The search pattern (regex)</param>
         /// <returns>The list of keys matching the provided pattern</returns>
-        IList<string> Keys(string pattern);
+        List<string> Keys(string pattern);
 
         /// <summary>
         /// Total number of objects in the cache.

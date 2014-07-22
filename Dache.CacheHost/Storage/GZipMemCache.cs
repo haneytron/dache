@@ -122,7 +122,7 @@ namespace Dache.CacheHost.Storage
         /// WARNING: THIS IS A VERY EXPENSIVE OPERATION FOR LARGE CACHES. USE WITH CAUTION.
         /// </summary>
         /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
-        public IList<string> Keys(string pattern)
+        public List<string> Keys(string pattern)
         {
             return _memCache.Keys(pattern);
         }

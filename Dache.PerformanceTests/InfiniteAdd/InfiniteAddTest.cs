@@ -22,7 +22,7 @@ namespace Dache.PerformanceTests.InfiniteAdd
             cacheClient.HostReconnected += (sender, e) => { Console.WriteLine("*** Host reconnected"); };
 
             // Add test1 to test10000
-            int i = 1;
+            int i = 0;
             while (true)
             {
                 cacheClient.AddOrUpdate("test" + i, value);

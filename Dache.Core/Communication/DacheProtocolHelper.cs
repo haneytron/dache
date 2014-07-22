@@ -30,32 +30,6 @@ namespace Dache.Core.Communication
         public const string AbsoluteExpirationFormat = "yyMMddHHmmss";
 
         /// <summary>
-        /// The message type.
-        /// </summary>
-        public enum MessageType
-        {
-            /// <summary>
-            /// No repeated items.
-            /// </summary>
-            Literal = 0,
-
-            /// <summary>
-            /// Repeating cache keys.
-            /// </summary>
-            RepeatingCacheKeys,
-
-            /// <summary>
-            /// Repeating cache objects.
-            /// </summary>
-            RepeatingCacheObjects,
-
-            /// <summary>
-            /// Repeating cache keys and objects in pairs.
-            /// </summary>
-            RepeatingCacheKeysAndObjects
-        }
-
-        /// <summary>
         /// Writes a value to the memory stream.
         /// </summary>
         /// <param name="memoryStream">The memory stream.</param>
@@ -100,42 +74,12 @@ namespace Dache.Core.Communication
         }
 
         /// <summary>
-        /// Writes the control byte placeholder to the memory stream.
-        /// </summary>
-        /// <param name="memoryStream">The memory stream.</param>
-        public static void WriteControlBytePlaceHolder(this MemoryStream memoryStream)
-        {
-            memoryStream.Write(ControlByteDefault, 0, ControlByteDefault.Length);
-        }
-
-        /// <summary>
         /// Writes a space to the memory stream.
         /// </summary>
         /// <param name="memoryStream">The memory stream.</param>
         public static void WriteSpace(this MemoryStream memoryStream)
         {
             memoryStream.Write(SpaceByte, 0, SpaceByte.Length);
-        }
-
-        /// <summary>
-        /// Sets the control byte to the specified message type in a command byte array.
-        /// </summary>
-        /// <param name="command">The command byte array.</param>
-        /// <param name="messageType">The message type.</param>
-        public static void SetControlByte(this byte[] command, MessageType messageType)
-        {
-            // Set message type
-            command[0] = Convert.ToByte((int)messageType);
-        }
-
-        /// <summary>
-        /// Extracts the message type from the control byte in a command byte array.
-        /// </summary>
-        /// <param name="command">The command byte array.</param>
-        /// <param name="messageType">The message type.</param>
-        public static void ExtractControlByte(this byte[] command, out MessageType messageType)
-        {
-            messageType = (MessageType)command[0];
         }
     }
 }

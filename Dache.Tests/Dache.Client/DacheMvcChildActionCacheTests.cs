@@ -128,7 +128,7 @@ namespace Dache.Tests.Dache.Client
         {
             var cacheClient = new Mock<ICacheClient>();
             object value = null;
-            cacheClient.Setup(i => i.TryGet<object>(It.IsAny<string>(), out value, false )).Returns(false);
+            cacheClient.Setup(i => i.TryGet<object>(It.IsAny<string>(), out value)).Returns(false);
 
             var dacheMvcChildActionCache = new DacheMvcChildActionCache(cacheClient.Object);
 
@@ -142,7 +142,7 @@ namespace Dache.Tests.Dache.Client
         {
             var cacheClient = new Mock<ICacheClient>();
             object value = new object();
-            cacheClient.Setup(i => i.TryGet<object>(It.IsAny<string>(), out value, false)).Returns(true);
+            cacheClient.Setup(i => i.TryGet<object>(It.IsAny<string>(), out value)).Returns(true);
 
             var dacheMvcChildActionCache = new DacheMvcChildActionCache(cacheClient.Object);
 

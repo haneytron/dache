@@ -56,7 +56,7 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                cacheClient.AddOrUpdateTagged("tagtest" + i, value, "demotag");
+                cacheClient.AddOrUpdate("tagtest" + i, value, tagName: "demotag");
             }
             stopwatch.Stop();
 
@@ -126,34 +126,6 @@ namespace Dache.PerformanceTests.MultiOperation
             Console.WriteLine("Get Tagged object count: " + getManyResults.Count);
             #endregion
 
-            #region Local Get 10000 strings
-            stopwatch.Restart();
-            for (int i = 1; i <= 10000; i++)
-            {
-                if (!cacheClient.TryGet("test" + i, out value, true))
-                {
-                    Console.WriteLine("Get failed for cache key: " + "test" + i);
-                }
-            }
-            stopwatch.Stop();
-
-            Console.WriteLine("Local Get time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
-            #endregion
-
-            #region Local Get again 10000 strings
-            stopwatch.Restart();
-            for (int i = 1; i <= 10000; i++)
-            {
-                if (!cacheClient.TryGet("test" + i, out value, true))
-                {
-                    Console.WriteLine("Get failed for cache key: " + "test" + i);
-                }
-            }
-            stopwatch.Stop();
-
-            Console.WriteLine("Local Get again time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
-            #endregion
-
             Console.WriteLine();
             Console.WriteLine("***** BEGIN REMOVE 10000 TESTS *****");
             Console.WriteLine();
@@ -194,7 +166,7 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                cacheClient.AddOrUpdate("testabsolute" + i, value, absoluteExpiration);
+                cacheClient.AddOrUpdate("testabsolute" + i, value, absoluteExpiration: absoluteExpiration);
             }
             stopwatch.Stop();
 
@@ -210,7 +182,7 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                cacheClient.AddOrUpdate("testabsolutecomplex" + i, myObject, slidingExpiration);
+                cacheClient.AddOrUpdate("testabsolutecomplex" + i, myObject, slidingExpiration: slidingExpiration);
             }
             stopwatch.Stop();
 
@@ -230,28 +202,6 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Stop();
 
             Console.WriteLine("Get complex object time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
-            #endregion
-
-            #region Local Get 10000 complex objects with sliding expiration
-            stopwatch.Restart();
-            for (int i = 1; i <= 10000; i++)
-            {
-                cacheClient.TryGet("testabsolutecomplex" + i, out myObject, true);
-            }
-            stopwatch.Stop();
-
-            Console.WriteLine("Local Get complex object time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
-            #endregion
-
-            #region Local Get again 10000 complex objects with sliding expiration
-            stopwatch.Restart();
-            for (int i = 1; i <= 10000; i++)
-            {
-                cacheClient.TryGet("testabsolutecomplex" + i, out myObject, true);
-            }
-            stopwatch.Stop();
-
-            Console.WriteLine("Local Get again complex object time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
             #endregion
 
             overallStopwatch.Stop();
