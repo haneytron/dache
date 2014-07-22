@@ -55,6 +55,7 @@
     <Compile Include="MultiOperation\MultiOperationTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RemovedItemCallback\RemovedItemCallbackTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Dache.Client\Dache.Client.csproj">

@@ -2,9 +2,9 @@
 using System.Threading;
 using Dache.Client;
 
-namespace Dache.PerformanceTests.InfiniteAdd
+namespace Dache.PerformanceTests.RemovedItemCallback
 {
-    internal static class InfiniteAddTest
+    internal static class RemovedItemCallbackTest
     {
         public static void Run()
         {
@@ -15,23 +15,30 @@ namespace Dache.PerformanceTests.InfiniteAdd
 
             int itemsToAdd = 1000;
 
-            Console.WriteLine("***** BEGIN INFINITE ADD " + itemsToAdd + " ITEMS TEST (WILL NEVER END) *****");
+            Console.WriteLine("***** BEGIN REMOVED ITEM CALLBACK TEST *****");
             Console.WriteLine();
 
             cacheClient.HostDisconnected += (sender, e) => { Console.WriteLine("*** Host disconnected"); };
             cacheClient.HostReconnected += (sender, e) => { Console.WriteLine("*** Host reconnected"); };
+            cacheClient.CacheItemExpired += (sender, e) => { Console.WriteLine("Cache key expired: " + e.CacheKey); };
 
             // Add items
-            int i = 0;
-            while (true)
+            for (int i = 0; i < itemsToAdd; i++)
             {
-                cacheClient.AddOrUpdate("test" + i, value);
-                i++;
-                if (i == itemsToAdd)
-                {
-                    i = 1;
-                }
+                cacheClient.AddOrUpdate("test" + i, value, notifyRemoved: true);
             }
+
+            Console.WriteLine("***** " + itemsToAdd + " ITEMS ADDED *****");
+            Console.WriteLine("***** BEGIN REMOVING " + itemsToAdd + " ITEMS AFTER 2000 MS PAUSE *****");
+            Thread.Sleep(2000);
+
+            // Remove items
+            for (int i = 0; i < itemsToAdd; i++)
+            {
+                cacheClient.Remove("test" + i);
+            }
+
+            Console.ReadKey();
         }
     }
 }

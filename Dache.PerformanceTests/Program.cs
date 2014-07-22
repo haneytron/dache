@@ -18,6 +18,7 @@ namespace Dache.PerformanceTests
                 Console.WriteLine();
                 Console.WriteLine("    1. Multiple Operation");
                 Console.WriteLine("    2. Infinite Add (Run multiple copies to stress test)");
+                Console.WriteLine("    3. Removed Item Callback");
                 Console.WriteLine();
                 Console.Write("Your choice: ");
 
@@ -40,6 +41,10 @@ namespace Dache.PerformanceTests
                 else if (selection == 2)
                 {
                     InfiniteAdd.InfiniteAddTest.Run();
+                }
+                else if (selection == 3)
+                {
+                    RemovedItemCallback.RemovedItemCallbackTest.Run();
                 }
                 else
                 {
