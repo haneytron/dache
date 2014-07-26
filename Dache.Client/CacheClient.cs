@@ -107,9 +107,7 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets the object stored at the given cache key from the cache. If cacheLocally is set to true, 
-        /// this will first look in the local cache. If the key is not found in the local cache, the object 
-        /// is retrieved remotely and cached locally for subsequent local lookups.
+        /// Gets the object stored at the given cache key from the cache.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKey">The cache key.</param>
@@ -169,9 +167,7 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets the objects stored at the given cache keys from the cache. If cacheLocally is set to true, 
-        /// this will first look in the local cache. If the keys are not found in the local cache, the objects 
-        /// are retrieved remotely and cached locally for subsequent local lookups.
+        /// Gets the objects stored at the given cache keys from the cache.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="cacheKeys">The cache keys.</param>
@@ -266,9 +262,7 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Gets the objects stored at the given tag name from the cache. If cacheLocally is set to true, 
-        /// this will first look in the local cache. If the tagged objects are not found in the local cache, 
-        /// the objects are retrieved remotely and cached locally for subsequent local lookups.
+        /// Gets the objects stored at the given tag name from the cache.
         /// </summary>
         /// <typeparam name="T">The expected type.</typeparam>
         /// <param name="tagName">The tag name.</param>
