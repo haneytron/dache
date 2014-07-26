@@ -49,32 +49,34 @@ VERSION INFORMATION
 ============================================
 
 
-1.3.2
+1.4.0 - THE FASTER, BETTER, STRONGER BUILD!
 ------------------
 
-- IMPORTANT LICENSING CHANGE: Dache software is now dual licensed. Please see the LICENSE.txt file for more information.
+- HIGH AVAILABILITY! You can now configure Dache to use > 1 cache host per cache fragment/bucket. This allows for redundancy in the case of cache server failure!
 
-- POSSIBLE BREAKING CHANGE: Due to the separation of the cache host logic into an independent DLL, the cache host service has been renamed from Dache.CacheHost.exe to Dache.CacheHostService.exe
+- FASTER BETTER COMMUNICATION! SimplSockets rewritten for much more efficient communication. Also streamlined the Dache low level TCP syntax.
 
-- Separated cache host into independent DLL which can be used in your own custom processes and code. This enables things like using Dache in custom Azure Worker Roles or console applications!
+- MUCH SIMPLER CLIENT METHOD CALLS! Reduced most operations to 1 or 2 methods with named parameters instead of having lke 17 Add____ methods.
 
-- Created NuGet package for the independent Dache Cache Host DLL.
+- CACHED ITEM REMOVAL CALLBACKS! Now you can be notified when a cache key is removed from cache. NOTE: updating a cache key triggers a removal, so don't spin yourself into a loop with this!
 
-- Cleaned up Performance Counter code and (hopefully) fixed bug related to performance counter memory leak. If the issue remains after this build I'll be removing the performance counters entirely.
+- Performance counter overhaul; no longer using performance counters for self-hosting (fixes errors related to permissions for self-hosting)
 
-- Removed unused Cache Evictions and Expirations Per Second performance counter.
+- Catching and swallowing regex pattern exceptions. If you use a bad regex pattern, you'll get no results.
 
-- Fixed 100% cache miss on GetTaggedLocal
+- Fixed cache memory limit reporting (`MemoryCache` MSDN docs LIED to me!)
 
-- Fixed possible infinite loops in cache client when no data was returned from the cache host
+- White space checks on cache keys and tag names (will throw exception at client)
 
-- Fixed bug with assigning/resolving cache host IP address in CommunicationClient
+- Added new performance test for removed item callbacks. This lets you see how subscribed to removed cache keys works.
 
-- Fixed very, VERY stupid error with absolute expiration of cached item date time format. I should have written unit tests!
+- Updated `TODO.txt`
 
-- Various code cleanup housekeeping tasks
+- Updated example client config file and documentation
 
-- Stubbed data persistence framework to allow Dache to persist cached data between restarts (recover from crashes and failures)! This feature is not yet complete.
+- Updated various XML code comments
+
+- Minor formatting of `README` file
 
 
 INSTALLATION INSTRUCTIONS
