@@ -8,12 +8,6 @@ del prefix -t tagName1 tagName2 tagName3 tagName4...
 keys prefix [-t tagName1 tagName2 tagName3 tagName4...]
 clear
 
-****
-NO SPACES IN CACHE KEYS
-ALLOW FOR CALLBACK BOOLEAN IN CLIENT, SIMPLIFY METHODS
-ISSUE EXPIRATION FOR TAG NAMES ALSO
-****
-
 -Clear tag from TagRoutingTable memory when removing all tagged items from host
 -Introduce of Sorted Sets/Lists with weights
 -Create integer storage methods and increment/decrement methods?
