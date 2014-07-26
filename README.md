@@ -52,7 +52,7 @@ VERSION INFORMATION
 1.4.0 - THE FASTER, BETTER, STRONGER BUILD!
 ------------------
 
-- HIGH AVAILABILITY! You can now configure Dache to use > 1 cache host per cache fragment/bucket. This allows for redundancy in the case of cache server failure!
+- HIGH AVAILABILITY! You can now configure Dache to use > 1 cache host per cache fragment/bucket. This allows for redundancy in the case of cache server failure! To utilize this, adjust the `hostRedundancyLayers` setting in the dache client `.config` file.
 
 - FASTER BETTER COMMUNICATION! SimplSockets rewritten for much more efficient communication. Also streamlined the Dache low level TCP syntax.
 
