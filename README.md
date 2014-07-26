@@ -78,6 +78,8 @@ VERSION INFORMATION
 
 - Minor formatting of `README` file
 
+- Various minor edge case bug fixes
+
 
 INSTALLATION INSTRUCTIONS
 ============================================
