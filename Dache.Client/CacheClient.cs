@@ -22,10 +22,11 @@ namespace Dache.Client
     /// </summary>
     public class CacheClient : ICacheClient
     {
-        // The list of cache clients
-        private readonly List<CacheHostBucket> _cacheHostLoadBalancingDistribution = new List<CacheHostBucket>(10);
-        // The cache host bucket comparer
-        private readonly IComparer<CacheHostBucket> _cacheHostBucketComparer = new CacheHostBucketComparer();
+        // The list of cache host buckets
+        private readonly List<CacheHostBucket> _cacheHostBuckets = new List<CacheHostBucket>(10);
+        // The offline cache host bucket indexes
+        private readonly HashSet<int> _offlineCacheHostBucketIndexes = new HashSet<int>();
+
         // The lock used to ensure state
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
@@ -49,8 +50,6 @@ namespace Dache.Client
             var cacheHosts = CacheClientConfigurationSection.Settings.CacheHosts;
             // Get the cache host reconnect interval from configuration
             var hostReconnectIntervalSeconds = CacheClientConfigurationSection.Settings.HostReconnectIntervalSeconds;
-            // Get the host redundancy layers from configuration
-            var hostRedundancyLayers = CacheClientConfigurationSection.Settings.HostRedundancyLayers;
 
             // Sanitize
             if (cacheHosts == null)
@@ -58,35 +57,47 @@ namespace Dache.Client
                 throw new ConfigurationErrorsException("At least one cache host must be specified in your application's configuration.");
             }
 
-            // Add the cache hosts to the cache client list
-            foreach (CacheHostElement cacheHost in cacheHosts)
+            // Get the host redundancy layers from configuration
+            var hostRedundancyLayers = CacheClientConfigurationSection.Settings.HostRedundancyLayers;
+            CacheHostBucket currentCacheHostBucket = new CacheHostBucket();
+
+            // Assign the cache hosts to buckets in a specified order
+            foreach (CacheHostElement cacheHost in cacheHosts.OfType<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
-                // Instantiate a cache host client container
-                var clientContainer = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalSeconds * 1000, 1000, 4096);
+                // Instantiate a communication client
+                var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalSeconds * 1000, 1000, 4096);
 
                 // Hook up the disconnected and reconnected events
-                clientContainer.Disconnected += OnClientDisconnected;
-                clientContainer.Reconnected += OnClientReconnected;
+                communicationClient.Disconnected += OnClientDisconnected;
+                communicationClient.Reconnected += OnClientReconnected;
 
                 // Hook up the message receive event
-                clientContainer.MessageReceived += ReceiveMessage;
+                communicationClient.MessageReceived += ReceiveMessage;
 
-                // Attempt to connect
-                if (!clientContainer.Connect())
+                // Add to cache host bucket
+                currentCacheHostBucket.AddCacheHost(communicationClient);
+
+                // check if done with bucket
+                if (currentCacheHostBucket.Count == hostRedundancyLayers + 1)
                 {
-                    // Skip it for now
-                    continue;
+                    _cacheHostBuckets.Add(currentCacheHostBucket);
+                    currentCacheHostBucket = new CacheHostBucket();
                 }
-
-                // Add to the client list - constructor so no lock needed over the add here
-                _cacheHostLoadBalancingDistribution.Add(new CacheHostBucket
-                {
-                    CacheHost = clientContainer
-                });
             }
 
-            // Now calculate the load balancing distribution
-            CalculateCacheHostLoadBalancingDistribution();
+            // Final safety check for uneven cache host distributions
+            if (currentCacheHostBucket.Count > 0)
+            {
+                _cacheHostBuckets.Add(currentCacheHostBucket);
+            }
+
+            _logger.Info("Cache Host Assignment", string.Format("Assigned {0} cache hosts to {1} cache host buckets ({2} per bucket)", cacheHosts.Count, _cacheHostBuckets.Count, hostRedundancyLayers + 1));
+
+            // Now attempt to connect to each host
+            foreach (var cacheHostBucket in _cacheHostBuckets)
+            {
+                cacheHostBucket.PerformActionOnAll(c => c.Connect());
+            }
         }
 
         /// <summary>
@@ -113,11 +124,11 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(cacheKey);
+                var cacheHostBucket = DetermineBucket(cacheKey);
 
                 try
                 {
-                    rawValues = client.Get(new[] { cacheKey });
+                    rawValues = cacheHostBucket.GetNext().Get(new[] { cacheKey });
                     break;
                 }
                 catch
@@ -173,7 +184,7 @@ namespace Dache.Client
             do
             {
                 // Need to batch up requests
-                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                var routingDictionary = new Dictionary<CacheHostBucket, List<string>>(_cacheHostBuckets.Count);
                 List<string> clientCacheKeys = null;
                 foreach (var cacheKey in cacheKeys)
                 {
@@ -184,12 +195,12 @@ namespace Dache.Client
                         continue;
                     }
 
-                    // Get the communication client
-                    var client = DetermineClient(cacheKey);
-                    if (!routingDictionary.TryGetValue(client, out clientCacheKeys))
+                    // Get the cache host bucket
+                    var cacheHostBucket = DetermineBucket(cacheKey);
+                    if (!routingDictionary.TryGetValue(cacheHostBucket, out clientCacheKeys))
                     {
                         clientCacheKeys = new List<string>(10);
-                        routingDictionary.Add(client, clientCacheKeys);
+                        routingDictionary.Add(cacheHostBucket, clientCacheKeys);
                     }
 
                     clientCacheKeys.Add(cacheKey);
@@ -203,10 +214,10 @@ namespace Dache.Client
                     {
                         if (rawResults == null)
                         {
-                            rawResults = routingDictionaryEntry.Key.Get(routingDictionaryEntry.Value);
+                            rawResults = routingDictionaryEntry.Key.GetNext().Get(routingDictionaryEntry.Value);
                             continue;
                         }
-                        rawResults.AddRange(routingDictionaryEntry.Key.Get(routingDictionaryEntry.Value));
+                        rawResults.AddRange(routingDictionaryEntry.Key.GetNext().Get(routingDictionaryEntry.Value));
                     }
 
                     // If we got here we did all of the work successfully
@@ -268,12 +279,12 @@ namespace Dache.Client
 
             do
             {
-                // Use the tag's client
-                var client = DetermineClient(tagName);
+                // Use the tag's cache host bucket
+                var cacheHostBucket = DetermineBucket(tagName);
 
                 try
                 {
-                    rawResults = client.GetTagged(new[] { tagName }, pattern: pattern);
+                    rawResults = cacheHostBucket.GetNext().GetTagged(new[] { tagName }, pattern: pattern);
                     break;
                 }
                 catch
@@ -353,11 +364,11 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(cacheKey);
+                var cacheHostBucket = DetermineBucket(cacheKey);
 
                 try
                 {
-                    client.AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, tagName: tagName, absoluteExpiration: absoluteExpiration, slidingExpiration: slidingExpiration, notifyRemoved: notifyRemoved, isInterned: isInterned);
+                    cacheHostBucket.PerformActionOnAll(c => c.AddOrUpdate(new[] { new KeyValuePair<string, byte[]>(cacheKey, bytes) }, tagName: tagName, absoluteExpiration: absoluteExpiration, slidingExpiration: slidingExpiration, notifyRemoved: notifyRemoved, isInterned: isInterned));
                     break;
                 }
                 catch
@@ -394,7 +405,7 @@ namespace Dache.Client
                 throw new ArgumentException("cannot contain spaces", "tagName");
             }
 
-            var routingDictionary = new Dictionary<CommunicationClient, List<KeyValuePair<string, byte[]>>>(_cacheHostLoadBalancingDistribution.Count);
+            var routingDictionary = new Dictionary<CacheHostBucket, List<KeyValuePair<string, byte[]>>>(_cacheHostBuckets.Count);
             List<KeyValuePair<string, byte[]>> clientCacheKeysAndObjects = null;
             byte[] bytes = null;
 
@@ -421,12 +432,12 @@ namespace Dache.Client
                         continue;
                     }
 
-                    // Get the communication client
-                    var client = DetermineClient(cacheKeyAndObjectKvp.Key);
-                    if (!routingDictionary.TryGetValue(client, out clientCacheKeysAndObjects))
+                    // Get the cache host bucket
+                    var cacheHostBucket = DetermineBucket(cacheKeyAndObjectKvp.Key);
+                    if (!routingDictionary.TryGetValue(cacheHostBucket, out clientCacheKeysAndObjects))
                     {
                         clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
-                        routingDictionary.Add(client, clientCacheKeysAndObjects);
+                        routingDictionary.Add(cacheHostBucket, clientCacheKeysAndObjects);
                     }
 
                     clientCacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKeyAndObjectKvp.Key, bytes));
@@ -442,7 +453,7 @@ namespace Dache.Client
                 {
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.AddOrUpdate(routingDictionaryEntry.Value, tagName: tagName, absoluteExpiration: absoluteExpiration, slidingExpiration: slidingExpiration, notifyRemoved: notifyRemoved, isInterned: isInterned);
+                        routingDictionaryEntry.Key.PerformActionOnAll(c => c.AddOrUpdate(routingDictionaryEntry.Value, tagName: tagName, absoluteExpiration: absoluteExpiration, slidingExpiration: slidingExpiration, notifyRemoved: notifyRemoved, isInterned: isInterned));
                     }
 
                     // If we got here we did all of the work successfully
@@ -473,11 +484,11 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(cacheKey);
+                var cacheHostBucket = DetermineBucket(cacheKey);
 
                 try
                 {
-                    client.Remove(new[] { cacheKey });
+                    cacheHostBucket.PerformActionOnAll(c => c.Remove(new[] { cacheKey }));
                     break;
                 }
                 catch
@@ -506,7 +517,7 @@ namespace Dache.Client
             do
             {
                 // Need to batch up requests
-                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                var routingDictionary = new Dictionary<CacheHostBucket, List<string>>(_cacheHostBuckets.Count);
                 List<string> clientCacheKeys = null;
                 foreach (var cacheKey in cacheKeys)
                 {
@@ -517,12 +528,12 @@ namespace Dache.Client
                         continue;
                     }
 
-                    // Get the communication client
-                    var client = DetermineClient(cacheKey);
-                    if (!routingDictionary.TryGetValue(client, out clientCacheKeys))
+                    // Get the cache host bucket
+                    var cacheHostBucket = DetermineBucket(cacheKey);
+                    if (!routingDictionary.TryGetValue(cacheHostBucket, out clientCacheKeys))
                     {
                         clientCacheKeys = new List<string>(10);
-                        routingDictionary.Add(client, clientCacheKeys);
+                        routingDictionary.Add(cacheHostBucket, clientCacheKeys);
                     }
 
                     clientCacheKeys.Add(cacheKey);
@@ -533,7 +544,7 @@ namespace Dache.Client
                     // Now we've batched them, do the work
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.Remove(routingDictionaryEntry.Value);
+                        routingDictionaryEntry.Key.PerformActionOnAll(c => c.Remove(routingDictionaryEntry.Value));
                     }
 
                     // If we got here we did all of the work successfully
@@ -570,11 +581,11 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(tagName);
+                var cacheHostBucket = DetermineBucket(tagName);
 
                 try
                 {
-                    client.RemoveTagged(new[] { tagName }, pattern);
+                    cacheHostBucket.PerformActionOnAll(c => c.RemoveTagged(new[] { tagName }, pattern));
                     break;
                 }
                 catch
@@ -609,7 +620,7 @@ namespace Dache.Client
             do
             {
                 // Need to batch up requests
-                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                var routingDictionary = new Dictionary<CacheHostBucket, List<string>>(_cacheHostBuckets.Count);
                 List<string> clientTagNames = null;
                 foreach (var tagName in tagNames)
                 {
@@ -620,12 +631,12 @@ namespace Dache.Client
                         continue;
                     }
 
-                    // Get the communication client
-                    var client = DetermineClient(tagName);
-                    if (!routingDictionary.TryGetValue(client, out clientTagNames))
+                    // Get the cache host bucket
+                    var cacheHostBucket = DetermineBucket(tagName);
+                    if (!routingDictionary.TryGetValue(cacheHostBucket, out clientTagNames))
                     {
                         clientTagNames = new List<string>(10);
-                        routingDictionary.Add(client, clientTagNames);
+                        routingDictionary.Add(cacheHostBucket, clientTagNames);
                     }
 
                     clientTagNames.Add(tagName);
@@ -636,7 +647,7 @@ namespace Dache.Client
                     // Now we've batched them, do the work
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        routingDictionaryEntry.Key.RemoveTagged(routingDictionaryEntry.Value, pattern);
+                        routingDictionaryEntry.Key.PerformActionOnAll(c => c.RemoveTagged(routingDictionaryEntry.Value, pattern));
                     }
 
                     // If we got here we did all of the work successfully
@@ -669,9 +680,16 @@ namespace Dache.Client
                 // Enumerate all cache hosts
                 try
                 {
-                    foreach (var communicationClient in _cacheHostLoadBalancingDistribution)
+                    foreach (var cacheHostBucket in _cacheHostBuckets)
                     {
-                        var rawResults = communicationClient.CacheHost.GetCacheKeys(pattern);
+                        var communicationClient = cacheHostBucket.GetNext();
+                        // Ignore offline
+                        if (communicationClient == null)
+                        {
+                            continue;
+                        }
+
+                        var rawResults = communicationClient.GetCacheKeys(pattern);
 
                         // Ensure we got some results
                         if (rawResults == null)
@@ -718,11 +736,11 @@ namespace Dache.Client
 
             do
             {
-                var client = DetermineClient(tagName);
+                var cacheHostBucket = DetermineBucket(tagName);
 
                 try
                 {
-                    var rawResults = client.GetCacheKeys(pattern);
+                    var rawResults = cacheHostBucket.GetNext().GetCacheKeys(pattern);
 
                     // Ensure we got some results
                     if (rawResults == null)
@@ -767,7 +785,7 @@ namespace Dache.Client
                 List<string> results = new List<string>(100);
 
                 // Need to batch up requests
-                var routingDictionary = new Dictionary<CommunicationClient, List<string>>(_cacheHostLoadBalancingDistribution.Count);
+                var routingDictionary = new Dictionary<CacheHostBucket, List<string>>(_cacheHostBuckets.Count);
                 List<string> clientTagNames = null;
                 foreach (var tagName in tagNames)
                 {
@@ -778,12 +796,12 @@ namespace Dache.Client
                         continue;
                     }
 
-                    // Get the communication client
-                    var client = DetermineClient(tagName);
-                    if (!routingDictionary.TryGetValue(client, out clientTagNames))
+                    // Get the cache host bucket
+                    var cacheHostBucket = DetermineBucket(tagName);
+                    if (!routingDictionary.TryGetValue(cacheHostBucket, out clientTagNames))
                     {
                         clientTagNames = new List<string>(10);
-                        routingDictionary.Add(client, clientTagNames);
+                        routingDictionary.Add(cacheHostBucket, clientTagNames);
                     }
 
                     clientTagNames.Add(tagName);
@@ -794,7 +812,7 @@ namespace Dache.Client
                     // Now we've batched them, do the work
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        var rawResults = routingDictionaryEntry.Key.GetCacheKeysTagged(routingDictionaryEntry.Value, pattern);
+                        var rawResults = routingDictionaryEntry.Key.GetNext().GetCacheKeysTagged(routingDictionaryEntry.Value, pattern);
 
                         // Ensure we got some results for this host
                         if (rawResults == null)
@@ -832,9 +850,9 @@ namespace Dache.Client
                 // Enumerate all cache hosts
                 try
                 {
-                    foreach (var communicationClient in _cacheHostLoadBalancingDistribution)
+                    foreach (var cacheHostBucket in _cacheHostBuckets)
                     {
-                        communicationClient.CacheHost.Clear();
+                        cacheHostBucket.PerformActionOnAll(c => c.Clear());
                     }
 
                     // If we got here we succeeded
@@ -871,22 +889,29 @@ namespace Dache.Client
         {
             var client = (CommunicationClient)sender;
 
-            // Remove the communication client from the list of clients
+            // Take cache host offline
             _lock.EnterWriteLock();
 
             try
             {
-                var cacheHostClient = _cacheHostLoadBalancingDistribution.FirstOrDefault(i => i.CacheHost.Equals(client));
-                if (cacheHostClient == null)
+                var result = _cacheHostBuckets.Any(i => i.TakeOffline(client));
+                if (!result)
                 {
                     // Already done
                     return;
                 }
 
-                _cacheHostLoadBalancingDistribution.Remove(cacheHostClient);
+                // See if any buckets have 0 online hosts
+                for (int i = 0; i < _cacheHostBuckets.Count; i++)
+                {
+                    var cacheHostBucket = _cacheHostBuckets[i];
 
-                // Calculate load balancing distribution
-                CalculateCacheHostLoadBalancingDistribution();
+                    if (cacheHostBucket.GetNext() == null)
+                    {
+                        // Needs to be offline
+                       _offlineCacheHostBucketIndexes.Add(i);
+                    }
+                }
             }
             finally
             {
@@ -912,18 +937,29 @@ namespace Dache.Client
         {
             var client = (CommunicationClient)sender;
 
-            // Add the communication client to the list of clients
+            // Bring cache host online
             _lock.EnterWriteLock();
 
             try
             {
-                _cacheHostLoadBalancingDistribution.Add(new CacheHostBucket
+                var result = _cacheHostBuckets.Any(i => i.BringOnline(client));
+                if (!result)
                 {
-                    CacheHost = client
-                });
+                    // Already done
+                    return;
+                }
 
-                // Calculate load balancing distribution
-                CalculateCacheHostLoadBalancingDistribution();
+                // See if any buckets have > 0 online hosts
+                for (int i = 0; i < _cacheHostBuckets.Count; i++)
+                {
+                    var cacheHostBucket = _cacheHostBuckets[i];
+
+                    if (_offlineCacheHostBucketIndexes.Contains(i) && cacheHostBucket.GetNext() != null)
+                    {
+                        // Needs to be online
+                        _offlineCacheHostBucketIndexes.Remove(i);
+                    }
+                }
             }
             finally
             {
@@ -941,63 +977,53 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Calculates the cache host load balancing distribution by considering the average object count across all hosts as well as the cached object count 
-        /// at each of the hosts.
-        /// </summary>
-        private void CalculateCacheHostLoadBalancingDistribution()
-        {
-            // Get the number of cache hosts
-            var registeredCacheHostCount = _cacheHostLoadBalancingDistribution.Count;
-
-            // Reorder cache hosts so that all clients always use the same order
-            _cacheHostLoadBalancingDistribution.Sort(_cacheHostBucketComparer);
-
-            int x = 0;
-            // Iterate all cache hosts in the load balancing distribution
-            for (int i = 0; i < _cacheHostLoadBalancingDistribution.Count; i++)
-            {
-                // Get the current cache host bucket
-                var cacheHostBucket = _cacheHostLoadBalancingDistribution[i];
-
-                // Determine current range
-                int currentMinimum = (int)((long)(x * uint.MaxValue) / registeredCacheHostCount) - int.MaxValue - 1;
-                // If not first iteration
-                if (x > 0)
-                {
-                    // Add 1
-                    currentMinimum++;
-                }
-                x++;
-                int currentMaximum = (int)((long)(x * uint.MaxValue) / registeredCacheHostCount) - int.MaxValue - 1;
-
-                // Update values
-                cacheHostBucket.MinValue = currentMinimum;
-                cacheHostBucket.MaxValue = currentMaximum;
-            }
-        }
-
-        /// <summary>
-        /// Determines the cache host client based on the cache key.
+        /// Determines the cache host bucket based on the cache key.
         /// </summary>
         /// <param name="cacheKey">The cache key.</param>
-        /// <returns>The cache host client.</returns>
-        private CommunicationClient DetermineClient(string cacheKey)
+        /// <returns>The cache host bucket.</returns>
+        private CacheHostBucket DetermineBucket(string cacheKey)
         {
             _lock.EnterReadLock();
 
             try
             {
                 // Ensure a client is available
-                if (_cacheHostLoadBalancingDistribution.Count == 0)
+                if (_offlineCacheHostBucketIndexes.Count == _cacheHostBuckets.Count)
                 {
                     throw new NoCacheHostsAvailableException("There are no reachable cache hosts available. Verify your client settings and ensure that all cache hosts can be successfully communicated with from this client.");
                 }
 
                 // Compute hash code
                 var hashCode = ComputeHashCode(cacheKey);
-                var index = BinarySearch(hashCode);
 
-                return _cacheHostLoadBalancingDistribution[index].CacheHost;
+                // The index to use is value of the (fairly evenly distributed) hashcode modulus the online cache host count
+                var index = Math.Abs(hashCode % (_cacheHostBuckets.Count - _offlineCacheHostBucketIndexes.Count));
+
+                // Walk the collection to determine the client, skipping offline
+                int realIndex = 0;
+                while (true)
+                {
+                    // Check if current is offline, and if so skip it
+                    if (_offlineCacheHostBucketIndexes.Contains(realIndex))
+                    {
+                        realIndex++;
+                        continue;
+                    }
+
+                    // If index has been decremented to 0, we're done
+                    if (index == 0)
+                    {
+                        // Done
+                        break;
+                    }
+
+                    // Decrement index
+                    index--;
+                    // Increment real index
+                    realIndex++;
+                }
+
+                return _cacheHostBuckets[realIndex];
             }
             finally
             {
@@ -1017,8 +1043,8 @@ namespace Dache.Client
                 int hash = 17;
                 foreach (char c in cacheKey)
                 {
-                    // Multiply by c to add greater variation
-                    hash = (hash * 23 + c) * c;
+                    // Very modulus-friendly
+                    hash += c;
                 }
                 return hash;
             }
@@ -1039,57 +1065,14 @@ namespace Dache.Client
                 {
                     foreach (char c in cacheKey)
                     {
-                        // Multiply by c to add greater variation
-                        hash = (hash * 23 + c) * c;
+                        // Very modulus-friendly
+                        hash += c;
                     }
                 }
                 resultHash ^= hash;
             }
 
             return resultHash;
-        }
-
-        /// <summary>
-        /// Binary searches the cache host load balancing distribution for the index of the matching cache host.
-        /// </summary>
-        /// <param name="hashCode">The hash code.</param>
-        /// <returns>A negative value if no cache host applies, otherwise the index of the cache host.</returns>
-        private int BinarySearch(int hashCode)
-        {
-            // Find the middle of the list, rounded down
-            var middleIndex = _cacheHostLoadBalancingDistribution.Count / 2;
-            // Do the binary search recursively
-            return BinarySearchRecursive(hashCode, middleIndex);
-        }
-
-        /// <summary>
-        /// Recursively binary searches the cache host load balancing distribution for the index of the matching cache host.
-        /// </summary>
-        /// <param name="hashCode">The hash code.</param>
-        /// <param name="currentIndex">The current index.</param>
-        /// <returns>A negative value if no cache host applies, otherwise the index of the cache host.</returns>
-        private int BinarySearchRecursive(int hashCode, int currentIndex)
-        {
-            var currentCacheHost = _cacheHostLoadBalancingDistribution[currentIndex];
-            if (currentCacheHost.MinValue > hashCode)
-            {
-                // Go left
-                return BinarySearchRecursive(hashCode, currentIndex / 2);
-            }
-            if (currentCacheHost.MaxValue < hashCode)
-            {
-                // Go right
-                return BinarySearchRecursive(hashCode, (int)(currentIndex * 1.5));
-            }
-
-            // Otherwise check if we're all done
-            if (currentCacheHost.MinValue <= hashCode && currentCacheHost.MaxValue >= hashCode)
-            {
-                return currentIndex;
-            }
-
-            // If we got here it doesn't exist, return the one's complement of where we are which will be negative
-            return ~currentIndex;
         }
 
         private void ReceiveMessage(object sender, MessageReceivedArgs e)
@@ -1151,40 +1134,156 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Provides cache host and bucket range information
+        /// Provides cache host bucket information.
         /// </summary>
         private class CacheHostBucket
         {
-            /// <summary>
-            /// The cache host.
-            /// </summary>
-            public CommunicationClient CacheHost { get; set; }
+            // The cache hosts
+            private readonly List<CommunicationClient> _cacheHosts = new List<CommunicationClient>();
+            // The offline cache hosts
+            private readonly List<CommunicationClient> _offlineCacheHosts = new List<CommunicationClient>();
+            // The current cache host index
+            private volatile int _currentCacheHostIndex = 0;
+            // The cache host count
+            private int _cacheHostCount = 0;
+            // The lock
+            private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
             /// <summary>
-            /// The minimum value of the range.
+            /// Adds a cache host to this bucket.
             /// </summary>
-            public int MinValue { get; set; }
-
-            /// <summary>
-            /// The maximum value of the range.
-            /// </summary>
-            public int MaxValue { get; set; }
-        }
-
-        /// <summary>
-        /// A cache host bucket comparer that compares cache host buckets by the underlying communication client's friendly address and port string.
-        /// </summary>
-        private class CacheHostBucketComparer : IComparer<CacheHostBucket>
-        {
-            /// <summary>
-            /// Compares two cache host buckets.
-            /// </summary>
-            /// <param name="x">The first cache host bucket.</param>
-            /// <param name="y">The second cache host bucket.</param>
-            /// <returns>-1 if x is less than y, 1 is x is greater than x, or 1 if x equals y.</returns>
-            public int Compare(CacheHostBucket x, CacheHostBucket y)
+            /// <param name="cacheHost">The cache host.</param>
+            public void AddCacheHost(CommunicationClient cacheHost)
             {
-                return string.Compare(x.CacheHost.ToString(), y.CacheHost.ToString());
+                // Sanitize
+                if (cacheHost == null)
+                {
+                    throw new ArgumentNullException("cacheHost");
+                }
+
+                _lock.EnterWriteLock();
+                try
+                {
+                    _cacheHosts.Add(cacheHost);
+                    _cacheHostCount++;
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
+                }
+            }
+
+            /// <summary>
+            /// Gets the next communication client.
+            /// </summary>
+            /// <returns>The next communication client, or null if none are available.</returns>
+            public CommunicationClient GetNext()
+            {
+                _lock.EnterReadLock();
+                try
+                {
+                    if (_cacheHosts.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    unchecked
+                    {
+                        // Should be close enough to atomic and never escape the bounds of the list
+                        return _cacheHosts[_currentCacheHostIndex++ % _cacheHosts.Count];
+                    }
+                }
+                finally
+                {
+                    _lock.ExitReadLock();
+                }
+            }
+
+            /// <summary>
+            /// Performs an action on all cache hosts in the bucket.
+            /// </summary>
+            /// <param name="cacheHostFunc">The action to perform.</param>
+            public void PerformActionOnAll(Action<CommunicationClient> cacheHostFunc)
+            {
+                List<CommunicationClient> cacheHosts = null;
+
+                _lock.EnterReadLock();
+                try
+                {
+                    cacheHosts = _cacheHosts.ToList();
+                }
+                finally
+                {
+                    _lock.ExitReadLock();
+                }
+
+                // Enumerate outside of the lock so disconnect events don't deadlock
+                foreach (var cacheHost in cacheHosts)
+                {
+                    cacheHostFunc(cacheHost);
+                }
+            }
+
+            /// <summary>
+            /// Takes the specified cache host offline.
+            /// </summary>
+            /// <param name="cacheHost">The cache host.</param>
+            /// <returns>true if successful.</returns>
+            public bool TakeOffline(CommunicationClient cacheHost)
+            {
+                _lock.EnterWriteLock();
+                try
+                {
+                    var result = _cacheHosts.Remove(cacheHost);
+                    if (result)
+                    {
+                        _offlineCacheHosts.Add(cacheHost);
+
+                        // Reset the current host to be safe
+                        _currentCacheHostIndex = 0;
+                    }
+
+                    return result;
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
+                }
+            }
+
+            /// <summary>
+            /// Brings the specified cache host online.
+            /// </summary>
+            /// <param name="cacheHost">The cache host.</param>
+            /// <returns>true if successful.</returns>
+            public bool BringOnline(CommunicationClient cacheHost)
+            {
+                _lock.EnterWriteLock();
+                try
+                {
+                    var result = _offlineCacheHosts.Remove(cacheHost);
+                    if (result)
+                    {
+                        _cacheHosts.Add(cacheHost);
+                    }
+
+                    return result;
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
+                }
+            }
+
+            /// <summary>
+            /// The cache host count.
+            /// </summary>
+            public int Count
+            {
+                get
+                {
+                    return _cacheHostCount;
+                }
             }
         }
     }

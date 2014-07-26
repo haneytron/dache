@@ -29,7 +29,7 @@ namespace Dache.PerformanceTests.InfiniteAdd
                 i++;
                 if (i == itemsToAdd)
                 {
-                    i = 1;
+                    i = 0;
                 }
             }
         }

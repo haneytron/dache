@@ -103,8 +103,11 @@ namespace Dache.Core.Logging
         /// <param name="message">The message.</param>
         private void WriteLine(string level, string message)
         {
-            var text = string.Format("{0} {1} {2}{3}", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"), level, message, Environment.NewLine);
-            File.AppendAllText(_filePath, text);
+            lock (_filePath)
+            {
+                var text = string.Format("{0} {1} {2}{3}", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"), level, message, Environment.NewLine);
+                File.AppendAllText(_filePath, text);
+            }
         }
     }
 }
