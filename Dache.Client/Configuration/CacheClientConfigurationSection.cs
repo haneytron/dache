@@ -36,28 +36,16 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The local cache memory limit, as a percentage of the total system memory. Valid range is 5 to 90.
+        /// The host redundancy layers. If > 0, this indicates how many servers will hold duplicated data per cache host. 
+        /// In practical terms, setting this to > 0 creates high availability.
         /// </summary>
-        [IntegerValidator(MinValue = 5, MaxValue = 90)]
-        [ConfigurationProperty("localCacheMemoryLimitPercentage", IsRequired = true, DefaultValue = 80)]
-        public int LocalCacheMemoryLimitPercentage
+        [IntegerValidator(MinValue = 0, MaxValue = 10)]
+        [ConfigurationProperty("hostRedundancyLayers", IsRequired = true, DefaultValue = 0)]
+        public int HostRedundancyLayers
         {
             get
             {
-                return (int)this["localCacheMemoryLimitPercentage"];
-            }
-        }
-
-        /// <summary>
-        /// When to expire locally cached entries, in seconds.
-        /// </summary>
-        [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("localCacheAbsoluteExpirationSeconds", IsRequired = true, DefaultValue = 3600)]
-        public int LocalCacheAbsoluteExpirationSeconds
-        {
-            get
-            {
-                return (int)this["localCacheAbsoluteExpirationSeconds"];
+                return (int)this["hostRedundancyLayers"];
             }
         }
 

@@ -29,13 +29,6 @@ namespace Dache.Client
         // The lock used to ensure state
         private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
-        // The local cache
-        private readonly MemoryCache _localCache = null;
-        // The local cache item absolute expiration seconds
-        private readonly int _localCacheItemExpirationSeconds = 0;
-        // The local cache name suffix - all instances of this class share the value to avoid duplication
-        private static int _localCacheNameSuffix = 0;
-
         // The binary serializer
         private readonly IBinarySerializer _binarySerializer = null;
         // The logger
@@ -56,24 +49,14 @@ namespace Dache.Client
             var cacheHosts = CacheClientConfigurationSection.Settings.CacheHosts;
             // Get the cache host reconnect interval from configuration
             var hostReconnectIntervalSeconds = CacheClientConfigurationSection.Settings.HostReconnectIntervalSeconds;
+            // Get the host redundancy layers from configuration
+            var hostRedundancyLayers = CacheClientConfigurationSection.Settings.HostRedundancyLayers;
 
             // Sanitize
             if (cacheHosts == null)
             {
                 throw new ConfigurationErrorsException("At least one cache host must be specified in your application's configuration.");
             }
-
-            // Initialize and configure the local cache
-            var physicalMemoryLimitPercentage = CacheClientConfigurationSection.Settings.LocalCacheMemoryLimitPercentage;
-            var cacheConfig = new NameValueCollection();
-            cacheConfig.Add("pollingInterval", "00:00:15");
-            cacheConfig.Add("cacheMemoryLimitMegabytes", "0");
-            cacheConfig.Add("physicalMemoryLimitPercentage", physicalMemoryLimitPercentage.ToString(CultureInfo.InvariantCulture));
-            // Increment the local cache name suffix to avoid overlapping local caches
-            int localCacheNameSuffix = Interlocked.Increment(ref _localCacheNameSuffix);
-            _localCache = new TrimmingMemoryCache("Dache Local Cache " + localCacheNameSuffix, cacheConfig);
-
-            _localCacheItemExpirationSeconds = CacheClientConfigurationSection.Settings.LocalCacheAbsoluteExpirationSeconds;
 
             // Add the cache hosts to the cache client list
             foreach (CacheHostElement cacheHost in cacheHosts)
@@ -1154,7 +1137,8 @@ namespace Dache.Client
                 // Invalidate local cache keys
                 foreach (var cacheKey in commandParts.Skip(1))
                 {
-                    _localCache.Remove(cacheKey);
+                    // TODO: figure out a smoother local cache use that is consistent
+                    //_localCache.Remove(cacheKey);
 
                     // Fire the cache item expired event
                     var cacheItemExpired = CacheItemExpired;
