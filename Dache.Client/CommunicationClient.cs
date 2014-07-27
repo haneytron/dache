@@ -319,7 +319,7 @@ namespace Dache.Client
             var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
 
             // Verify that we got something
-            if (commandResult == null)
+            if (commandResult == null || commandResult == "\0")
             {
                 return null;
             }

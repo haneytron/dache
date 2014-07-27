@@ -50,6 +50,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CacheMiss\CacheMissTest.cs" />
     <Compile Include="InfiniteAdd\InfiniteAddTest.cs" />
     <Compile Include="MultiOperation\CustomObject.cs" />
     <Compile Include="MultiOperation\MultiOperationTest.cs" />

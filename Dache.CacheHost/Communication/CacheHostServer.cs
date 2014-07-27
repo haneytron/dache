@@ -340,6 +340,13 @@ namespace Dache.Core.Communication
 
         private byte[] CreateCommandResult(List<byte[]> results)
         {
+            // Sanitize
+            if (results == null || results.Count == 0)
+            {
+                // Send smallest possible reply to indicate no results
+                return new byte[1];
+            }
+
             // Structure the results for sending
             using (var memoryStream = new MemoryStream())
             {
