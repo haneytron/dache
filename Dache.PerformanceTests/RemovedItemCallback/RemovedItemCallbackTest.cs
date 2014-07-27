@@ -8,6 +8,7 @@ namespace Dache.PerformanceTests.RemovedItemCallback
     {
         public static void Run()
         {
+            int totalCallbacks = 0;
             var cacheClient = new CacheClient();
 
             // 502 chars = 1 kb
@@ -20,7 +21,7 @@ namespace Dache.PerformanceTests.RemovedItemCallback
 
             cacheClient.HostDisconnected += (sender, e) => { Console.WriteLine("*** Host disconnected"); };
             cacheClient.HostReconnected += (sender, e) => { Console.WriteLine("*** Host reconnected"); };
-            cacheClient.CacheItemExpired += (sender, e) => { Console.WriteLine("Cache key expired: " + e.CacheKey); };
+            cacheClient.CacheItemExpired += (sender, e) => { Interlocked.Increment(ref totalCallbacks); Console.WriteLine(string.Format("Cache key expired: {1}, Total Removed: {1}", e.CacheKey, totalCallbacks)); };
 
             // Add items
             for (int i = 0; i < itemsToAdd; i++)

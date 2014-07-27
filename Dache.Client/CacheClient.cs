@@ -364,7 +364,8 @@ namespace Dache.Client
 
             do
             {
-                var cacheHostBucket = DetermineBucket(cacheKey);
+                // Get the cache host bucket - use tagName if specified
+                var cacheHostBucket = DetermineBucket(tagName != null ? tagName : cacheKey);
 
                 try
                 {
@@ -408,6 +409,7 @@ namespace Dache.Client
             var routingDictionary = new Dictionary<CacheHostBucket, List<KeyValuePair<string, byte[]>>>(_cacheHostBuckets.Count);
             List<KeyValuePair<string, byte[]>> clientCacheKeysAndObjects = null;
             byte[] bytes = null;
+            var useTagName = tagName != null;
 
             do
             {
@@ -432,8 +434,8 @@ namespace Dache.Client
                         continue;
                     }
 
-                    // Get the cache host bucket
-                    var cacheHostBucket = DetermineBucket(cacheKeyAndObjectKvp.Key);
+                    // Get the cache host bucket - use tagName if specified
+                    var cacheHostBucket = DetermineBucket(useTagName ? tagName : cacheKeyAndObjectKvp.Key);
                     if (!routingDictionary.TryGetValue(cacheHostBucket, out clientCacheKeysAndObjects))
                     {
                         clientCacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(10);
