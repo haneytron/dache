@@ -49,7 +49,7 @@ VERSION INFORMATION
 ============================================
 
 
-1.4.0 - THE FASTER, BETTER, STRONGER BUILD!
+1.4.1 - THE FASTER, BETTER, STRONGER BUILD!
 ------------------
 
 - HIGH AVAILABILITY! You can now configure Dache to use > 1 cache host per cache fragment/bucket. This allows for redundancy in the case of cache server failure! To utilize this, adjust the `hostRedundancyLayers` setting in the dache client `.config` file.
@@ -79,6 +79,8 @@ VERSION INFORMATION
 - Minor formatting of `README` file
 
 - Various minor edge case bug fixes
+
+- Fixed breaking change in tag adds introduced in 1.4.0
 
 
 INSTALLATION INSTRUCTIONS
