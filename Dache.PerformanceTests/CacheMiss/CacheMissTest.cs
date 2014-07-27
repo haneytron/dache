@@ -38,11 +38,22 @@ namespace Dache.PerformanceTests.CacheMiss
 
             if (bulkResult == null)
             {
-                Console.WriteLine("PASS: Did not receive values for bulks cache keys");
+                Console.WriteLine("PASS: Did not receive values for bulk cache keys");
             }
             else
             {
-                Console.WriteLine("FAIL: Received values for bulks cache keys");
+                Console.WriteLine("FAIL: Received values for bulk cache keys");
+            }
+
+            // Tag
+            var tagResult = cacheClient.GetTagged<string>("tagDoesntExist");
+            if (tagResult == null)
+            {
+                Console.WriteLine("PASS: Did not receive values for tag cache keys");
+            }
+            else
+            {
+                Console.WriteLine("FAIL: Received values for tag cache keys");
             }
 
             Console.ReadKey();

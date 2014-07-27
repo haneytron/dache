@@ -82,6 +82,8 @@ VERSION INFORMATION
 
 - Fixed breaking change in tag adds introduced in 1.4.0
 
+- Fixed breaking change in cache key misses introduced in 1.4.0
+
 
 INSTALLATION INSTRUCTIONS
 ============================================
