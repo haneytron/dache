@@ -14,7 +14,7 @@ namespace Dache.CacheHostService.Configuration
         private static readonly CacheHostConfigurationSection _settings = ConfigurationManager.GetSection("cacheHostSettings") as CacheHostConfigurationSection;
 
         /// <summary>
-        /// The cache host settings.
+        /// Provides a reference to the cache host settings from configuration file.
         /// </summary>
         public static CacheHostConfigurationSection Settings
         {

@@ -33,6 +33,10 @@ namespace Dache.Client.Configuration
             {
                 return (int)this["hostReconnectIntervalSeconds"];
             }
+            set
+            {
+                this["hostReconnectIntervalSeconds"] = value;
+            }
         }
 
         /// <summary>
@@ -47,6 +51,10 @@ namespace Dache.Client.Configuration
             {
                 return (int)this["hostRedundancyLayers"];
             }
+            set
+            {
+                this["hostRedundancyLayers"] = value;
+            }
         }
 
         /// <summary>
@@ -58,6 +66,10 @@ namespace Dache.Client.Configuration
             get
             {
                 return (CustomTypeElement)this["customLogger"];
+            }
+            set
+            {
+                this["customLogger"] = value;
             }
         }
 
@@ -71,6 +83,10 @@ namespace Dache.Client.Configuration
             {
                 return (CustomTypeElement)this["customSerializer"];
             }
+            set
+            {
+                this["customSerializer"] = value;
+            }
         }
 
         /// <summary>
@@ -83,6 +99,10 @@ namespace Dache.Client.Configuration
             get
             {
                 return (CacheHostsCollection)this["cacheHosts"];
+            }
+            set
+            {
+                this["cacheHosts"] = value;
             }
         }
     }

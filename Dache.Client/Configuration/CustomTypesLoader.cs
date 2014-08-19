@@ -12,15 +12,16 @@ namespace Dache.Client.Configuration
         /// <summary>
         /// Loads a custom logger. If one was not specified, or the loading fails, loads the default logger.
         /// </summary>
+        /// <param name="configuration">The cache client configuration.</param>
         /// <returns>The logger.</returns>
-        public static ILogger LoadLogger()
+        public static ILogger LoadLogger(CacheClientConfigurationSection configuration)
         {
             var defaultLogger = new FileLogger();
 
             // Configure custom logging
             try
             {
-                var customLoggerTypeString = CacheClientConfigurationSection.Settings.CustomLogger.Type;
+                var customLoggerTypeString = configuration.CustomLogger.Type;
                 // Check for custom logger
                 if (string.IsNullOrWhiteSpace(customLoggerTypeString))
                 {
@@ -47,15 +48,16 @@ namespace Dache.Client.Configuration
         /// <summary>
         /// Loads a custom serializer. If one was not specified, or the loading fails, loads the default serializer.
         /// </summary>
+        /// <param name="configuration">The cache client configuration.</param>
         /// <returns>The serializer.</returns>
-        public static IBinarySerializer LoadSerializer()
+        public static IBinarySerializer LoadSerializer(CacheClientConfigurationSection configuration)
         {
             var defaultSerializer = new BinarySerializer();
 
             // Configure custom serializer
             try
             {
-                var customSerializerTypeString = CacheClientConfigurationSection.Settings.CustomSerializer.Type;
+                var customSerializerTypeString = configuration.CustomSerializer.Type;
                 // Check for custom serializer
                 if (string.IsNullOrWhiteSpace(customSerializerTypeString))
                 {
@@ -76,7 +78,7 @@ namespace Dache.Client.Configuration
             catch (Exception ex)
             {
                 // Custom serializer load failed - no custom serialization
-                LoadLogger().Error(ex);
+                LoadLogger(configuration).Error(ex);
             }
 
             return defaultSerializer;

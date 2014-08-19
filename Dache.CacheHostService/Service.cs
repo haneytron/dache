@@ -63,9 +63,11 @@ namespace Dache.CacheHost
             try
             {
                 // Gather settings
-                var port = CacheHostConfigurationSection.Settings.Port;
-                var physicalMemoryLimitPercentage = CacheHostConfigurationSection.Settings.CacheMemoryLimitPercentage;
-                var maximumConnections = CacheHostConfigurationSection.Settings.MaximumConnections;
+                var configuration = CacheHostConfigurationSection.Settings;
+
+                var port = configuration.Port;
+                var physicalMemoryLimitPercentage = configuration.CacheMemoryLimitPercentage;
+                var maximumConnections = configuration.MaximumConnections;
 
                 // Configure the performance counter data manager
                 var performanceDataManager = new PerformanceCounterPerformanceDataManager(port);
@@ -74,7 +76,7 @@ namespace Dache.CacheHost
                 IMemCache memCache;
                 var memoryCache = new MemCache(physicalMemoryLimitPercentage, performanceDataManager);
 
-                if (CacheHostConfigurationSection.Settings.StorageProvider == typeof(GZipMemCache))
+                if (configuration.StorageProvider == typeof(GZipMemCache))
                 {
                     memCache = new GZipMemCache(memoryCache);
                 }

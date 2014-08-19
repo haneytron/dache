@@ -38,18 +38,33 @@ namespace Dache.Client
         /// <summary>
         /// The constructor.
         /// </summary>
-        public CacheClient()
+        public CacheClient() : this(CacheClientConfigurationSection.Settings)
         {
+
+        }
+
+        /// <summary>
+        /// The constructor.
+        /// </summary>
+        /// <param name="configuration">The programmatically created cache host configuration.</param>
+        public CacheClient(CacheClientConfigurationSection configuration)
+        {
+            // Sanitize
+            if (configuration == null)
+            {
+                throw new ArgumentNullException("configuration");
+            }
+
             // Load custom logging
-            _logger = CustomTypesLoader.LoadLogger();
+            _logger = CustomTypesLoader.LoadLogger(configuration);
 
             // Configure custom serializer
-            _binarySerializer = CustomTypesLoader.LoadSerializer();
+            _binarySerializer = CustomTypesLoader.LoadSerializer(configuration);
 
             // Get the cache hosts from configuration
-            var cacheHosts = CacheClientConfigurationSection.Settings.CacheHosts;
+            var cacheHosts = configuration.CacheHosts;
             // Get the cache host reconnect interval from configuration
-            var hostReconnectIntervalSeconds = CacheClientConfigurationSection.Settings.HostReconnectIntervalSeconds;
+            var hostReconnectIntervalSeconds = configuration.HostReconnectIntervalSeconds;
 
             // Sanitize
             if (cacheHosts == null)
@@ -58,7 +73,7 @@ namespace Dache.Client
             }
 
             // Get the host redundancy layers from configuration
-            var hostRedundancyLayers = CacheClientConfigurationSection.Settings.HostRedundancyLayers;
+            var hostRedundancyLayers = configuration.HostRedundancyLayers;
             CacheHostBucket currentCacheHostBucket = new CacheHostBucket();
 
             // Assign the cache hosts to buckets in a specified order
