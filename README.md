@@ -6,9 +6,9 @@ distributed caching for .net applications
 
 fast, scalable distributed caching with meaningful performance metrics for your managers and a simple api for your development team
 
-**WEB:**   http://www.getdache.net
+**WEB:**   http://www.dache.io
 
-**EMAIL:** [info@getdache.net](mailto:info@getdache.net)
+**EMAIL:** [info@dache.io](mailto:info@dache.io)
 
 **NUGET:** [Dache.Client](http://www.nuget.org/packages/Dache.Client) and [Dache.CacheHost](http://www.nuget.org/packages/Dache.CacheHost)
 
@@ -28,7 +28,7 @@ at http://www.gnu.org/copyleft/gpl.html
 The **Commercial Dache License**, which must be purchased directly 
 from Imperative Bytes, LLC - the Limited Liability Company which 
 owns the Dache source code. You may purchase the Commercial Dache 
-License by contacting us at [info@getdache.net](mailto:info@getdache.net).
+License by contacting us at [info@dache.io](mailto:info@dache.io).
 
 Please see `LICENSE.txt` for more information.
 
@@ -42,7 +42,7 @@ In order to clarify the intellectual property license granted with Contributions
 agreement to the license terms of the **Dache Individual Contributor License Agreement** (located in `INDIVIDUAL.txt`). This license 
 is for your protection as a Contributor as well as the protection of Imperative Bytes; it does not change your rights to use your own 
 Contributions for any other purpose. If you have not already done so, please complete, scan, and e-mail an original signed Agreement 
-to [info@getdache.net](mailto:info@getdache.net).
+to [info@dache.io](mailto:info@dache.io).
 
 
 VERSION INFORMATION
