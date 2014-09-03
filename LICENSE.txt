@@ -13,7 +13,7 @@ at <http://www.gnu.org/copyleft/gpl.html> and also included below.
 The Commercial Dache License, which must be purchased directly 
 from Imperative Bytes, LLC - the Limited Liability Company which 
 owns the Dache source code. You may purchase the Commercial Dache 
-License by contacting us at <mailto:info@getdache.net>.
+License by contacting us at <mailto:info@dache.io>.
 
 --------------------------------------------
 WHICH LICENSE SHOULD I USE?
@@ -31,7 +31,7 @@ You may choose which license you'd like to use at any time, but must
 purchase a Commercial Dache License if you use Dache in a closed source 
 project. If you want to commercially distribute software which uses 
 Dache and cannot confirm to the GNU General Public License Version 3, 
-contact us at <mailto:info@getdache.net> to discuss a Commercial Dache 
+contact us at <mailto:info@dache.io> to discuss a Commercial Dache 
 License.
 
 --------------------------------------------
