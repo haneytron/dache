@@ -227,12 +227,17 @@ namespace Dache.Client
                     rawResults = null;
                     foreach (var routingDictionaryEntry in routingDictionary)
                     {
-                        if (rawResults == null)
+                        var getResults = routingDictionaryEntry.Key.GetNext().Get(routingDictionaryEntry.Value);
+                        if (getResults != null)
                         {
-                            rawResults = routingDictionaryEntry.Key.GetNext().Get(routingDictionaryEntry.Value);
-                            continue;
+                            if (rawResults == null)
+                            {
+                                rawResults = getResults;
+                                continue;
+                            }
+
+                            rawResults.AddRange(getResults);
                         }
-                        rawResults.AddRange(routingDictionaryEntry.Key.GetNext().Get(routingDictionaryEntry.Value));
                     }
 
                     // If we got here we did all of the work successfully
