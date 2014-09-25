@@ -25,7 +25,7 @@ namespace Dache.Core.Communication
         // The tag routing table
         private readonly ITagRoutingTable _tagRoutingTable;
         // The cache server socket
-        private readonly ISimplSocket _server;
+        private readonly ISimplSocketServer _server;
         // The local end point
         private readonly IPEndPoint _localEndPoint;
         // The maximum number of simultaneous connections
@@ -99,7 +99,7 @@ namespace Dache.Core.Communication
             _localEndPoint = new IPEndPoint(IPAddress.Any, port);
 
             // Define the server
-            _server = new SimplSocket(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
+            _server = new SimplSocketServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections);
 
             // Hook into received message event
             _server.MessageReceived += ReceiveMessage;
@@ -385,7 +385,7 @@ namespace Dache.Core.Communication
             }
 
             // Notify all clients
-            _server.Send(command);
+            _server.Broadcast(command);
         }
 
         /// <summary>

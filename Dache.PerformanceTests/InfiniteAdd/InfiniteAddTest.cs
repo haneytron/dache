@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Dache.Client;
 
 namespace Dache.PerformanceTests.InfiniteAdd
@@ -22,16 +23,20 @@ namespace Dache.PerformanceTests.InfiniteAdd
             cacheClient.HostReconnected += (sender, e) => { Console.WriteLine("*** Host reconnected"); };
 
             // Add items
-            int i = 0;
-            while (true)
-            {
-                cacheClient.AddOrUpdate("test" + i, value);
-                i++;
-                if (i == itemsToAdd)
+            Task.Factory.StartNew(() => {
+                int i = 0;
+                while (true)
                 {
-                    i = 0;
+                    cacheClient.AddOrUpdate("test" + i, value);
+                    i++;
+                    if (i == itemsToAdd)
+                    {
+                        i = 0;
+                    }
                 }
-            }
+            });
+
+            Console.ReadKey();
         }
     }
 }

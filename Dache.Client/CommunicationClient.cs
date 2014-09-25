@@ -16,7 +16,7 @@ namespace Dache.Client
     internal class CommunicationClient : ICacheHostContract
     {
         // The client socket
-        private ISimplSocket _client = null;
+        private ISimplSocketClient _client = null;
 
         // The remote endpoint
         private readonly IPEndPoint _remoteEndPoint = null;
@@ -24,7 +24,7 @@ namespace Dache.Client
         private readonly int _hostReconnectIntervalMilliseconds = 0;
 
         // Whether or not the communication client is connected
-        private volatile bool _isConnected = true;
+        private volatile bool _isConnected = false;
         // The lock object used for reconnection
         private readonly object _reconnectLock = new object();
         // The timer used to reconnect to the server
@@ -35,10 +35,9 @@ namespace Dache.Client
         /// </summary>
         /// <param name="address">The address.</param>
         /// <param name="port">The port.</param>
-        /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
         /// <param name="hostReconnectIntervalMilliseconds">The cache host reconnect interval, in milliseconds.</param>
-        public CommunicationClient(string address, int port, int hostReconnectIntervalMilliseconds, int maximumConnections, int messageBufferSize)
+        public CommunicationClient(string address, int port, int hostReconnectIntervalMilliseconds, int messageBufferSize)
         {
             // Sanitize
             if (String.IsNullOrWhiteSpace(address))
@@ -53,19 +52,19 @@ namespace Dache.Client
             {
                 throw new ArgumentException("must be greater than 0", "hostReconnectIntervalMilliseconds");
             }
-            if (maximumConnections <= 0)
-            {
-                throw new ArgumentException("must be greater than 0", "maximumConnections");
-            }
             if (messageBufferSize <= 256)
             {
                 throw new ArgumentException("cannot be less than 256", "messageBufferSize");
             }
 
             // Define the client
-            _client = new SimplSocket(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections, false);
+            _client = new SimplSocketClient(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize);
 
             // Wire into events
+            _client.SuccessfullyConnected += (sender, e) =>
+            {
+                SuccessfullyConnected();
+            };
             _client.MessageReceived += (sender, e) =>
             {
                 var messageReceived = MessageReceived;
@@ -100,21 +99,17 @@ namespace Dache.Client
 
             // Initialize reconnect timer
             _reconnectTimer = new Timer(ReconnectToServer, null, Timeout.Infinite, Timeout.Infinite);
+
+            // Always assume initially connected
+            _isConnected = true;
         }
 
         /// <summary>
         /// Connects to the cache host.
         /// </summary>
-        /// <returns>true if successful, false otherwise.</returns>
-        public bool Connect()
+        public void Connect()
         {
-            var result = _client.Connect(_remoteEndPoint);
-            if (!result)
-            {
-                // Disconnect the client
-                DisconnectFromServer();
-            }
-            return result;
+            _client.Connect(_remoteEndPoint);
         }
 
         /// <summary>
@@ -543,25 +538,31 @@ namespace Dache.Client
                 // Close the client
                 _client.Close();
 
-                // Reconnect
-                if (!Connect())
-                {
-                    // Reconnection failed, so we're done (the Timer will retry)
-                    return;
-                }
+                // Attempt to reconnect
+                Connect();
+            }
+        }
 
-                // If we got here, we're back online, adjust reconnected status
-                _isConnected = true;
+        private void SuccessfullyConnected()
+        {
+            // Double check if already reconnected
+            if (_isConnected)
+            {
+                // Do nothing
+                return;
+            }
 
-                // Disable the reconnect timer to stop trying to reconnect
-                _reconnectTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            // If we got here, we're back online, adjust reconnected status
+            _isConnected = true;
 
-                // Fire the reconnected event
-                var reconnected = Reconnected;
-                if (reconnected != null)
-                {
-                    reconnected(this, EventArgs.Empty);
-                }
+            // Disable the reconnect timer to stop trying to reconnect
+            _reconnectTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+            // Fire the reconnected event
+            var reconnected = Reconnected;
+            if (reconnected != null)
+            {
+                reconnected(this, EventArgs.Empty);
             }
         }
 

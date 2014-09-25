@@ -174,7 +174,7 @@ namespace Dache.Core.Performance
         /// <summary>
         /// Called when disposed.
         /// </summary>
-        public void Dispose()
+        public new void Dispose()
         {
             _numberOfCachedObjectsCounter.Dispose();
             _totalRequestsPerSecondCounter.Dispose();
@@ -184,6 +184,8 @@ namespace Dache.Core.Performance
             _addsPerSecondCounter.Dispose();
             _getsPerSecondCounter.Dispose();
             _removesPerSecondCounter.Dispose();
+
+            base.Dispose();
         }
     }
 }

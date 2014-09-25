@@ -20,7 +20,7 @@ namespace Dache.PerformanceTests.MultiOperation
             overallStopwatch.Start();
 
             // 502 chars = 1 kb
-            string value = "asdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasas";
+            const string value = "asdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasas";
 
             CustomObject myObject = new CustomObject();
 
@@ -88,11 +88,13 @@ namespace Dache.PerformanceTests.MultiOperation
             Console.WriteLine("***** BEGIN GET 10000 TESTS *****");
             Console.WriteLine();
 
+            string otherValue = null;
+
             #region Regular Get 10000 strings
             stopwatch.Restart();
             for (int i = 1; i <= 10000; i++)
             {
-                if (!cacheClient.TryGet("test" + i, out value))
+                if (!cacheClient.TryGet("test" + i, out otherValue))
                 {
                     Console.WriteLine("Get failed for cache key: " + "test" + i);
                 }
