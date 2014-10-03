@@ -41,6 +41,9 @@ namespace Dache.Core.Communication
         // The logger
         private readonly ILogger _logger;
 
+        // The invalid command string list
+        private readonly List<string> _invalidCommandStringList = new List<string> { "invalid command" };
+
         /// <summary>
         /// The constructor.
         /// </summary>
@@ -103,6 +106,7 @@ namespace Dache.Core.Communication
 
             // Hook into received message event
             _server.MessageReceived += ReceiveMessage;
+            _server.Error += (sender, e) => { _logger.Warn("Dache Client Disconnected", e.Exception); };
         }
 
         private void ReceiveMessage(object sender, MessageReceivedArgs e)
@@ -324,6 +328,12 @@ namespace Dache.Core.Communication
                             AddOrUpdate(cacheKeysAndObjects, tagName: tagName, notifyRemoved: notifyRemoved);
                         }
                     }
+                    break;
+                }
+                default:
+                {
+                    // Invalid command
+                    commandResult = CreateCommandResult(_invalidCommandStringList);
                     break;
                 }
             }
