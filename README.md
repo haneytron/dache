@@ -2,9 +2,9 @@ DACHE
 ===========
 
 
-distributed caching for .net applications 
+Distributed caching for .NET applications 
 
-fast, scalable distributed caching with meaningful performance metrics for your managers and a simple api for your development team
+Fast, scalable distributed caching with meaningful performance metrics for your managers and a simple API for your development team
 
 **WEB:**   http://www.dache.io
 
@@ -49,40 +49,14 @@ VERSION INFORMATION
 ============================================
 
 
-1.4.1 - THE FASTER, BETTER, STRONGER BUILD!
+1.4.2
 ------------------
 
-- HIGH AVAILABILITY! You can now configure Dache to use > 1 cache host per cache fragment/bucket. This allows for redundancy in the case of cache server failure! To utilize this, adjust the `hostRedundancyLayers` setting in the dache client `.config` file.
+- Upgraded to new version of SimplSockets. This new version fixed numerous crashes, hangs, and communication problems. Dache should be significantly more reliable now with better uptimes.
 
-- FASTER BETTER COMMUNICATION! SimplSockets rewritten for much more efficient communication. Also streamlined the Dache low level TCP syntax.
-
-- MUCH SIMPLER CLIENT METHOD CALLS! Reduced most operations to 1 or 2 methods with named parameters instead of having lke 17 Add____ methods.
-
-- CACHED ITEM REMOVAL CALLBACKS! Now you can be notified when a cache key is removed from cache. NOTE: updating a cache key triggers a removal, so don't spin yourself into a loop with this!
-
-- Performance counter overhaul; no longer using performance counters for self-hosting (fixes errors related to permissions for self-hosting)
-
-- Catching and swallowing regex pattern exceptions. If you use a bad regex pattern, you'll get no results.
-
-- Fixed cache memory limit reporting (`MemoryCache` MSDN docs LIED to me!)
-
-- White space checks on cache keys and tag names (will throw exception at client)
-
-- Added new performance test for removed item callbacks. This lets you see how subscribed to removed cache keys works.
-
-- Updated `TODO.txt`
-
-- Updated example client config file and documentation
-
-- Updated various XML code comments
-
-- Minor formatting of `README` file
+- When hosting the Dache Server in your own process, you may now configure it programmatically instead of having to use a configuration file. There is a new constructor to facilitate this option.
 
 - Various minor edge case bug fixes
-
-- Fixed breaking change in tag adds introduced in 1.4.0
-
-- Fixed breaking change in cache key misses introduced in 1.4.0
 
 
 INSTALLATION INSTRUCTIONS
