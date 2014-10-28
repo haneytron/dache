@@ -52,7 +52,14 @@ namespace Dache.Client.Plugins.OutputCache
 
             var cacheKey = string.Format(_cacheKey, key);
 
-            _cacheClient.AddOrUpdate(cacheKey, value, absoluteExpiration: absoluteExpiration);
+            if (absoluteExpiration == DateTime.MaxValue)
+            {
+                _cacheClient.AddOrUpdate(cacheKey, value);
+            }
+            else
+            {
+                _cacheClient.AddOrUpdate(cacheKey, value, absoluteExpiration: absoluteExpiration);
+            }
             
             return true;
         }
