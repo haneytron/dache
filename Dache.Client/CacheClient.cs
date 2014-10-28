@@ -18,7 +18,7 @@ using SimplSockets;
 namespace Dache.Client
 {
     /// <summary>
-    /// The client for cache host communication.
+    /// The client for cache host communication. This should be used as a singleton/static reference and only created once. Thread safe.
     /// </summary>
     public class CacheClient : ICacheClient
     {
