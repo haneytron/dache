@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Web.Caching;
 
 namespace Dache.Client.Plugins.OutputCache
@@ -30,7 +31,15 @@ namespace Dache.Client.Plugins.OutputCache
                 return value;
             }
 
-            _cacheClient.AddOrUpdate(cacheKey, entry, absoluteExpiration: utcExpiry);
+            if (utcExpiry == DateTime.MaxValue)
+            {
+                _cacheClient.AddOrUpdate(cacheKey, entry);
+            }
+            else
+            {
+                _cacheClient.AddOrUpdate(cacheKey, entry, absoluteExpiration: utcExpiry);
+            }
+
             return entry;
         }
         
@@ -69,7 +78,14 @@ namespace Dache.Client.Plugins.OutputCache
         {
             var cacheKey = string.Format(_cacheKey, key);
 
-            _cacheClient.AddOrUpdate(cacheKey, entry, absoluteExpiration: utcExpiry);
+            if (utcExpiry == DateTime.MaxValue)
+            {
+                _cacheClient.AddOrUpdate(cacheKey, entry);
+            }
+            else
+            {
+                _cacheClient.AddOrUpdate(cacheKey, entry, absoluteExpiration: utcExpiry);
+            }
         }
     }
 }
