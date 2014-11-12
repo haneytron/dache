@@ -102,7 +102,7 @@ namespace Dache.Core.Communication
             _localEndPoint = new IPEndPoint(IPAddress.Any, port);
 
             // Define the server
-            _server = new SimplSocketServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, maximumConnections);
+            _server = new SimplSocketServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, 10000 /* TODO: make a setting */, maximumConnections);
 
             // Hook into received message event
             _server.MessageReceived += ReceiveMessage;

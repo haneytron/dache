@@ -49,14 +49,12 @@ VERSION INFORMATION
 ============================================
 
 
-1.4.2
+1.4.3
 ------------------
 
-- Upgraded to new version of SimplSockets. This new version fixed numerous crashes, hangs, and communication problems. Dache should be significantly more reliable now with better uptimes.
+- Upgraded to new version of SimplSockets. This new version fixes a rare hang.
 
-- When hosting the Dache Server in your own process, you may now configure it programmatically instead of having to use a configuration file. There is a new constructor to facilitate this option.
-
-- Various minor edge case bug fixes
+- Fixed bug in DacheOutputCacheProvider and DacheMvcChildActionCache
 
 
 INSTALLATION INSTRUCTIONS
