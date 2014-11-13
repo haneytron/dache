@@ -12,6 +12,8 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 **NUGET:** [Dache.Client](http://www.nuget.org/packages/Dache.Client) and [Dache.CacheHost](http://www.nuget.org/packages/Dache.CacheHost)
 
+**BINARIES:** https://github.com/ironyx/dache/releases
+
 
 LICENSE INFORMATION
 ============================================
