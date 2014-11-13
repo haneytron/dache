@@ -49,12 +49,10 @@ VERSION INFORMATION
 ============================================
 
 
-1.4.3
+1.4.4
 ------------------
 
-- Upgraded to new version of SimplSockets. This new version fixes a rare hang.
-
-- Fixed bug in DacheOutputCacheProvider and DacheMvcChildActionCache
+- Fixed bug in SimplSockets which caused maximum connections leak (and eventual inability to connect) due to improper sempahore release
 
 
 INSTALLATION INSTRUCTIONS
