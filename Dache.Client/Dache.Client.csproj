@@ -75,7 +75,7 @@
     <Compile Include="Serialization\IBinarySerializer.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Client.Example.config">
+    <Content Include="DacheClient.Example.config">
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

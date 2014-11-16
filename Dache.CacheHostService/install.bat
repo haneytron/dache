@@ -1,4 +1,47 @@
 CLS
-ECHO Installing Dache Cache Host
+@echo off
+SETLOCAL
 
-START %windir%\Microsoft.NET\Framework\v4.0.30319\installutil.exe "%~d0%~p0\Dache.CacheHostService.exe"
+TITLE Dache Host Installer
+
+SET INSTALL_UTIL=%windir%\Microsoft.Net\Framework\v4.0.30319\installutil.exe
+SET SERVICE_EXE=%~d0%~p0\Dache.CacheHostService.exe
+
+if not exist "%INSTALL_UTIL%" (
+    echo FAILURE: Could not find installutil.exe (path searched: "%INSTALL_UTIL%"^). Exiting...
+    pause
+    goto:eof
+)
+
+if not exist "%SERVICE_EXE%" (
+    echo FAILURE: Could not find Cache Host Service (path searched: "%SERVICE_EXE%"^). Exiting...
+    pause
+    goto:eof
+)
+
+echo INFO: Administrative permissions required. Detecting permissions...
+net session >nul 2>&1
+if %errorLevel% == 0 (
+    echo SUCCESS: Administrative permissions confirmed.
+) else (
+    echo FAILURE: Current permissions inadequate. Please run as administrator. Exiting...
+    pause
+    goto:eof
+)
+
+
+echo INFO: Installing Dache Cache Host
+echo.
+
+%INSTALL_UTIL% "%SERVICE_EXE%"
+
+echo.
+if %errorlevel% == 0 (
+    echo SUCCESS: Dache Cache Host has been successfully installed.
+) else (
+    echo FAILURE: Dache Cache Host could not be installed.
+)
+
+pause
+
+ENDLOCAL
