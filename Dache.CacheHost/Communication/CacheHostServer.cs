@@ -106,7 +106,15 @@ namespace Dache.Core.Communication
 
             // Hook into received message event
             _server.MessageReceived += ReceiveMessage;
-            _server.Error += (sender, e) => { _logger.Warn("Dache Client Disconnected", e.Exception); };
+            _server.Error += (sender, e) =>
+            {
+                _logger.Warn("Dache Client Disconnected", e.Exception);
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("WARN: Dache Client Disconnected");
+                Console.WriteLine("WARN: Reason = " + e.Exception.Message);
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Cyan;
+            };
         }
 
         private void ReceiveMessage(object sender, MessageReceivedArgs e)

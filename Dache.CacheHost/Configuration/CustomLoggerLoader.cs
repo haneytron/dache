@@ -1,12 +1,12 @@
 ﻿using System;
 using Dache.Core.Logging;
 
-namespace Dache.CacheHostService.Configuration
+namespace Dache.CacheHost.Configuration
 {
     /// <summary>
     /// Loads custom logger from configuration.
     /// </summary>
-    internal static class CustomLoggerLoader
+    public static class CustomLoggerLoader
     {
         /// <summary>
         /// Loads a custom logger. If one was not specified, or the loading fails, loads the default logger.

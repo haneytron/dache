@@ -3,7 +3,7 @@ using System.ServiceProcess;
 using System.Threading;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
-using Dache.CacheHostService.Configuration;
+using Dache.CacheHost.Configuration;
 using Dache.Core.Communication;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
@@ -27,12 +27,7 @@ namespace Dache.CacheHost
         /// <param name="args">The arguments passed, if any.</param>
         static void Main(string[] args)
         {
-            var servicesToRun = new ServiceBase[] 
-            { 
-                new Service()
-            };
-
-            ServiceBase.Run(servicesToRun);
+            ServiceBase.Run(new[] { new Service() });
         }
 
         /// <summary>

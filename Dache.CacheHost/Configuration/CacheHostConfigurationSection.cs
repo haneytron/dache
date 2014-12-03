@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Configuration;
 using Dache.CacheHost.Storage;
 
-namespace Dache.CacheHostService.Configuration
+namespace Dache.CacheHost.Configuration
 {
     /// <summary>
     /// An application configuration section that allows a user to specify cache host settings.

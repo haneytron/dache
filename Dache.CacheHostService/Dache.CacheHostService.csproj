@@ -46,11 +46,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\dache.client\configuration\CustomTypeElement.cs">
-      <Link>Configuration\CustomTypeElement.cs</Link>
-    </Compile>
-    <Compile Include="Configuration\CacheHostConfigurationSection.cs" />
-    <Compile Include="Configuration\CustomLoggerLoader.cs" />
     <Compile Include="Service.cs">
       <SubType>Component</SubType>
     </Compile>
