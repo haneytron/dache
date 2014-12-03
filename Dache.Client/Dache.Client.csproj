@@ -101,7 +101,21 @@
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
-  <Target Name="AfterBuild">
-  </Target>
   -->
+  <Target Name="AfterBuild">
+    <GetAssemblyIdentity AssemblyFiles="$(OutDir)$(TargetFileName)">
+      <Output TaskParameter="Assemblies" ItemName="TheVersion" />
+    </GetAssemblyIdentity>
+    <PropertyGroup>
+      <Pattern>(\d+)\.(\d+)\.(\d+)</Pattern>
+      <In>%(TheVersion.Version)</In>
+      <OutVersion>$([System.Text.RegularExpressions.Regex]::Match($(In), $(Pattern)))</OutVersion>
+    </PropertyGroup>
+    <ItemGroup>
+      <OutputFiles Include="$(OutDir)*" Exclude="$(OutDir)*.tmp;$(OutDir)log.txt" />
+      <SolnFiles Include="$(SolutionDir)INDIVIDUAL.txt;$(SolutionDir)LICENSE.txt;$(SolutionDir)README.md" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OutputFiles)" DestinationFolder="$(SolutionDir)..\dache-$(OutVersion)\Client" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(SolnFiles)" DestinationFolder="$(SolutionDir)..\dache-$(OutVersion)\" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
