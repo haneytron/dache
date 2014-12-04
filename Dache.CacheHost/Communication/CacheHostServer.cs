@@ -53,7 +53,9 @@ namespace Dache.Core.Communication
         /// <param name="port">The port.</param>
         /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
-        public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, ILogger logger, int port, int maximumConnections, int messageBufferSize)
+        /// <param name="timeoutMilliseconds">The communication timeout, in milliseconds.</param>
+        /// <param name="maxMessageSize">The maximum message size, in bytes.</param>
+        public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, ILogger logger, int port, int maximumConnections, int messageBufferSize, int timeoutMilliseconds, int maxMessageSize)
         {
             // Sanitize
             if (memCache == null)
@@ -71,14 +73,6 @@ namespace Dache.Core.Communication
             if (port <= 0)
             {
                 throw new ArgumentException("cannot be <= 0", "port");
-            }
-            if (maximumConnections <= 0)
-            {
-                throw new ArgumentException("cannot be <= 0", "maximumConnections");
-            }
-            if (messageBufferSize < 256)
-            {
-                throw new ArgumentException("cannot be < 256", "messageBufferSize");
             }
 
             // Set the default cache item policies
@@ -102,7 +96,8 @@ namespace Dache.Core.Communication
             _localEndPoint = new IPEndPoint(IPAddress.Any, port);
 
             // Define the server
-            _server = new SimplSocketServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize, 10000 /* TODO: make a setting */, maximumConnections);
+            _server = new SimplSocketServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize: messageBufferSize, 
+                communicationTimeout: timeoutMilliseconds, maxMessageSize: maxMessageSize, maximumConnections: maximumConnections);
 
             // Hook into received message event
             _server.MessageReceived += ReceiveMessage;

@@ -48,9 +48,9 @@
     <Reference Include="SharpMemoryCache">
       <HintPath>..\packages\SharpMemoryCache.1.0.0\lib\SharpMemoryCache.dll</HintPath>
     </Reference>
-    <Reference Include="SimplSockets, Version=1.3.0.24722, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="SimplSockets, Version=1.3.5.40327, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\SimplSockets.1.3.4\lib\SimplSockets.dll</HintPath>
+      <HintPath>..\packages\SimplSockets.1.3.5\lib\SimplSockets.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />

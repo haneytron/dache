@@ -80,7 +80,8 @@ namespace Dache.Client
             foreach (CacheHostElement cacheHost in cacheHosts.OfType<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
                 // Instantiate a communication client
-                var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalSeconds * 1000, 4096);
+                // TODO: make some of this hard-coded stuff configurable
+                var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalSeconds * 1000, 4096, 10000, 100 * 1024 * 1024);
 
                 // Hook up the disconnected and reconnected events
                 communicationClient.Disconnected += OnClientDisconnected;

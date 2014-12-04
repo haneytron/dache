@@ -37,9 +37,10 @@ namespace Dache.CacheHost
 
             
             Console.WriteLine("INFO: Starting " + Console.Title + "...");
-            Console.WriteLine();
 
             _cacheHostEngine.Start();
+
+            Console.WriteLine("INFO: Started Successfully");
 
             new AutoResetEvent(false).WaitOne();
         }
@@ -100,10 +101,12 @@ namespace Dache.CacheHost
             // Instantiate the cache host engine
             _cacheHostEngine = new CacheHostEngine(memCache, logger, port, physicalMemoryLimitPercentage, maximumConnections);
 
-            Console.WriteLine("INFO: Listening on port " + port);
-            Console.WriteLine("INFO: Memory Limit      " + physicalMemoryLimitPercentage + "%");
-            Console.WriteLine("INFO: Max Connections   " + maximumConnections);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("SETTINGS: Listening on port " + port);
+            Console.WriteLine("SETTINGS: Memory Limit      " + physicalMemoryLimitPercentage + "%");
+            Console.WriteLine("SETTINGS: Max Connections   " + maximumConnections);
             Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Cyan;
 
             return true;
         }
