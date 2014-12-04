@@ -113,9 +113,9 @@
     </PropertyGroup>
     <ItemGroup>
       <OutputFiles Include="$(OutDir)*" Exclude="$(OutDir)*.tmp;$(OutDir)log.txt" />
-      <SolnFiles Include="$(SolutionDir)INDIVIDUAL.txt;$(SolutionDir)LICENSE.txt;$(SolutionDir)README.md" />
+      <SolnFiles Include="$(SolutionDir)LICENSE.txt;$(SolutionDir)README.md" />
     </ItemGroup>
-    <Copy SourceFiles="@(OutputFiles)" DestinationFolder="$(SolutionDir)..\dache-$(OutVersion)\Client" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(SolnFiles)" DestinationFolder="$(SolutionDir)..\dache-$(OutVersion)\" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(OutputFiles)" DestinationFolder="$(SolutionDir)dache-$(OutVersion)\Client" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(SolnFiles)" DestinationFolder="$(SolutionDir)dache-$(OutVersion)\" SkipUnchangedFiles="true" />
   </Target>
 </Project>
