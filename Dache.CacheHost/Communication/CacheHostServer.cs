@@ -99,7 +99,13 @@ namespace Dache.Core.Communication
             _server = new SimplSocketServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize: messageBufferSize, 
                 communicationTimeout: timeoutMilliseconds, maxMessageSize: maxMessageSize, maximumConnections: maximumConnections);
 
-            // Hook into received message event
+            // Hook into events
+            _server.ClientConnected += (sender, e) =>
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("CONN: Dache Client Connected");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+            };
             _server.MessageReceived += ReceiveMessage;
             _server.Error += (sender, e) =>
             {
@@ -107,7 +113,6 @@ namespace Dache.Core.Communication
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("WARN: Dache Client Disconnected");
                 Console.WriteLine("WARN: Reason = " + e.Exception.Message);
-                Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.Cyan;
             };
         }
