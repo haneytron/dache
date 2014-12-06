@@ -20,6 +20,14 @@ namespace Dache.CacheHost
         private readonly IRunnable _cacheHostRunner = null;
 
         /// <summary>
+        /// The constructor that derives configuration from file.
+        /// </summary>
+        public CacheHostEngine() : this(CacheHostConfigurationSection.Settings)
+        {
+
+        }
+
+        /// <summary>
         /// The constructor.
         /// </summary>
         /// <param name="configuration">The configuration to use for the cache host.</param>

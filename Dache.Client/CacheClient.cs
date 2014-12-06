@@ -36,7 +36,7 @@ namespace Dache.Client
         private readonly ILogger _logger = null;
 
         /// <summary>
-        /// The constructor that uses XML configuration.
+        /// The constructor that derives configuration from file.
         /// </summary>
         public CacheClient() : this(CacheClientConfigurationSection.Settings)
         {
@@ -46,7 +46,7 @@ namespace Dache.Client
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="configuration">The programmatically created cache host configuration.</param>
+        /// <param name="configuration">The configuration to use for the cache client.</param>
         public CacheClient(CacheClientConfigurationSection configuration)
         {
             // Sanitize
