@@ -41,6 +41,7 @@ namespace Dache.CacheHost
             _cacheHostEngine.Start();
 
             Console.WriteLine("INFO: Started Successfully");
+            Console.WriteLine();
 
             new AutoResetEvent(false).WaitOne();
         }
