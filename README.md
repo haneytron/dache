@@ -38,9 +38,9 @@ INSTALLATION INSTRUCTIONS
 ============================================
 
 
-Client
---------
+Getting started quickly involves standing up the Dache Client and a Dache Host for the client to communicate with.
 
+## Client
 
 The Dache Client is a single DLL which you include in any application which you would like to use Dache with. Include it via [NuGet](http://www.nuget.org/packages/Dache.Client). Your `web.config` or `app.config` will be automatically modified to install the default Dache client configuration:
 
@@ -64,14 +64,27 @@ A file called `CacheProvider.cs` will also be installed at the root of your proj
 
 **IMPORTANT:** all clients should be configured with the same list of servers. The list of servers does not have to be in the same order, but each client's list should contain the same servers.
 
+## Host
 
-[**See Quick-Start for more information**](https://github.com/ironyx/dache/wiki/Quick-Start)
+The host is the actual process that does the caching work. You have 3 options for hosting Dache:
 
-Host
---------
+- Run the **quick and easy console host** provided in the [latest release download](http://www.dache.io/download)
+- Install the **Windows service** provided in the [latest release download](http://www.dache.io/download)
+- Host Dache **in your own process** by including the [Dache.CacheHost NuGet package](http://www.nuget.org/packages/Dache.CacheHost)
 
+### Quick And Easy Console Host
 
-The host is the actual process that does the caching work. You have 2 options for hosting Dache. You can either use the Windows service provided in the download (see: http://www.dache.io/download), or you can include the Dache host ([NuGet](http://www.nuget.org/packages/Dache.CacheHost)) package and host it in your own process (such as an Azure worker role). The choice is yours!
+To use the console host, first download the [latest release](http://www.dache.io/download) and then run (or double click) `CacheHost/Dache.CacheHost.exe`. A console will open that verifies the Dache settings and then gives you information about Dache as it is used.
+
+### Windows Service
+
+To install and use the provided Windows service, first download the binaries from http://www.dache.io/download and then run `CacheHost/install.bat`. You will be offered custom installation settings, including the ability to rename the service if you want to install multiple Dache hosts on a single server under unique names.
+
+After successful installation, you can run the service from Windows Services.
+
+To uninstall Dache, run `CacheHost/uninstall.bat`.
+
+### Host In Your Own Process
 
 To host it in your own process, Include it via [NuGet](http://www.nuget.org/packages/Dache.CacheHost). Your `web.config` or `app.config` will be automatically modified to install the default Dache host configuration:
 
@@ -86,15 +99,24 @@ To host it in your own process, Include it via [NuGet](http://www.nuget.org/pack
 </configuration>
 ```
 
-Next, instantiate a `new Dache.CacheHost.CacheHostEngine(CacheHostConfigurationSection configuration)`, passing in either `CacheHostConfigurationSection.Settings` to use the settings from your `app.config` or `web.config`, or a `new CacheHostConfigurationSection()` which you have manually configured to supply the settings via code.
+Next, instantiate the `CacheHostEngine`:
 
-To install and use the provided Windows service, first download the binaries from http://www.dache.io/download and then run `CacheHost/install.bat`. You will be offered custom installation settings, including the ability to rename the service if you want to install multiple Dache hosts on a single server under unique names.
+```csharp
+// Using the settings from app.config or web.config
+var cacheHost = new Dache.CacheHost.CacheHostEngine(CacheHostConfigurationSection.Settings);
+```
 
-After successful installation, you can run the service from Windows Services.
+or
 
-To uninstall Dache, run `CacheHost/uninstall.bat`.
+```csharp
+// Using programmatically created settings
+var settings = new CacheHostConfigurationSettings { ... };
+var cacheHost = new Dache.CacheHost.CacheHostEngine(settings);
+```
 
-[**See Quick-Start for more information**](https://github.com/ironyx/dache/wiki/Quick-Start)
+## Next Steps
+
+To learn more about Dache, check out the other pages of this wiki.
 
 
 Board
