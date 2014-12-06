@@ -16,8 +16,9 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.4.5
+## 1.4.6
 
+- Fixed bug where performance counters not being installed crashed Dache Host
 - Greatly simplified Dache host and client configuration. Most settings are now optional.
 - Created new Dache Host executable that can be run as a quick-start without installing the service. This file hosts Dache with default settings and provides information in a console window.
 - Upgraded SimplSockets. The latest version supports a maximum message size limit and also returns the `Connect` method of the client to synchronous.
