@@ -1,6 +1,4 @@
-DACHE
-===========
-
+# DACHE
 
 Distributed caching for .NET applications 
 
@@ -16,13 +14,9 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 **WIKI:** http://www.github.com/ironyx/dache/wiki
 
+# VERSION INFORMATION
 
-VERSION INFORMATION
-============================================
-
-
-1.4.5
-------------------
+## 1.4.5
 
 - Greatly simplified Dache host and client configuration. Most settings are now optional.
 - Created new Dache Host executable that can be run as a quick-start without installing the service. This file hosts Dache with default settings and provides information in a console window.
@@ -33,10 +27,7 @@ VERSION INFORMATION
 - Created MSBUILD tasks to create a nice execution folder structure for Dache files after each build. This new folder is in root of solution and is called `dache-<version>`.
 - **IMPORTANT:** releases will no longer be offered in GitHub. Instead, they will be found at our download page: http://www.dache.io/download - this is a much simpler and less confusing way to get the Dache binaries.
 
-
-INSTALLATION INSTRUCTIONS
-============================================
-
+# INSTALLATION INSTRUCTIONS
 
 Getting started quickly involves standing up the Dache Client and a Dache Host for the client to communicate with.
 
@@ -58,9 +49,24 @@ The Dache Client is a single DLL which you include in any application which you 
 </configuration>
 ```
 
-A file called `CacheProvider.cs` will also be installed at the root of your project. It is a working example of using the Dache client and is intended for experimentation and getting a quick-start with Dache. You can build on top of this implementation or discard it completely. The purpose of it is to show you how to use the Dache client in your code.
+Next, instantiate the `CacheClient`:
 
-**NOTE:** if you prefer to derive your settings from code rather than configuration, use the `new CacheClient(CacheClientConfigurationSection configuration)` constructor, passing in a `CacheClientConfigurationSection` which you've configured in code.
+```csharp
+// Using the settings from app.config or web.config
+var cacheClient = new Dache.Client.CacheClient();
+```
+
+or
+
+```csharp
+// Using programmatically created settings
+var settings = new CacheClientConfigurationSettings { ... };
+var cacheClient = new Dache.Client.CacheClient(settings);
+```
+
+A file called `CacheProvider.cs` will also be installed at the root of your project. It is a working example of using the `CacheClient` and is intended for experimentation and getting a quick-start with Dache. You can build on top of this implementation or discard it completely. The purpose of it is to show you how to use the Dache client in your code.
+
+**NOTE:** `CacheClient` is intended to be used as a singleton. **Do not create a new `CacheClient` per request.**
 
 **IMPORTANT:** all clients should be configured with the same list of servers. The list of servers does not have to be in the same order, but each client's list should contain the same servers.
 
@@ -118,11 +124,7 @@ var cacheHost = new Dache.CacheHost.CacheHostEngine(settings);
 
 To learn more about using Dache, check out the [wiki](https://github.com/ironyx/dache/wiki).
 
-## Board
-
-Not yet completed. Feel free to contribute! :)
-
-## LICENSE INFORMATION
+# LICENSE INFORMATION
 
 Dache software is dual licensed. You must choose which license you 
 would like to use Dache under from the following 2 options:
@@ -139,7 +141,7 @@ License by contacting us at [info@dache.io](mailto:info@dache.io).
 
 Please see `LICENSE.txt` for more information.
 
-## IMPORTANT NOTE TO SOURCE CODE CONTRIBUTORS
+# IMPORTANT NOTE TO SOURCE CODE CONTRIBUTORS
 
 In order to clarify the intellectual property license granted with Contributions from any person or entity, Imperative Bytes, LLC. 
 ("Imperative Bytes") must have a Contributor License Agreement ("CLA") on file that has been signed by each Contributor, indicating 
