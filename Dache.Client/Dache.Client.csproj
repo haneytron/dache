@@ -59,6 +59,7 @@
     <Compile Include="Configuration\CustomTypesLoader.cs" />
     <Compile Include="CacheItemExpiredArgs.cs" />
     <Compile Include="Exceptions\NoCacheHostsAvailableException.cs" />
+    <None Include="NuGet\CacheProvider.cs.pp" />
     <Compile Include="Plugins\OutputCache\DacheMvcChildActionCache.cs" />
     <Compile Include="Plugins\OutputCache\DacheOutputCacheProvider.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionState.cs" />
@@ -75,14 +76,16 @@
     <Compile Include="Serialization\IBinarySerializer.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="DacheClient.Example.config">
+    <Content Include="Example.config">
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config.transform" />
-    <None Include="web.config.transform" />
+    <None Include="NuGet\app.config.transform">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="NuGet\web.config.transform" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
