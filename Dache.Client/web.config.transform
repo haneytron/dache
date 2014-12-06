@@ -1,0 +1,10 @@
+﻿<configuration>
+    <configSections>
+        <section name="cacheClientSettings" type="Dache.Client.Configuration.CacheClientConfigurationSection, Dache.Client"/>
+    </configSections>
+    <cacheClientSettings hostReconnectIntervalSeconds="10" hostRedundancyLayers="0">
+        <cacheHosts>
+            <add address="localhost" port="33333" />
+        </cacheHosts>
+    </cacheClientSettings>
+</configuration>
