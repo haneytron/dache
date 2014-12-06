@@ -14,6 +14,8 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 **DOWNLOAD:** http://www.dache.io/download
 
+**WIKI:** http://www.github.com/ironyx/dache/wiki
+
 
 VERSION INFORMATION
 ============================================
