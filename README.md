@@ -127,7 +127,7 @@ Next, instantiate the `CacheHostEngine`:
 
 ```csharp
 // Using the settings from app.config or web.config
-var cacheHost = new Dache.CacheHost.CacheHostEngine(CacheHostConfigurationSection.Settings);
+var cacheHost = new Dache.CacheHost.CacheHostEngine();
 ```
 
 or
