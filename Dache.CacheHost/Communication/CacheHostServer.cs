@@ -70,10 +70,6 @@ namespace Dache.Core.Communication
             {
                 throw new ArgumentNullException("logger");
             }
-            if (port <= 0)
-            {
-                throw new ArgumentException("cannot be <= 0", "port");
-            }
 
             // Set the default cache item policies
             _defaultCacheItemPolicy = new CacheItemPolicy();

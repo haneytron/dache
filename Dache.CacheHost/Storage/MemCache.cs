@@ -45,7 +45,7 @@ namespace Dache.CacheHost.Storage
         /// </summary>
         /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of the total system memory.</param>
         /// <param name="performanceDataManager">The performance data manager.</param>
-        public MemCache(int physicalMemoryLimitPercentage, PerformanceDataManager performanceDataManager)
+        internal MemCache(int physicalMemoryLimitPercentage, PerformanceDataManager performanceDataManager)
         {
             // Sanitize
             if (physicalMemoryLimitPercentage <= 0)

@@ -75,36 +75,13 @@ namespace Dache.CacheHost
                 return false;
             }
 
-            // Load custom logging
-            var logger = CustomLoggerLoader.LoadLogger();
-
-            var port = configuration.Port;
-            var physicalMemoryLimitPercentage = configuration.CacheMemoryLimitPercentage;
-            var maximumConnections = configuration.MaximumConnections;
-
-            // Configure the performance counter data manager
-            var performanceDataManager = new PerformanceCounterPerformanceDataManager(port);
-
-            // Determine the MemCache to use
-            IMemCache memCache;
-            var memoryCache = new MemCache(physicalMemoryLimitPercentage, performanceDataManager);
-
-            if (configuration.StorageProvider == typeof(GZipMemCache))
-            {
-                memCache = new GZipMemCache(memoryCache);
-            }
-            else
-            {
-                memCache = memoryCache;
-            }
-
             // Instantiate the cache host engine
-            _cacheHostEngine = new CacheHostEngine(memCache, logger, port, physicalMemoryLimitPercentage, maximumConnections);
+            _cacheHostEngine = new CacheHostEngine(configuration);
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("SETTINGS: Listening on port " + port);
-            Console.WriteLine("SETTINGS: Memory Limit      " + physicalMemoryLimitPercentage + "%");
-            Console.WriteLine("SETTINGS: Max Connections   " + maximumConnections);
+            Console.WriteLine("SETTINGS: Listening on port " + configuration.Port);
+            Console.WriteLine("SETTINGS: Memory Limit      " + configuration.CacheMemoryLimitPercentage + "%");
+            Console.WriteLine("SETTINGS: Max Connections   " + configuration.MaximumConnections);
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Cyan;
 

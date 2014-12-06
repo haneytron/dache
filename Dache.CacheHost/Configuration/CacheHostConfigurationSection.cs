@@ -37,7 +37,7 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The cache host port. Valid range is > 0.
+        /// The cache host port. The default is 33333. Valid range is &gt; 0.
         /// </summary>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
         [ConfigurationProperty("port", IsRequired = true, DefaultValue = 33333)]
@@ -54,10 +54,10 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The maximum connections. Valid range is > 0.
+        /// The maximum connections. The default is 20. Valid range is &gt; 0.
         /// </summary>
         [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("maximumConnections", IsRequired = true, DefaultValue = 20)]
+        [ConfigurationProperty("maximumConnections", IsRequired = false, DefaultValue = 20)]
         public int MaximumConnections
         {
             get
@@ -71,10 +71,61 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The cache memory limit, as a percentage of the total system memory. Valid range is 5 to 90.
+        /// The message buffer size. The default is 1024. Valid range is 1024 to 4096.
+        /// </summary>
+        [IntegerValidator(MinValue = 1024, MaxValue = 4096)]
+        [ConfigurationProperty("messageBufferSize", IsRequired = false, DefaultValue = 1024)]
+        public int MessageBufferSize
+        {
+            get
+            {
+                return (int)this["messageBufferSize"];
+            }
+            set
+            {
+                this["messageBufferSize"] = value;
+            }
+        }
+
+        /// <summary>
+        /// How long to permit a communication attempt before forcefully closing the connection. The default is 10. Valid range is &gt;= 5.
+        /// </summary>
+        [IntegerValidator(MinValue = 5, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("communicationTimeoutSeconds", IsRequired = true, DefaultValue = 10)]
+        public int CommunicationTimeoutSeconds
+        {
+            get
+            {
+                return (int)this["communicationTimeoutSeconds"];
+            }
+            set
+            {
+                this["communicationTimeoutSeconds"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The maximum size of a message permitted. The default is 1 MB (104857600) valid range is &gt;= 512KB (52428800)
+        /// </summary>
+        [IntegerValidator(MinValue = 104857600, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("maximumMessageSize", IsRequired = false, DefaultValue = 104857600)]
+        public int MaximumMessageSize
+        {
+            get
+            {
+                return (int)this["maximumMessageSize"];
+            }
+            set
+            {
+                this["maximumMessageSize"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The cache memory limit, as a percentage of the total system memory. The default is 80. Valid range is 5 to 90.
         /// </summary>
         [IntegerValidator(MinValue = 5, MaxValue = 90)]
-        [ConfigurationProperty("cacheMemoryLimitPercentage", IsRequired = true, DefaultValue = 80)]
+        [ConfigurationProperty("cacheMemoryLimitPercentage", IsRequired = false, DefaultValue = 80)]
         public int CacheMemoryLimitPercentage
         {
             get

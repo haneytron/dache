@@ -63,8 +63,6 @@ namespace Dache.Client
 
             // Get the cache hosts from configuration
             var cacheHosts = configuration.CacheHosts;
-            // Get the cache host reconnect interval from configuration
-            var hostReconnectIntervalSeconds = configuration.HostReconnectIntervalSeconds;
 
             // Sanitize
             if (cacheHosts == null)
@@ -80,8 +78,8 @@ namespace Dache.Client
             foreach (CacheHostElement cacheHost in cacheHosts.OfType<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
                 // Instantiate a communication client
-                // TODO: make some of this hard-coded stuff configurable
-                var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, hostReconnectIntervalSeconds * 1000, 4096, 10000, 100 * 1024 * 1024);
+                var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, configuration.HostReconnectIntervalSeconds * 1000, 
+                    configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSize);
 
                 // Hook up the disconnected and reconnected events
                 communicationClient.Disconnected += OnClientDisconnected;
@@ -1143,9 +1141,6 @@ namespace Dache.Client
                 // Invalidate local cache keys
                 foreach (var cacheKey in commandParts.Skip(1))
                 {
-                    // TODO: figure out a smoother local cache use that is consistent
-                    //_localCache.Remove(cacheKey);
-
                     // Fire the cache item expired event
                     var cacheItemExpired = CacheItemExpired;
                     if (cacheItemExpired != null)

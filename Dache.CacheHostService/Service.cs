@@ -57,31 +57,8 @@ namespace Dache.CacheHost
 
             try
             {
-                // Gather settings
-                var configuration = CacheHostConfigurationSection.Settings;
-
-                var port = configuration.Port;
-                var physicalMemoryLimitPercentage = configuration.CacheMemoryLimitPercentage;
-                var maximumConnections = configuration.MaximumConnections;
-
-                // Configure the performance counter data manager
-                var performanceDataManager = new PerformanceCounterPerformanceDataManager(port);
-                
-                // Determine the MemCache to use
-                IMemCache memCache;
-                var memoryCache = new MemCache(physicalMemoryLimitPercentage, performanceDataManager);
-
-                if (configuration.StorageProvider == typeof(GZipMemCache))
-                {
-                    memCache = new GZipMemCache(memoryCache);
-                }
-                else
-                {
-                    memCache = memoryCache;
-                }
-
                 // Instantiate the cache host engine
-                _cacheHostEngine = new CacheHostEngine(memCache, _logger, port, physicalMemoryLimitPercentage, maximumConnections);
+                _cacheHostEngine = new CacheHostEngine(CacheHostConfigurationSection.Settings);
             }
             catch (Exception ex)
             {

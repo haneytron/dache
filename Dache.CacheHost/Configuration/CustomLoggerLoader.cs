@@ -39,7 +39,13 @@ namespace Dache.CacheHost.Configuration
             catch (Exception ex)
             {
                 defaultLogger.Error(ex);
-                // Custom logger load failed - no custom logging
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("WARN: Custom logger type load failed");
+                Console.WriteLine("WARN: " + ex.GetBaseException().Message);
+                Console.WriteLine("WARN: Default logger will be used");
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Cyan;
             }
 
             return defaultLogger;

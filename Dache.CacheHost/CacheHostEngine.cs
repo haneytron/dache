@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
 using Dache.Core.Communication;
@@ -21,40 +22,38 @@ namespace Dache.CacheHost
         /// <summary>
         /// The constructor.
         /// </summary>
-        /// <param name="memCache">The mem cache to use.</param>
-        /// <param name="logger">The logger to use.</param>
-        /// <param name="port">The port to open.</param>
-        /// <param name="physicalMemoryLimitPercentage">The cache memory limit, as a percentage of physical memory.</param>
-        /// <param name="maximumConnections">The maximum number of simultaneous connections permitted to the cache host.</param>
-        /// <param name="messageBufferSize">The message buffer size.</param>
-        /// <param name="timeoutMilliseconds">The communication timeout, in milliseconds.</param>
-        /// <param name="maxMessageSize">The maximum message size, in bytes.</param>
-        public CacheHostEngine(IMemCache memCache, ILogger logger, int port, int physicalMemoryLimitPercentage = 85, int maximumConnections = 20, int messageBufferSize = 1024, 
-            int timeoutMilliseconds = 10000, int maxMessageSize = 100 * 1024 * 1024)
+        /// <param name="configuration">The configuration to use for the cache host.</param>
+        public CacheHostEngine(CacheHostConfigurationSection configuration)
         {
             // Sanitize
-            if (memCache == null)
+            if (configuration == null)
             {
-                throw new ArgumentNullException("memCache");
+                throw new ArgumentNullException("configuration");
             }
-            if (logger == null)
+
+            // Load custom logging
+            var logger = CustomLoggerLoader.LoadLogger();
+
+            var port = configuration.Port;
+            var physicalMemoryLimitPercentage = configuration.CacheMemoryLimitPercentage;
+            var maximumConnections = configuration.MaximumConnections;
+
+            // Configure the performance counter data manager
+            var performanceDataManager = new PerformanceCounterPerformanceDataManager(port);
+
+            // Determine the MemCache to use
+            IMemCache memCache = new MemCache(physicalMemoryLimitPercentage, performanceDataManager);
+            if (configuration.StorageProvider == typeof(GZipMemCache))
             {
-                throw new ArgumentNullException("logger");
-            }
-            if (port <= 0)
-            {
-                throw new ArgumentException("cannot be <= 0", "port");
-            }
-            if (physicalMemoryLimitPercentage < 5 || physicalMemoryLimitPercentage > 90)
-            {
-                throw new ArgumentException("must be >= 5 and <= 90", "physicalMemoryLimitPercentage");
+                memCache = new GZipMemCache(memCache);
             }
 
             // Initialize the tag routing table
             var tagRoutingTable = new TagRoutingTable();
 
             // Initialize the cache host server
-            var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, logger, port, maximumConnections, messageBufferSize, timeoutMilliseconds, maxMessageSize);
+            var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, CustomLoggerLoader.LoadLogger(), configuration.Port, 
+                configuration.MaximumConnections, configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSize);
 
             // Instantiate the cache host runner
             _cacheHostRunner = new CacheHostRunner(cacheHostServer);

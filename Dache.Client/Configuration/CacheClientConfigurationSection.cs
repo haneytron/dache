@@ -23,10 +23,10 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds.
+        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds. The default is 10. Valid range is &gt; 5.
         /// </summary>
-        [IntegerValidator(MinValue = 1, MaxValue = 300)]
-        [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = true, DefaultValue = 10)]
+        [IntegerValidator(MinValue = 5, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = false, DefaultValue = 10)]
         public int HostReconnectIntervalSeconds
         {
             get
@@ -40,11 +40,11 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The host redundancy layers. If > 0, this indicates how many servers will hold duplicated data per cache host. 
-        /// In practical terms, setting this to > 0 creates high availability.
+        /// The host redundancy layers. If &gt; 0, this indicates how many servers will hold duplicated data per cache host. 
+        /// In practical terms, setting this to &gt; 0 creates high availability. The default is 0. Valid range is 0 to 10.
         /// </summary>
         [IntegerValidator(MinValue = 0, MaxValue = 10)]
-        [ConfigurationProperty("hostRedundancyLayers", IsRequired = true, DefaultValue = 0)]
+        [ConfigurationProperty("hostRedundancyLayers", IsRequired = false, DefaultValue = 0)]
         public int HostRedundancyLayers
         {
             get
@@ -54,6 +54,57 @@ namespace Dache.Client.Configuration
             set
             {
                 this["hostRedundancyLayers"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The message buffer size. The default is 1024. Valid range is 1024 to 4096.
+        /// </summary>
+        [IntegerValidator(MinValue = 1024, MaxValue = 4096)]
+        [ConfigurationProperty("messageBufferSize", IsRequired = false, DefaultValue = 1024)]
+        public int MessageBufferSize
+        {
+            get
+            {
+                return (int)this["messageBufferSize"];
+            }
+            set
+            {
+                this["messageBufferSize"] = value;
+            }
+        }
+
+        /// <summary>
+        /// How long to permit a communication attempt before forcefully closing the connection. The default is 10. Valid range is &gt;= 5.
+        /// </summary>
+        [IntegerValidator(MinValue = 5, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("communicationTimeoutSeconds", IsRequired = true, DefaultValue = 10)]
+        public int CommunicationTimeoutSeconds
+        {
+            get
+            {
+                return (int)this["communicationTimeoutSeconds"];
+            }
+            set
+            {
+                this["communicationTimeoutSeconds"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The maximum size of a message permitted. The default is 1 MB (104857600) valid range is &gt;= 512KB (52428800)
+        /// </summary>
+        [IntegerValidator(MinValue = 104857600, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("maximumMessageSize", IsRequired = false, DefaultValue = 104857600)]
+        public int MaximumMessageSize
+        {
+            get
+            {
+                return (int)this["maximumMessageSize"];
+            }
+            set
+            {
+                this["maximumMessageSize"] = value;
             }
         }
 

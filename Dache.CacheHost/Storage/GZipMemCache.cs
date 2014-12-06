@@ -10,16 +10,16 @@ namespace Dache.CacheHost.Storage
     /// <summary>
     /// Encapsulates a memory cache that can compress and store byte arrays. This type is thread safe.
     /// </summary>
-    public sealed class GZipMemCache : IMemCache
+    internal sealed class GZipMemCache : IMemCache
     {
         // The underlying mem cache
-        private MemCache _memCache = null;
+        private IMemCache _memCache = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GZipMemCache"/> class.
         /// </summary>
         /// <param name="memCache">The memory cache.</param>
-        public GZipMemCache(MemCache memCache)
+        public GZipMemCache(IMemCache memCache)
         {
             _memCache = memCache;
         }
