@@ -58,7 +58,10 @@ The Dache Client is a single DLL which you include in any application which you 
 
 A file called `CacheProvider.cs` will also be installed at the root of your project. It is a working example of using the Dache client and is intended for experimentation and getting a quick-start with Dache. You can build on top of this implementation or discard it completely. The purpose of it is to show you how to use the Dache client in your code.
 
-**NOTE: all clients should be configured with the same list of servers. The list of servers does not have to be in the same order, but each client's list should contain the same servers.**
+**NOTE:** if you prefer to derive your settings from code rather than configuration, use the `new CacheClient(CacheClientConfigurationSection configuration)` constructor, passing in a `CacheClientConfigurationSection` which you've configured in code.
+
+**IMPORTANT:** all clients should be configured with the same list of servers. The list of servers does not have to be in the same order, but each client's list should contain the same servers.
+
 
 [**See Quick-Start for more information**](https://github.com/ironyx/dache/wiki/Quick-Start)
 
@@ -83,11 +86,11 @@ To host it in your own process, Include it via [NuGet](http://www.nuget.org/pack
 
 Next, instantiate a `new Dache.CacheHost.CacheHostEngine(CacheHostConfigurationSection configuration)`, passing in either `CacheHostConfigurationSection.Settings` to use the settings from your `app.config` or `web.config`, or a `new CacheHostConfigurationSection()` which you have manually configured to supply the settings via code.
 
-To install and use the provided Windows service, first download the binaries from http://www.dache.io/download and then run `install.bat` which is located in the `CacheHost` folder. You will be offered custom installation settings, including the ability to rename the service if you want to install multiple Dache hosts on a single server under unique names.
+To install and use the provided Windows service, first download the binaries from http://www.dache.io/download and then run `CacheHost/install.bat`. You will be offered custom installation settings, including the ability to rename the service if you want to install multiple Dache hosts on a single server under unique names.
 
 After successful installation, you can run the service from Windows Services.
 
-To uninstall Dache, run `uninstall.bat` which is located in the `CacheHost` folder.
+To uninstall Dache, run `CacheHost/uninstall.bat`.
 
 [**See Quick-Start for more information**](https://github.com/ironyx/dache/wiki/Quick-Start)
 
