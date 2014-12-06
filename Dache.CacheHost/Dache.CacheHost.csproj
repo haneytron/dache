@@ -93,6 +93,10 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="NuGet\app.config.transform">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="NuGet\web.config.transform" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

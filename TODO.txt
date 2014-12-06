@@ -8,6 +8,8 @@ del prefix -t tagName1 tagName2 tagName3 tagName4...
 keys prefix [-t tagName1 tagName2 tagName3 tagName4...]
 clear
 
+-Make both CacheClient and CacheHostEngine take the configuration file as optional
+-Handle cache keys that have spaces in them instead of throwing an exception
 -Clear tag from TagRoutingTable memory when removing all tagged items from host
 -Introduce of Sorted Sets/Lists with weights
 -Create integer storage methods and increment/decrement methods?

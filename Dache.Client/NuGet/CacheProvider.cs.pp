@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Dache.Client;
 
 namespace $rootnamespace$
 {
@@ -18,7 +16,7 @@ namespace $rootnamespace$
         /// </summary>
         /// <param name="key">The cache key.</param>
         /// <param name="value">The object to add to the cache.</param>
-        public void AddOrUpdate<T>(string key, object value)
+        public void AddOrUpdate(string key, object value)
         {
             _cacheClient.AddOrUpdate(key, value);
         }
