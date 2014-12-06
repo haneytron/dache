@@ -116,19 +116,13 @@ var cacheHost = new Dache.CacheHost.CacheHostEngine(settings);
 
 ## Next Steps
 
-To learn more about Dache, check out the other pages of this wiki.
+To learn more about using Dache, check out the [wiki](https://github.com/ironyx/dache/wiki).
 
-
-Board
---------
-
+## Board
 
 Not yet completed. Feel free to contribute! :)
 
-
-LICENSE INFORMATION
-============================================
-
+## LICENSE INFORMATION
 
 Dache software is dual licensed. You must choose which license you 
 would like to use Dache under from the following 2 options:
@@ -145,10 +139,7 @@ License by contacting us at [info@dache.io](mailto:info@dache.io).
 
 Please see `LICENSE.txt` for more information.
 
-
-IMPORTANT NOTE TO SOURCE CODE CONTRIBUTORS
-============================================
-
+## IMPORTANT NOTE TO SOURCE CODE CONTRIBUTORS
 
 In order to clarify the intellectual property license granted with Contributions from any person or entity, Imperative Bytes, LLC. 
 ("Imperative Bytes") must have a Contributor License Agreement ("CLA") on file that has been signed by each Contributor, indicating 
