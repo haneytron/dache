@@ -46,7 +46,7 @@ The Dache Client is a single DLL which you include in any application which you 
 <configuration>
   <configSections>
     <section name="cacheClientSettings"
-             type="Dache.Client.Configuration.CacheClientConfigurationSection, Dache.Client"/>
+      type="Dache.Client.Configuration.CacheClientConfigurationSection, Dache.Client"/>
   </configSections>
   <cacheClientSettings>
     <cacheHosts>
@@ -74,8 +74,8 @@ To host it in your own process, Include it via ([NuGet](http://www.nuget.org/pac
 <configuration>
   <configSections>
     <section name="cacheHostSettings"
-             type="Dache.CacheHost.Configuration.CacheHostConfigurationSection, Dache.CacheHost"
-             allowExeDefinition="MachineToApplication" />
+      type="Dache.CacheHost.Configuration.CacheHostConfigurationSection, Dache.CacheHost"
+      allowExeDefinition="MachineToApplication" />
   </configSections>
   <cacheHostSettings port="33333" />
 </configuration>
