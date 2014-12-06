@@ -33,7 +33,14 @@ Getting started quickly involves standing up the Dache Client and a Dache Host f
 
 ## Client
 
-The Dache Client is a single DLL which you include in any application which you would like to use Dache with. Include it via [NuGet](http://www.nuget.org/packages/Dache.Client). Your `web.config` or `app.config` will be automatically modified to install the default Dache client configuration:
+The Dache Client is a single DLL which you reference in any application which you would like to use Dache with. You have 2 options for installing the Dache Client:
+
+- Install the [Dache.Client NuGet package](http://www.nuget.org/packages/Dache.Client)
+- Reference `Dache.Client.dll` manually from the [latest release download](http://www.dache.io/download)
+
+### NuGet Client
+
+Install the Dache Client via [NuGet](http://www.nuget.org/packages/Dache.CacheHost). Your `web.config` or `app.config` will be automatically modified to include the default Dache client configuration:
 
 ```xml
 <configuration>
@@ -66,6 +73,12 @@ var cacheClient = new Dache.Client.CacheClient(settings);
 
 A file called `CacheProvider.cs` will also be installed at the root of your project. It is a working example of using the `CacheClient` and is intended for experimentation and getting a quick-start with Dache. You can build on top of this implementation or discard it completely. The purpose of it is to show you how to use the Dache client in your code.
 
+### Manual DLL Reference
+
+To install and the Dache Client manually, first download the binaries from http://www.dache.io/download and then copy the files located in the `Client` folder to your solution's folder structure. Then, add a reference to `Dache.Client.dll` to your project.
+
+Next, instantiate the `CacheClient` as demonstrated above. You'll also need to include the configuration above in your `app.config` or `web.config` file.
+
 **NOTE:** `CacheClient` is intended to be used as a singleton. **Do not create a new `CacheClient` per request.**
 
 **IMPORTANT:** all clients should be configured with the same list of servers. The list of servers does not have to be in the same order, but each client's list should contain the same servers.
@@ -76,7 +89,7 @@ The host is the actual process that does the caching work. You have 3 options fo
 
 - Run the **quick and easy console host** provided in the [latest release download](http://www.dache.io/download)
 - Install the **Windows service** provided in the [latest release download](http://www.dache.io/download)
-- Host Dache **in your own process** by including the [Dache.CacheHost NuGet package](http://www.nuget.org/packages/Dache.CacheHost)
+- Host Dache **in your own process** by installing the [Dache.CacheHost NuGet package](http://www.nuget.org/packages/Dache.CacheHost)
 
 ### Quick And Easy Console Host
 
@@ -92,7 +105,7 @@ To uninstall Dache, run `CacheHost/uninstall.bat`.
 
 ### Host In Your Own Process
 
-To host it in your own process, Include it via [NuGet](http://www.nuget.org/packages/Dache.CacheHost). Your `web.config` or `app.config` will be automatically modified to install the default Dache host configuration:
+To host Dache in your own process, install the Dache Host via [NuGet](http://www.nuget.org/packages/Dache.CacheHost). Your `web.config` or `app.config` will be automatically modified to include the default Dache host configuration:
 
 ```xml
 <configuration>
