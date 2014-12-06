@@ -79,9 +79,13 @@ To install and the Dache Client manually, first download the binaries from http:
 
 Next, instantiate the `CacheClient` as demonstrated above. You'll also need to include the configuration above in your `app.config` or `web.config` file.
 
-**NOTE:** `CacheClient` is intended to be used as a singleton. **Do not create a new `CacheClient` per request.**
+### Client Notes And Next Steps
+
+`CacheClient` is intended to be used as a singleton. **Do not create a new `CacheClient` per request.**
 
 **IMPORTANT:** all clients should be configured with the same list of servers. The list of servers does not have to be in the same order, but each client's list should contain the same servers.
+
+To learn more about using Dache, check out the [wiki](https://github.com/ironyx/dache/wiki).
 
 ## Host
 
@@ -133,7 +137,7 @@ var settings = new CacheHostConfigurationSettings { ... };
 var cacheHost = new Dache.CacheHost.CacheHostEngine(settings);
 ```
 
-## Next Steps
+### Host Notes And Next Steps
 
 To learn more about using Dache, check out the [wiki](https://github.com/ironyx/dache/wiki).
 
