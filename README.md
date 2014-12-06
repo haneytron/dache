@@ -29,7 +29,7 @@ VERSION INFORMATION
 - Massively improved Dache Host install.bat and uninstall.bat process. Now provides much more feedback and does checks for permissions prior to install and uninstall.
 - Significantly improved NuGet packages. The host is simplified to take a `CacheHostConfigurationSection` instead of multiple variables. The client is installed with default settings injected into `Web.config` or `App.config` and now provides `CacheProvider.cs` which is a simple, working implementation of the Dache client which can be used to experiment.
 - Created MSBUILD tasks to create a nice execution folder structure for Dache files after each build. This new folder is in root of solution and is called `dache-<version>`.
-- NOTE: releases will not longer be offered in GitHub but instead at our download page: http://www.dache.io/download - this is a much simpler and less confusing way to get Dache.
+- **IMPORTANT:** releases will no longer be offered in GitHub. Instead, they will be found at our download page: http://www.dache.io/download - this is a much simpler and less confusing way to get the Dache binaries.
 
 
 INSTALLATION INSTRUCTIONS
