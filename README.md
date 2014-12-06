@@ -74,7 +74,8 @@ To host it in your own process, Include it via ([NuGet](http://www.nuget.org/pac
 <configuration>
   <configSections>
     <section name="cacheHostSettings"
-             type="Dache.CacheHost.Configuration.CacheHostConfigurationSection, Dache.CacheHost" allowExeDefinition="MachineToApplication" />
+             type="Dache.CacheHost.Configuration.CacheHostConfigurationSection, Dache.CacheHost"
+             allowExeDefinition="MachineToApplication" />
   </configSections>
   <cacheHostSettings port="33333" />
 </configuration>
