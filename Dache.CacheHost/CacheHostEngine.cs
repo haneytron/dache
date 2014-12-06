@@ -47,10 +47,20 @@ namespace Dache.CacheHost
             var maximumConnections = configuration.MaximumConnections;
 
             // Configure the performance counter data manager
-            var performanceDataManager = new PerformanceCounterPerformanceDataManager(port);
+            PerformanceDataManager performanceDataManager = null;
+            try
+            {
+                performanceDataManager = new PerformanceCounterPerformanceDataManager(port);
+            }
+            catch (InvalidOperationException)
+            {
+                // Performance counters aren't installed, so don't use them
+                performanceDataManager = new PerformanceDataManager();
+            }
 
             // Determine the MemCache to use
             IMemCache memCache = new MemCache(physicalMemoryLimitPercentage, performanceDataManager);
+
             if (configuration.StorageProvider == typeof(GZipMemCache))
             {
                 memCache = new GZipMemCache(memCache);
