@@ -91,7 +91,7 @@ namespace Dache.CacheHost.Configuration
         /// How long to permit a communication attempt before forcefully closing the connection. The default is 10. Valid range is &gt;= 5.
         /// </summary>
         [IntegerValidator(MinValue = 5, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("communicationTimeoutSeconds", IsRequired = true, DefaultValue = 10)]
+        [ConfigurationProperty("communicationTimeoutSeconds", IsRequired = false, DefaultValue = 10)]
         public int CommunicationTimeoutSeconds
         {
             get
