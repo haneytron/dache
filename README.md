@@ -68,7 +68,7 @@ Host
 
 The host is the actual process that does the caching work. You have 2 options for hosting Dache. You can either use the Windows service provided in the download (see: http://www.dache.io/download), or you can include the Dache host ([NuGet](http://www.nuget.org/packages/Dache.CacheHost)) package and host it in your own process (such as an Azure worker role). The choice is yours!
 
-To host it in your own process, Include it via ([NuGet](http://www.nuget.org/packages/Dache.Client)). Your `web.config` or `app.config` will be automatically modified to install the default Dache host configuration:
+To host it in your own process, Include it via ([NuGet](http://www.nuget.org/packages/Dache.CacheHost)). Your `web.config` or `app.config` will be automatically modified to install the default Dache host configuration:
 
 ```xml
 <configuration>
