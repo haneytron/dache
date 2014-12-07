@@ -68,7 +68,7 @@ namespace Dache.CacheHost
             if (configuration == null)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("ERROR: cacheHostSettings configuration blockis  missing");
+                Console.WriteLine("ERROR: cacheHostSettings configuration block is missing");
                 Console.WriteLine("ERROR: Please verify that cacheHostSettings exists in config file");
                 Console.WriteLine();
                 Console.Write("Press any key to exit...");
