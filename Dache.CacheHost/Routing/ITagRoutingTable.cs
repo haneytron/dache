@@ -27,6 +27,6 @@ namespace Dache.CacheHost.Routing
         /// <param name="tagName">The tag name.</param>
         /// <param name="pattern">The regular expression search pattern. If no pattern is provided, default "*" (all) is used.</param>
         /// <returns>The tagged cache keys, or null if none were found.</returns>
-        IList<string> GetTaggedCacheKeys(string tagName, string pattern = "*");
+        List<string> GetTaggedCacheKeys(string tagName, string pattern = "*");
     }
 }
