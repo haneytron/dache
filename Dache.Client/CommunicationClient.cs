@@ -260,20 +260,30 @@ namespace Dache.Client
             return SendGetCacheKeys(tagNames: tagNames, pattern: pattern);
         }
 
+        static byte[] _clearCommand = null;
+
         /// <summary>
         /// Clears the cache.
         /// </summary>
         public void Clear()
         {
-            byte[] command;
-            using (var memoryStream = new MemoryStream())
+            if (_clearCommand == null)
             {
-                memoryStream.Write("clear");
-                command = memoryStream.ToArray();
+                lock (_clearCommand)
+                {
+                    if (_clearCommand == null)
+                    {
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            memoryStream.Write("clear");
+                            _clearCommand = memoryStream.ToArray();
+                        }
+                    }
+                }
             }
 
             // Send
-            _client.Send(command);
+            _client.Send(_clearCommand);
         }
 
         private List<byte[]> SendGet(IEnumerable<string> cacheKeysOrTagNames, bool isTagNames = false, string pattern = null)
@@ -296,10 +306,10 @@ namespace Dache.Client
                     memoryStream.Write("-t");
                 }
 
-                foreach (var cacheKeysOrTagName in cacheKeysOrTagNames)
+                foreach (var cacheKeyOrTagName in cacheKeysOrTagNames)
                 {
                     memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeysOrTagName);
+                    memoryStream.Write(NormalizeCacheKeyOrTagName(cacheKeyOrTagName));
                 }
                 command = memoryStream.ToArray();
             }
@@ -362,7 +372,7 @@ namespace Dache.Client
                 foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
                     memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.Write(NormalizeCacheKeyOrTagName(cacheKeyAndSerializedObjectKvp.Key));
                     memoryStream.WriteSpace();
                     memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
                 }
@@ -385,10 +395,10 @@ namespace Dache.Client
                     memoryStream.Write("{0} -t ", pattern);
                 }
 
-                foreach (var cacheKeysOrTagName in cacheKeysOrTagNames)
+                foreach (var cacheKeyOrTagName in cacheKeysOrTagNames)
                 {
                     memoryStream.WriteSpace();
-                    memoryStream.Write(cacheKeysOrTagName);
+                    memoryStream.Write(NormalizeCacheKeyOrTagName(cacheKeyOrTagName));
                 }
                 command = memoryStream.ToArray();
             }
@@ -411,7 +421,7 @@ namespace Dache.Client
                     foreach (var tagName in tagNames)
                     {
                         memoryStream.WriteSpace();
-                        memoryStream.Write(tagName);
+                        memoryStream.Write(NormalizeCacheKeyOrTagName(tagName));
                     }
                 }
 
@@ -557,7 +567,7 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Parses the command parts onto byte arrays.
+        /// Parses the command parts into byte arrays.
         /// </summary>
         /// <param name="commandParts">The command parts.</param>
         /// <returns>A list of byte arrays.</returns>
@@ -570,6 +580,11 @@ namespace Dache.Client
                 cacheObjects.Add(Convert.FromBase64String(commandParts[i]));
             }
             return cacheObjects;
+        }
+
+        private string NormalizeCacheKeyOrTagName(string cacheKeyOrTagName)
+        {
+            return cacheKeyOrTagName.Replace(' ', '_');
         }
     }
 }

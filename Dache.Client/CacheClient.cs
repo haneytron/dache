@@ -128,10 +128,6 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
-            if (cacheKey.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "cacheKey");
-            }
 
             // Do remote work
             List<byte[]> rawValues = null;
@@ -202,13 +198,6 @@ namespace Dache.Client
                 List<string> clientCacheKeys = null;
                 foreach (var cacheKey in cacheKeys)
                 {
-                    if (cacheKey.IndexOf(' ') != -1)
-                    {
-                        // Log cache key error
-                        _logger.Error("Cache Key Error", string.Format("Cache key \"{0}\" contains one or more spaces", cacheKey));
-                        continue;
-                    }
-
                     // Get the cache host bucket
                     var cacheHostBucket = DetermineBucket(cacheKey);
                     if (!routingDictionary.TryGetValue(cacheHostBucket, out clientCacheKeys))
@@ -288,10 +277,6 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "tagName");
             }
-            if (tagName.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "tagName");
-            }
 
             // Do remote work
             IList<byte[]> rawResults = null;
@@ -357,17 +342,9 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
-            if (cacheKey.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "cacheKey");
-            }
             if (value == null)
             {
                 throw new ArgumentNullException("value");
-            }
-            if (tagName != null && tagName.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "tagName");
             }
 
             byte[] bytes = null;
@@ -420,10 +397,6 @@ namespace Dache.Client
             {
                 throw new ArgumentException("must have at least one element", "cacheKeysAndObjects");
             }
-            if (tagName != null && tagName.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "tagName");
-            }
 
             var routingDictionary = new Dictionary<CacheHostBucket, List<KeyValuePair<string, byte[]>>>(_cacheHostBuckets.Count);
             List<KeyValuePair<string, byte[]>> clientCacheKeysAndObjects = null;
@@ -434,13 +407,6 @@ namespace Dache.Client
             {
                 foreach (var cacheKeyAndObjectKvp in cacheKeysAndObjects)
                 {
-                    if (cacheKeyAndObjectKvp.Key.IndexOf(' ') != -1)
-                    {
-                        // Log cache key error
-                        _logger.Error("Cache Key Error", string.Format("Cache key \"{0}\" contains one or more spaces", cacheKeyAndObjectKvp.Key));
-                        continue;
-                    }
-
                     try
                     {
                         // Serialize
@@ -498,10 +464,6 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "cacheKey");
             }
-            if (cacheKey.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "cacheKey");
-            }
 
             do
             {
@@ -542,13 +504,6 @@ namespace Dache.Client
                 List<string> clientCacheKeys = null;
                 foreach (var cacheKey in cacheKeys)
                 {
-                    if (cacheKey.IndexOf(' ') != -1)
-                    {
-                        // Log cache key error
-                        _logger.Error("Cache Key Error", string.Format("Cache key \"{0}\" contains one or more spaces", cacheKey));
-                        continue;
-                    }
-
                     // Get the cache host bucket
                     var cacheHostBucket = DetermineBucket(cacheKey);
                     if (!routingDictionary.TryGetValue(cacheHostBucket, out clientCacheKeys))
@@ -594,10 +549,6 @@ namespace Dache.Client
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
-            }
-            if (tagName.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "tagName");
             }
 
             do
@@ -645,13 +596,6 @@ namespace Dache.Client
                 List<string> clientTagNames = null;
                 foreach (var tagName in tagNames)
                 {
-                    if (tagName.IndexOf(' ') != -1)
-                    {
-                        // Log tag name error
-                        _logger.Error("Tag Name Error", string.Format("Tag name \"{0}\" contains one or more spaces", tagName));
-                        continue;
-                    }
-
                     // Get the cache host bucket
                     var cacheHostBucket = DetermineBucket(tagName);
                     if (!routingDictionary.TryGetValue(cacheHostBucket, out clientTagNames))
@@ -750,10 +694,6 @@ namespace Dache.Client
             {
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
             }
-            if (tagName.IndexOf(' ') != -1)
-            {
-                throw new ArgumentException("cannot contain spaces", "tagName");
-            }
 
             do
             {
@@ -810,13 +750,6 @@ namespace Dache.Client
                 List<string> clientTagNames = null;
                 foreach (var tagName in tagNames)
                 {
-                    if (tagName.IndexOf(' ') != -1)
-                    {
-                        // Log tag name error
-                        _logger.Error("Tag Name Error", string.Format("Tag name \"{0}\" contains one or more spaces", tagName));
-                        continue;
-                    }
-
                     // Get the cache host bucket
                     var cacheHostBucket = DetermineBucket(tagName);
                     if (!routingDictionary.TryGetValue(cacheHostBucket, out clientTagNames))
