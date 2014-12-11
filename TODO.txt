@@ -8,7 +8,8 @@ del prefix -t tagName1 tagName2 tagName3 tagName4...
 keys prefix [-t tagName1 tagName2 tagName3 tagName4...]
 clear
 
--Introduce of Sorted Sets/Lists with weights
--Create integer storage methods and increment/decrement methods?
--Create distributed lock methods?
+-Create distributed locks
+-Create distributed addition of long/int
+-Introduce Sorted Sets/Lists with weights
+-Disk persistence / restore
 -Build NHibernate second level cache provider plugin
