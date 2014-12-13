@@ -41,8 +41,8 @@ namespace Dache.Core.Communication
         // The logger
         private readonly ILogger _logger;
 
-        // The invalid command string list
-        private readonly List<string> _invalidCommandStringList = new List<string> { "invalid command" };
+        // The invalid command result
+        private static readonly byte[] _noResults = new byte[] { 0 };
 
         /// <summary>
         /// The constructor.
@@ -118,28 +118,25 @@ namespace Dache.Core.Communication
             var command = e.ReceivedMessage.Message;
             if (command == null || command.Length == 0)
             {
-                _logger.Error("Dache.CacheHost.Communication.CacheHostServer.ReceiveMessage - command is null or empty", "command variable is null or empty, indicating an empty or invalid message");
                 return;
             }
 
-            // Get the command string skipping our control byte
-            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command);
-            var commandResult = ProcessCommand(commandString);
-            if (commandResult != null)
-            {
-                // Send the result if there is one
-                _server.Reply(commandResult, e.ReceivedMessage);
-            }
+            // Get the command string
+            int position = 0;
+            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(command, ref position));
+
+            var commandResult = ProcessCommand(commandString, command, position); 
+            if (commandResult != null) 
+            { 
+                // Send the result if there is one 
+                _server.Reply(commandResult, e.ReceivedMessage); 
+            } 
         }
 
-        private byte[] ProcessCommand(string command)
+        private byte[] ProcessCommand(string command, byte[] data, int position)
         {
             // Sanitize
-            if (command == null)
-            {
-                return null;
-            }
-            if (string.IsNullOrWhiteSpace(command))
+            if (string.IsNullOrWhiteSpace(command) || data == null || data.Length == 0 || position <= -1)
             {
                 return null;
             }
@@ -163,19 +160,18 @@ namespace Dache.Core.Communication
 
                 case "keys":
                 {
-                    // Sanitize the command
-                    if (commandParts.Length < 2)
-                    {
-                        return null;
-                    }
-
                     var pattern = commandParts[1];
                     List<string> results = null;
 
                     // Check for tags
-                    if (commandParts.Length > 3 && string.Equals(commandParts[2], "-t", StringComparison.OrdinalIgnoreCase))
+                    if (commandParts.Length == 3 && string.Equals(commandParts[2], "-t", StringComparison.OrdinalIgnoreCase))
                     {
-                        var tagNames = commandParts.Skip(3);
+                        List<string> tagNames = new List<string>();
+                        while (position < data.Length)
+                        {
+                            tagNames.Add(DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(data, ref position)));
+                        }
+
                         results = GetCacheKeysTagged(tagNames, pattern);
                     }
                     else
@@ -189,24 +185,29 @@ namespace Dache.Core.Communication
 
                 case "get":
                 {
-                    // Sanitize the command
-                    if (commandParts.Length < 2)
-                    {
-                        return null;
-                    }
-
                     List<byte[]> results = null;
 
                     // Check for tags
-                    if (commandParts.Length > 3 && string.Equals(commandParts[2], "-t", StringComparison.OrdinalIgnoreCase))
+                    if (commandParts.Length == 3 && string.Equals(commandParts[2], "-t", StringComparison.OrdinalIgnoreCase))
                     {
                         var pattern = commandParts[1];
-                        var tagNames = commandParts.Skip(3);
+
+                        List<string> tagNames = new List<string>();
+                        while (position < data.Length)
+                        {
+                            tagNames.Add(DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(data, ref position)));
+                        }
+
                         results = GetTagged(tagNames, pattern);
                     }
                     else
                     {
-                        var cacheKeys = commandParts.Skip(1);
+                        List<string> cacheKeys = new List<string>();
+                        while (position < data.Length)
+                        {
+                            cacheKeys.Add(DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(data, ref position)));
+                        }
+
                         results = Get(cacheKeys);
                     }
 
@@ -216,22 +217,27 @@ namespace Dache.Core.Communication
 
                 case "del":
                 {
-                    // Sanitize the command
-                    if (commandParts.Length < 2)
-                    {
-                        return null;
-                    }
-
                     // Check for tags
-                    if (commandParts.Length > 3 && string.Equals(commandParts[2], "-t", StringComparison.OrdinalIgnoreCase))
+                    if (commandParts.Length == 3 && string.Equals(commandParts[2], "-t", StringComparison.OrdinalIgnoreCase))
                     {
                         var pattern = commandParts[1];
-                        var tagNames = commandParts.Skip(3);
+
+                        List<string> tagNames = new List<string>();
+                        while (position < data.Length)
+                        {
+                            tagNames.Add(DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(data, ref position)));
+                        }
+
                         RemoveTagged(tagNames, pattern);
                     }
                     else
                     {
-                        var cacheKeys = commandParts.Skip(1);
+                        List<string> cacheKeys = new List<string>();
+                        while (position < data.Length)
+                        {
+                            cacheKeys.Add(DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(data, ref position)));
+                        }
+
                         Remove(cacheKeys);
                     }
 
@@ -240,15 +246,6 @@ namespace Dache.Core.Communication
 
                 case "set":
                 {
-                    // Sanitize the command
-                    if (commandParts.Length < 3)
-                    {
-                        return null;
-                    }
-
-                    // Set initial cache keys and objects index
-                    int cacheKeysAndObjectsIndex = 1;
-
                     bool isInterned = false;
                     string tagName = null;
                     DateTimeOffset? absoluteExpiration = null;
@@ -264,14 +261,12 @@ namespace Dache.Core.Communication
                             case "-i":
                             {
                                 isInterned = true;
-                                cacheKeysAndObjectsIndex++;
                                 break;
                             }
                             // Tag name
                             case "-t":
                             {
                                 tagName = commandParts[i + 1];
-                                cacheKeysAndObjectsIndex += 2;
                                 i++;
                                 break;
                             }
@@ -279,7 +274,6 @@ namespace Dache.Core.Communication
                             case "-a":
                             {
                                 absoluteExpiration = DateTimeOffset.ParseExact(commandParts[i + 1], DacheProtocolHelper.AbsoluteExpirationFormat, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
-                                cacheKeysAndObjectsIndex += 2;
                                 i++;
                                 break;
                             }
@@ -288,7 +282,6 @@ namespace Dache.Core.Communication
                             case "-s":
                             {
                                 slidingExpiration = TimeSpan.FromSeconds(int.Parse(commandParts[i + 1]));
-                                cacheKeysAndObjectsIndex += 2;
                                 i++;
                                 break;
                             }
@@ -297,11 +290,10 @@ namespace Dache.Core.Communication
                             case "-c":
                             {
                                 notifyRemoved = true;
-                                cacheKeysAndObjectsIndex++;
                                 break;
                             }
 
-                            // Assumed to be cache key
+                            // Something invalid or end of command
                             default:
                             {
                                 i = commandParts.Length;
@@ -310,7 +302,7 @@ namespace Dache.Core.Communication
                         }
                     }
 
-                    IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndObjects = ParseCacheKeysAndObjects(commandParts, cacheKeysAndObjectsIndex);
+                    IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndObjects = ParseCacheKeysAndObjects(data, position);
 
                     // Decide what to do
                     if (isInterned)
@@ -337,19 +329,33 @@ namespace Dache.Core.Communication
                 default:
                 {
                     // Invalid command
-                    commandResult = CreateCommandResult(_invalidCommandStringList);
                     break;
                 }
             }
 
-            // Return the result - may be null if there was no valid message
+            // Return the result - may be no results if there was no valid message
             return commandResult;
         }
 
         private byte[] CreateCommandResult(List<string> results)
         {
+            // Sanitize
+            if (results == null || results.Count == 0)
+            {
+                // Send smallest possible reply to indicate no results
+                return _noResults;
+            }
+
             // Structure the results for sending
-            return DacheProtocolHelper.CommunicationEncoding.GetBytes(string.Join(" ", results));
+            using (var memoryStream = new MemoryStream())
+            {
+                foreach (var result in results)
+                {
+                    memoryStream.Write(result);
+                }
+
+                return memoryStream.ToArray();
+            }
         }
 
         private byte[] CreateCommandResult(List<byte[]> results)
@@ -358,32 +364,43 @@ namespace Dache.Core.Communication
             if (results == null || results.Count == 0)
             {
                 // Send smallest possible reply to indicate no results
-                return new byte[1];
+                return _noResults;
             }
 
             // Structure the results for sending
             using (var memoryStream = new MemoryStream())
             {
-                for (int i = 0; i < results.Count; i++)
+                foreach (var result in results)
                 {
-                    if (i != 0)
-                    {
-                        memoryStream.WriteSpace();
-                    }
-                    memoryStream.WriteBase64(results[i]);
+                    memoryStream.Write(result);
                 }
+
                 return memoryStream.ToArray();
             }
         }
 
-        private IEnumerable<KeyValuePair<string, byte[]>> ParseCacheKeysAndObjects(string[] commandParts, int startIndex)
+        private IEnumerable<KeyValuePair<string, byte[]>> ParseCacheKeysAndObjects(byte[] data, int position)
         {
-            // Regular set
-            var cacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>(commandParts.Length / 2);
-            for (int i = startIndex; i < commandParts.Length; i = i + 2)
+
+            var cacheKeysAndObjects = new List<KeyValuePair<string, byte[]>>();
+            int i = 0;
+            string cacheKey = null;
+
+            while (position < data.Length)
             {
-                cacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(commandParts[i], Convert.FromBase64String(commandParts[i + 1])));
+                var result = DacheProtocolHelper.Extract(data, ref position);
+                if (i % 2 == 0)
+                {
+                    cacheKey = DacheProtocolHelper.CommunicationEncoding.GetString(result);
+                }
+                else
+                {
+                    cacheKeysAndObjects.Add(new KeyValuePair<string, byte[]>(cacheKey, result));
+                }
+
+                unchecked { i++; }
             }
+
             return cacheKeysAndObjects;
         }
 
@@ -393,7 +410,6 @@ namespace Dache.Core.Communication
             using (var memoryStream = new MemoryStream())
             {
                 memoryStream.Write("expire");
-                memoryStream.WriteSpace();
                 memoryStream.Write(args.CacheItem.Key);
                 command = memoryStream.ToArray();
             }

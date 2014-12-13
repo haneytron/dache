@@ -1034,24 +1034,21 @@ namespace Dache.Client
             var command = e.ReceivedMessage.Message;
             if (command == null || command.Length == 0)
             {
-                throw new InvalidOperationException("Dache.CacheHost.Communication.CacheHostServer.ReceiveMessage - command variable is null or empty, indicating an empty or invalid message");
-            }
-
-            // Get the command string skipping our control byte
-            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(command);
-
-            // Right now this is only used for invalidating cache keys, so there will never be a reply
-            ProcessCommand(commandString);
-        }
-
-        private void ProcessCommand(string command)
-        {
-            // Sanitize
-            if (command == null)
-            {
                 return;
             }
-            if (string.IsNullOrWhiteSpace(command))
+
+            // Get the command string
+            int position = 0;
+            var commandString = DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(command, ref position));
+
+            // Right now this is only used for invalidating cache keys, so there will never be a reply
+            ProcessCommand(commandString, command, position);
+        }
+
+        private void ProcessCommand(string command, byte[] data, int position)
+        {
+            // Sanitize
+            if (string.IsNullOrWhiteSpace(command) || data == null || data.Length == 0 || position <= -1)
             {
                 return;
             }
@@ -1065,20 +1062,15 @@ namespace Dache.Client
             // Determine command
             if (string.Equals(commandParts[0], "expire", StringComparison.OrdinalIgnoreCase))
             {
-                // Sanitize the command
-                if (commandParts.Length < 2)
-                {
-                    return;
-                }
-
                 // Invalidate local cache keys
-                foreach (var cacheKey in commandParts.Skip(1))
+                while (position < data.Length)
                 {
+                    var result = DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(data, ref position));
                     // Fire the cache item expired event
                     var cacheItemExpired = CacheItemExpired;
                     if (cacheItemExpired != null)
                     {
-                        cacheItemExpired(this, new CacheItemExpiredArgs(cacheKey));
+                        cacheItemExpired(this, new CacheItemExpiredArgs(result));
                     }
                 }
             }

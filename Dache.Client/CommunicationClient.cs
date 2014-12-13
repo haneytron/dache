@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using Dache.Core.Communication;
 using SimplSockets;
@@ -210,10 +211,6 @@ namespace Dache.Client
             {
                 throw new ArgumentException("must have at least one element", "tagNames");
             }
-            if (string.IsNullOrWhiteSpace(pattern))
-            {
-                throw new ArgumentException("cannot be null, empty, or white space", "pattern");
-            }
 
             SendRemove(tagNames, isTagNames: true, pattern: pattern);
         }
@@ -257,7 +254,7 @@ namespace Dache.Client
                 throw new ArgumentException("cannot be null, empty, or white space", "pattern");
             }
 
-            return SendGetCacheKeys(tagNames: tagNames, pattern: pattern);
+            return SendGetCacheKeys(tagNames, pattern);
         }
 
         static byte[] _clearCommand = null;
@@ -286,95 +283,97 @@ namespace Dache.Client
             _client.Send(_clearCommand);
         }
 
-        private List<byte[]> SendGet(IEnumerable<string> cacheKeysOrTagNames, bool isTagNames = false, string pattern = null)
+        private List<byte[]> SendGet(IEnumerable<string> cacheKeysOrTagNames, bool isTagNames = false, string pattern = "*")
         {
             byte[] command = null;
+                
+            var sb = new StringBuilder();
+            sb.Append("get");
+            sb.Append(" ").Append(pattern);
+
+            if (isTagNames)
+            {
+                sb.Append(" -t");
+            }
+
             using (var memoryStream = new MemoryStream())
             {
-                memoryStream.Write("get");
-
-                if (isTagNames)
-                {
-                    if (pattern != null)
-                    {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(pattern);
-                        memoryStream.WriteSpace();
-                    }
-
-                    memoryStream.WriteSpace();
-                    memoryStream.Write("-t");
-                }
+                memoryStream.Write(sb.ToString());
 
                 foreach (var cacheKeyOrTagName in cacheKeysOrTagNames)
                 {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(NormalizeCacheKeyOrTagName(cacheKeyOrTagName));
+                    memoryStream.Write(cacheKeyOrTagName);
                 }
                 command = memoryStream.ToArray();
             }
 
             // Send and receive
             command = _client.SendReceive(command);
-            // Parse string
-            var commandResult = DacheProtocolHelper.CommunicationEncoding.GetString(command);
 
             // Verify that we got something
-            if (commandResult == null || commandResult == "\0")
+            if (command == null || (command.Length == 1 && command[0] == 0))
             {
                 return null;
             }
 
-            // Parse command from bytes
-            var commandResultParts = commandResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            return ParseCacheObjects(commandResultParts);
+            // Get command result
+            var commandResultParts = new List<byte[]>();
+            int position = 0;
+            while (position < command.Length)
+            {
+                commandResultParts.Add(DacheProtocolHelper.Extract(command, ref position));
+            }
+
+            return commandResultParts;
         }
 
         private void SendAddOrUpdate(IEnumerable<KeyValuePair<string, byte[]>> cacheKeysAndSerializedObjects, string tagName = null,
             DateTimeOffset? absoluteExpiration = null, TimeSpan? slidingExpiration = null, bool notifyRemoved = false, bool isInterned = false)
         {
             byte[] command = null;
+
+            var sb = new StringBuilder();
+            sb.Append("set");
+
+            if (isInterned)
+            {
+                // If interned, expirations and callback notifications are ignored
+                sb.Append(" -i");
+            }
+            else
+            {
+                // Absolute expiration
+                if (absoluteExpiration.HasValue)
+                {
+                    sb.AppendFormat(" -a {0}", absoluteExpiration.Value.UtcDateTime.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
+                }
+                // Sliding expiration
+                else if (slidingExpiration.HasValue)
+                {
+                    sb.AppendFormat(" -s {0}", (int)slidingExpiration.Value.TotalSeconds);
+                }
+
+                // Notify removed
+                if (notifyRemoved)
+                {
+                    sb.Append(" -c");
+                }
+            }
+
+            // Tag name
+            if (!string.IsNullOrWhiteSpace(tagName))
+            {
+                sb.AppendFormat(" -t {0}", tagName);
+            }
+
             using (var memoryStream = new MemoryStream())
             {
-                memoryStream.Write("set");
-
-                if (isInterned)
-                {
-                    // If interned, expirations and callback notifications are ignored
-                    memoryStream.Write(" -i");
-                }
-                else
-                {
-                    // Absolute expiration
-                    if (absoluteExpiration.HasValue)
-                    {
-                        memoryStream.Write(" -a {0}", absoluteExpiration.Value.UtcDateTime.ToString(DacheProtocolHelper.AbsoluteExpirationFormat));
-                    }
-                    // Sliding expiration
-                    else if (slidingExpiration.HasValue)
-                    {
-                        memoryStream.Write(" -s {0}", (int)slidingExpiration.Value.TotalSeconds);
-                    }
-
-                    // Notify removed
-                    if (notifyRemoved)
-                    {
-                        memoryStream.Write(" -c");
-                    }
-                }
-
-                // Tag name
-                if (!string.IsNullOrWhiteSpace(tagName))
-                {
-                    memoryStream.Write(" -t {0}", tagName);
-                }
+                memoryStream.Write(sb.ToString());
 
                 foreach (var cacheKeyAndSerializedObjectKvp in cacheKeysAndSerializedObjects)
                 {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(NormalizeCacheKeyOrTagName(cacheKeyAndSerializedObjectKvp.Key));
-                    memoryStream.WriteSpace();
-                    memoryStream.WriteBase64(cacheKeyAndSerializedObjectKvp.Value);
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Key);
+                    memoryStream.Write(cacheKeyAndSerializedObjectKvp.Value);
                 }
                 command = memoryStream.ToArray();
             }
@@ -385,20 +384,24 @@ namespace Dache.Client
 
         private void SendRemove(IEnumerable<string> cacheKeysOrTagNames, bool isTagNames = false, string pattern = "*")
         {
-            byte[] command;
+            byte[] command = null;
+            
+            var sb = new StringBuilder();
+            sb.Append("del");
+            sb.Append(" ").Append(pattern);
+
+            if (isTagNames)
+            {
+                sb.Append(" -t");
+            }
+
             using (var memoryStream = new MemoryStream())
             {
-                memoryStream.Write("del ");
-
-                if (isTagNames)
-                {
-                    memoryStream.Write("{0} -t ", pattern);
-                }
+                memoryStream.Write(sb.ToString());
 
                 foreach (var cacheKeyOrTagName in cacheKeysOrTagNames)
                 {
-                    memoryStream.WriteSpace();
-                    memoryStream.Write(NormalizeCacheKeyOrTagName(cacheKeyOrTagName));
+                    memoryStream.Write(cacheKeyOrTagName);
                 }
                 command = memoryStream.ToArray();
             }
@@ -410,18 +413,29 @@ namespace Dache.Client
         private List<string> SendGetCacheKeys(IEnumerable<string> tagNames = null, string pattern = "*")
         {
             byte[] command;
+
+            var sb = new StringBuilder();
+            sb.Append("keys");
+
+            if (pattern != null)
+            {
+                sb.Append(" ").Append(pattern);
+            }
+
+            if (tagNames != null)
+            {
+                sb.Append(" -t");
+            }
+            
             using (var memoryStream = new MemoryStream())
             {
-                memoryStream.Write("keys {0}", pattern);
+                memoryStream.Write(sb.ToString());
 
                 if (tagNames != null)
                 {
-                    memoryStream.Write(" -t");
-
                     foreach (var tagName in tagNames)
                     {
-                        memoryStream.WriteSpace();
-                        memoryStream.Write(NormalizeCacheKeyOrTagName(tagName));
+                        memoryStream.Write(tagName);
                     }
                 }
 
@@ -429,22 +443,23 @@ namespace Dache.Client
             }
 
             // Send and receive
-            var rawResult = _client.SendReceive(command);
+            command = _client.SendReceive(command);
 
             // Verify that we got something
-            if (rawResult == null)
+            if (command == null || (command.Length == 1 && command[0] == 0))
             {
                 return null;
             }
 
-            // Parse string
-            var decodedResult = DacheProtocolHelper.CommunicationEncoding.GetString(rawResult);
-            if (string.IsNullOrWhiteSpace(decodedResult))
+            // Get command result
+            var commandResultParts = new List<string>();
+            int position = 0;
+            while (position < command.Length)
             {
-                return null;
+                commandResultParts.Add(DacheProtocolHelper.CommunicationEncoding.GetString(DacheProtocolHelper.Extract(command, ref position)));
             }
 
-            return new List<string>(decodedResult.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+            return commandResultParts;
         }
 
         /// <summary>
@@ -564,27 +579,6 @@ namespace Dache.Client
                 }
 
             }
-        }
-
-        /// <summary>
-        /// Parses the command parts into byte arrays.
-        /// </summary>
-        /// <param name="commandParts">The command parts.</param>
-        /// <returns>A list of byte arrays.</returns>
-        private static List<byte[]> ParseCacheObjects(string[] commandParts)
-        {
-            // Regular set
-            var cacheObjects = new List<byte[]>(commandParts.Length);
-            for (int i = 0; i < commandParts.Length; i++)
-            {
-                cacheObjects.Add(Convert.FromBase64String(commandParts[i]));
-            }
-            return cacheObjects;
-        }
-
-        private string NormalizeCacheKeyOrTagName(string cacheKeyOrTagName)
-        {
-            return cacheKeyOrTagName.Replace(' ', '_');
         }
     }
 }
