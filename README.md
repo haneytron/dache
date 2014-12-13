@@ -19,6 +19,8 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 ## 1.4.7
 
 - Enabled Dache client support for keys with spaces in them. These keys replace the space with an underscore '_' character.
+- Fixed logical error in TagRoutingTable that would cause an eventual memory leak
+- Cleaned up TagRoutingTable memory usage
 
 # INSTALLATION INSTRUCTIONS
 
