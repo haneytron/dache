@@ -16,17 +16,9 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.4.6
+## 1.4.7
 
-- Fixed bug where performance counters not being installed crashed Dache Host
-- Greatly simplified Dache host and client configuration. Most settings are now optional.
-- Created new Dache Host executable that can be run as a quick-start without installing the service. This file hosts Dache with default settings and provides information in a console window.
-- Upgraded SimplSockets. The latest version supports a maximum message size limit and also returns the `Connect` method of the client to synchronous.
-- Fixed a broken unit test.
-- Massively improved Dache Host install.bat and uninstall.bat process. Now provides much more feedback and does checks for permissions prior to install and uninstall.
-- Significantly improved NuGet packages. The host is simplified to take a `CacheHostConfigurationSection` instead of multiple variables. The client is installed with default settings injected into `Web.config` or `App.config` and now provides `CacheProvider.cs` which is a simple, working implementation of the Dache client which can be used to experiment.
-- Created MSBUILD tasks to create a nice execution folder structure for Dache files after each build. This new folder is in root of solution and is called `dache-<version>`.
-- **IMPORTANT:** releases will no longer be offered in GitHub. Instead, they will be found at our download page: http://www.dache.io/download - this is a much simpler and less confusing way to get the Dache binaries.
+- Enabled Dache client support for keys with spaces in them. These keys replace the space with an underscore '_' character.
 
 # INSTALLATION INSTRUCTIONS
 
