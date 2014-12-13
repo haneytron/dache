@@ -16,11 +16,10 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.4.7
+## 1.4.8
 
-- Enabled Dache client support for keys with spaces in them. These keys replace the space with an underscore '_' character.
-- Fixed logical error in TagRoutingTable that would cause an eventual memory leak
-- Cleaned up TagRoutingTable memory usage
+- Reworked Dache communication protocol. This removes all Base-64 string usage in favor of lengh-prefixed byte encoding. This improves Dache performance by >= 30% in our tests, and lowers communication overhead.
+- Side effect of reworked Dache communication protocol is that cache keys now natively support spaces, since they are no longer space delimited and are byte prefixed now.
 
 # INSTALLATION INSTRUCTIONS
 
