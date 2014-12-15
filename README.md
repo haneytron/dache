@@ -16,10 +16,9 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.4.8
+## 1.4.9
 
-- Reworked Dache communication protocol. This removes all Base-64 string usage in favor of lengh-prefixed byte encoding. This improves Dache performance by >= 30% in our tests, and lowers communication overhead.
-- Side effect of reworked Dache communication protocol is that cache keys now natively support spaces, since they are no longer space delimited and are byte prefixed now.
+- Fixed bug introduced in 1.4.8 that caused `CacheClient.Clear()` to spin into an infinite loop.
 
 # INSTALLATION INSTRUCTIONS
 
