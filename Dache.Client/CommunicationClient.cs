@@ -258,6 +258,7 @@ namespace Dache.Client
         }
 
         static byte[] _clearCommand = null;
+        static readonly object _clearCommandLock = new object();
 
         /// <summary>
         /// Clears the cache.
@@ -266,7 +267,7 @@ namespace Dache.Client
         {
             if (_clearCommand == null)
             {
-                lock (_clearCommand)
+                lock (_clearCommandLock)
                 {
                     if (_clearCommand == null)
                     {
