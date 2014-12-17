@@ -77,9 +77,6 @@ namespace Dache.CacheHost
                 return false;
             }
 
-            // Set the default logger
-            CustomLoggerLoader.DefaultLogger = new FileLogger();
-
             // Instantiate the cache host engine
             _cacheHostEngine = new CacheHostEngine(configuration);
 

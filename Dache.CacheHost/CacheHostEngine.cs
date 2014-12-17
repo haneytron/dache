@@ -36,6 +36,12 @@ namespace Dache.CacheHost
                 throw new ArgumentNullException("configuration");
             }
 
+            // Set default logger to file if necessary
+            if (CustomLoggerLoader.DefaultLogger == null)
+            {
+                CustomLoggerLoader.DefaultLogger = new FileLogger();
+            }
+
             var port = configuration.Port;
             var physicalMemoryLimitPercentage = configuration.CacheMemoryLimitPercentage;
             var maximumConnections = configuration.MaximumConnections;
