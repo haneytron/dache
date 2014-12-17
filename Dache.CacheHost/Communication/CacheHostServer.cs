@@ -2,18 +2,17 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Caching;
 using System.Text.RegularExpressions;
-using Dache.CacheHost;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
+using Dache.Core.Communication;
 using Dache.Core.Logging;
 using SimplSockets;
 
-namespace Dache.Core.Communication
+namespace Dache.CacheHost.Communication
 {
     /// <summary>
     /// The server for client to cache communication.

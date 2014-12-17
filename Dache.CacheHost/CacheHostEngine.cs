@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Dache.CacheHost.Communication;
 using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Routing;
 using Dache.CacheHost.Storage;
-using Dache.Core.Communication;
 using Dache.Core.Logging;
 using Dache.Core.Performance;
 
@@ -38,9 +35,6 @@ namespace Dache.CacheHost
             {
                 throw new ArgumentNullException("configuration");
             }
-
-            // Load custom logging
-            var logger = CustomLoggerLoader.LoadLogger();
 
             var port = configuration.Port;
             var physicalMemoryLimitPercentage = configuration.CacheMemoryLimitPercentage;

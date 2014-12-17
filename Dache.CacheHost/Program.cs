@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using Dache.CacheHost.Configuration;
 using Dache.CacheHost.Storage;
+using Dache.Core.Logging;
 using Dache.Core.Performance;
 
 namespace Dache.CacheHost
@@ -75,6 +76,9 @@ namespace Dache.CacheHost
                 Console.ReadKey();
                 return false;
             }
+
+            // Set the default logger
+            CustomLoggerLoader.DefaultLogger = new FileLogger();
 
             // Instantiate the cache host engine
             _cacheHostEngine = new CacheHostEngine(configuration);

@@ -39,6 +39,7 @@ namespace Dache.CacheHost
             ServiceName = "Dache Cache Host";
 
             // Load custom logging
+            CustomLoggerLoader.DefaultLogger = new EventViewerLogger("Cache Host", "Dache");
             _logger = CustomLoggerLoader.LoadLogger();
         }
 

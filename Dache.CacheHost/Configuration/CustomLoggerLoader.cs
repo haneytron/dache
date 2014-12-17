@@ -9,13 +9,20 @@ namespace Dache.CacheHost.Configuration
     public static class CustomLoggerLoader
     {
         /// <summary>
+        /// Gets or sets the default logger to use if no logger is specified via configuration.
+        /// </summary>
+        public static ILogger DefaultLogger { get; set; }
+
+        /// <summary>
         /// Loads a custom logger. If one was not specified, or the loading fails, loads the default logger.
         /// </summary>
         /// <returns>The logger.</returns>
         public static ILogger LoadLogger()
         {
-            var defaultLogger = new EventViewerLogger("Cache Host", "Dache");
-            //var defaultLogger = new FileLogger();
+            if (DefaultLogger == null)
+            {
+                throw new InvalidOperationException("Please set the default logger before calling this method");
+            }
 
             // Configure custom logging
             try
@@ -25,7 +32,7 @@ namespace Dache.CacheHost.Configuration
                 if (string.IsNullOrWhiteSpace(customLoggerTypeString))
                 {
                     // No custom logging
-                    return defaultLogger;
+                    return DefaultLogger;
                 }
 
                 // Have a custom logger, attempt to load it and confirm it
@@ -38,7 +45,7 @@ namespace Dache.CacheHost.Configuration
             }
             catch (Exception ex)
             {
-                defaultLogger.Error(ex);
+                DefaultLogger.Error(ex);
 
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("WARN: Custom logger type load failed");
@@ -48,7 +55,7 @@ namespace Dache.CacheHost.Configuration
                 Console.ForegroundColor = ConsoleColor.Cyan;
             }
 
-            return defaultLogger;
+            return DefaultLogger;
         }
     }
 }
