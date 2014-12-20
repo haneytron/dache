@@ -61,7 +61,7 @@ namespace Dache.CacheHost
             // Determine the MemCache to use
             IMemCache memCache = new MemCache(physicalMemoryLimitPercentage, performanceDataManager);
 
-            if (configuration.StorageProvider == typeof(GZipMemCache))
+            if (configuration.CompressData)
             {
                 memCache = new GZipMemCache(memCache);
             }

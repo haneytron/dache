@@ -81,9 +81,14 @@ namespace Dache.CacheHost
             _cacheHostEngine = new CacheHostEngine(configuration);
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("SETTINGS: Listening on port " + configuration.Port);
-            Console.WriteLine("SETTINGS: Memory Limit      " + configuration.CacheMemoryLimitPercentage + "%");
-            Console.WriteLine("SETTINGS: Max Connections   " + configuration.MaximumConnections);
+            Console.WriteLine("SETTINGS: Listening on port     " + configuration.Port);
+            Console.WriteLine("SETTINGS: Max Connections       " + configuration.MaximumConnections);
+            Console.WriteLine("SETTINGS: Message Buffer Size   " + configuration.MessageBufferSize + " BYTES");
+            Console.WriteLine("SETTINGS: Communication Timeout " + configuration.CommunicationTimeoutSeconds + " SECONDS");
+            Console.WriteLine("SETTINGS: Max Message Size      " + configuration.MaximumMessageSize + " BYTES");
+            Console.WriteLine("SETTINGS: Memory Limit          " + configuration.CacheMemoryLimitPercentage + "%");
+            Console.WriteLine("SETTINGS: Compress Data         " + configuration.CompressData.ToString().ToUpperInvariant());
+            
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Cyan;
 

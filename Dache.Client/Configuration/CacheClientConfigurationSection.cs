@@ -92,7 +92,7 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The maximum size of a message permitted. The default is 1 MB (104857600) valid range is &gt;= 512KB (52428800)
+        /// The maximum size of a message permitted. The default is 104857600 (1 MB). Valid range is &gt;= 52428800 (512 KB).
         /// </summary>
         [IntegerValidator(MinValue = 104857600, MaxValue = int.MaxValue)]
         [ConfigurationProperty("maximumMessageSize", IsRequired = false, DefaultValue = 104857600)]

@@ -16,9 +16,10 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.5.1
+## 1.5.2
 
-- Fixed bug introduced in 1.4.8 that caused NuGet Dache Cache Host to crash when recording a loggable event (due to trying to use Event Viewer logger intended for installed Windows Service)
+- Made storageProvider into a much simpler compressData boolean setting. Valid values are true and false.
+- Updated configuration settings commments.
 
 # INSTALLATION INSTRUCTIONS
 

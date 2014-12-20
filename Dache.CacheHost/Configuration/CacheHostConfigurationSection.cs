@@ -105,7 +105,7 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The maximum size of a message permitted. The default is 1 MB (104857600) valid range is &gt;= 512KB (52428800)
+        /// The maximum size of a message permitted. The default is 104857600 (1 MB). Valid range is &gt;= 52428800 (512 KB).
         /// </summary>
         [IntegerValidator(MinValue = 104857600, MaxValue = int.MaxValue)]
         [ConfigurationProperty("maximumMessageSize", IsRequired = false, DefaultValue = 104857600)]
@@ -139,19 +139,18 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// Gets or sets the storage provider.
+        /// Whether or not to compress data via GZip when storing it in the cache. The default is false. Valid options are true and false.
         /// </summary>
-        [TypeConverter(typeof(TypeNameConverter))]
-        [ConfigurationProperty("storageProvider", IsRequired = false, DefaultValue = typeof(MemCache))]
-        public Type StorageProvider
+        [ConfigurationProperty("compressData", IsRequired = false, DefaultValue = false)]
+        public bool CompressData
         {
             get
             {
-                return this["storageProvider"] as Type;
+                return (bool)this["compressData"];
             }
             set
             {
-                this["storageProvider"] = value;
+                this["compressData"] = value;
             }
         }
     }
