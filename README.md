@@ -19,7 +19,7 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 ## 1.5.2
 
 - Made storageProvider into a much simpler compressData boolean setting. Valid values are true and false.
-- Updated configuration settings commments.
+- Updated configuration settings comments.
 
 # INSTALLATION INSTRUCTIONS
 
