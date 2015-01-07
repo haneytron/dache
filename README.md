@@ -16,10 +16,9 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.5.2
+## 1.5.3
 
-- Made storageProvider into a much simpler compressData boolean setting. Valid values are true and false.
-- Updated configuration settings commments.
+- Upgraded SimplSockets to fix bug that could cause deadlock on startup.
 
 # INSTALLATION INSTRUCTIONS
 
