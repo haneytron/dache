@@ -950,34 +950,16 @@ namespace Dache.Client
                 // Compute hash code
                 var hashCode = ComputeHashCode(cacheKey);
 
-                // The index to use is value of the (fairly evenly distributed) hashcode modulus the online cache host count
-                var index = Math.Abs(hashCode % (_cacheHostBuckets.Count - _offlineCacheHostBucketIndexes.Count));
+                // The index to use is value of the (fairly evenly distributed) hashcode modulus the total cache host count
+                var index = Math.Abs(hashCode % _cacheHostBuckets.Count);
 
-                // Walk the collection to determine the client, skipping offline
-                int realIndex = 0;
-                while (true)
+                // Consistent hashing: if current is offline, use the one above it (rolling over to 0)
+                while (_offlineCacheHostBucketIndexes.Contains(index))
                 {
-                    // Check if current is offline, and if so skip it
-                    if (_offlineCacheHostBucketIndexes.Contains(realIndex))
-                    {
-                        realIndex++;
-                        continue;
-                    }
-
-                    // If index has been decremented to 0, we're done
-                    if (index == 0)
-                    {
-                        // Done
-                        break;
-                    }
-
-                    // Decrement index
-                    index--;
-                    // Increment real index
-                    realIndex++;
+                    index = ++index % _cacheHostBuckets.Count;
                 }
 
-                return _cacheHostBuckets[realIndex];
+                return _cacheHostBuckets[index];
             }
             finally
             {

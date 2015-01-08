@@ -16,9 +16,10 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.5.3
+## 1.5.4
 
-- Upgraded SimplSockets to fix bug that could cause deadlock on startup.
+- Upgraded SimplSockets to fix client bug that could cause disconnect loop when reconnecting.
+- Installed Consistent hashing. This ensures that when a cache host is added or removed, only K/N keys need to be remapped where K = key count and N = online hosts. In short: it's awesome.
 
 # INSTALLATION INSTRUCTIONS
 
