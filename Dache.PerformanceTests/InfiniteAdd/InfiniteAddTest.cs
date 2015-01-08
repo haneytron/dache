@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dache.Client;
+using Dache.Client.Exceptions;
 
 namespace Dache.PerformanceTests.InfiniteAdd
 {
@@ -27,7 +28,16 @@ namespace Dache.PerformanceTests.InfiniteAdd
                 int i = 0;
                 while (true)
                 {
-                    cacheClient.AddOrUpdate("test" + i, value);
+                    try
+                    {
+                        cacheClient.AddOrUpdate("test" + i, value);
+                    }
+                    catch (NoCacheHostsAvailableException)
+                    {
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+
                     i++;
                     if (i == itemsToAdd)
                     {
