@@ -557,9 +557,6 @@ namespace Dache.Client
                     // Ignore
                 }
 
-                // Close the client
-                _client.Close();
-
                 // Attempt to reconnect
                 if (!Connect())
                 {
