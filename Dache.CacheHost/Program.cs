@@ -85,7 +85,7 @@ namespace Dache.CacheHost
             Console.WriteLine("SETTINGS: Max Connections       " + configuration.MaximumConnections);
             Console.WriteLine("SETTINGS: Message Buffer Size   " + configuration.MessageBufferSize + " BYTES");
             Console.WriteLine("SETTINGS: Communication Timeout " + configuration.CommunicationTimeoutSeconds + " SECONDS");
-            Console.WriteLine("SETTINGS: Max Message Size      " + configuration.MaximumMessageSize + " BYTES");
+            Console.WriteLine("SETTINGS: Max Message Size      " + configuration.MaximumMessageSizeKB + " KB");
             Console.WriteLine("SETTINGS: Memory Limit          " + configuration.CacheMemoryLimitPercentage + "%");
             Console.WriteLine("SETTINGS: Compress Data         " + configuration.CompressData.ToString().ToUpperInvariant());
             

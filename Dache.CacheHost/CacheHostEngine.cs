@@ -71,7 +71,7 @@ namespace Dache.CacheHost
 
             // Initialize the cache host server
             var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, CustomLoggerLoader.LoadLogger(), configuration.Port, 
-                configuration.MaximumConnections, configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSize);
+                configuration.MaximumConnections, configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSizeKB * 1024);
 
             // Instantiate the cache host runner
             _cacheHostRunner = new CacheHostRunner(cacheHostServer);

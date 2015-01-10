@@ -23,10 +23,10 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds. The default is 10. Valid range is &gt; 5.
+        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds. The default is 5. Valid range is &gt;= 5.
         /// </summary>
         [IntegerValidator(MinValue = 5, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = false, DefaultValue = 10)]
+        [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = false, DefaultValue = 5)]
         public int HostReconnectIntervalSeconds
         {
             get
@@ -92,19 +92,19 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The maximum size of a message permitted. The default is 104857600 (1 MB). Valid range is &gt;= 52428800 (512 KB).
+        /// The maximum size of a message permitted, in kilobytes. The default is 10240 (10 MB). Valid range is &gt;= 512.
         /// </summary>
-        [IntegerValidator(MinValue = 104857600, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("maximumMessageSize", IsRequired = false, DefaultValue = 104857600)]
-        public int MaximumMessageSize
+        [IntegerValidator(MinValue = 512, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("maximumMessageSizeKB", IsRequired = false, DefaultValue = 10240)]
+        public int MaximumMessageSizeKB
         {
             get
             {
-                return (int)this["maximumMessageSize"];
+                return (int)this["maximumMessageSizeKB"];
             }
             set
             {
-                this["maximumMessageSize"] = value;
+                this["maximumMessageSizeKB"] = value;
             }
         }
 

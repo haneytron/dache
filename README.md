@@ -16,10 +16,11 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.5.4
+## 1.5.5
 
-- Upgraded SimplSockets to fix client bug that could cause disconnect loop when reconnecting.
-- Installed Consistent hashing. This ensures that when a cache host is added or removed, only K/N keys need to be remapped where K = key count and N = online hosts. In short: it's awesome.
+- **BREAKING CHANGE:** renamed `maximumMessageSize` to `maximumMessageSizeKB` and simplified value (represented in kilobytes now). New default for both client and host is 10240 (10 MB).
+- Upgraded SimplSockets to fix client bug that could cause disconnect of cache client.
+- Set client default host reconnect interval to 5 seconds (was 10 seconds)
 
 # INSTALLATION INSTRUCTIONS
 

@@ -79,7 +79,7 @@ namespace Dache.Client
             {
                 // Instantiate a communication client
                 var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, configuration.HostReconnectIntervalSeconds * 1000, 
-                    configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSize);
+                    configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSizeKB * 1024);
 
                 // Hook up the disconnected and reconnected events
                 communicationClient.Disconnected += OnClientDisconnected;
