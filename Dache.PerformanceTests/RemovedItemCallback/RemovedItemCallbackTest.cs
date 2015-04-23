@@ -24,7 +24,7 @@ namespace Dache.PerformanceTests.RemovedItemCallback
             cacheClient.CacheItemExpired += (sender, e) => { Interlocked.Increment(ref totalCallbacks); Console.WriteLine(string.Format("Cache key expired: {0}, Total Removed: {1}", e.CacheKey, totalCallbacks)); };
 
             // Add items
-            for (int i = 0; i < itemsToAdd; i++)
+            for (int i = 1; i <= itemsToAdd; i++)
             {
                 cacheClient.AddOrUpdate("test" + i, value, notifyRemoved: true);
             }
@@ -34,7 +34,7 @@ namespace Dache.PerformanceTests.RemovedItemCallback
             Thread.Sleep(2000);
 
             // Remove items
-            for (int i = 0; i < itemsToAdd; i++)
+            for (int i = 1; i <= itemsToAdd; i++)
             {
                 cacheClient.Remove("test" + i);
             }

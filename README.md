@@ -16,11 +16,11 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.5.5
+## 1.5.6
 
-- **BREAKING CHANGE:** renamed `maximumMessageSize` to `maximumMessageSizeKB` and simplified value (represented in kilobytes now). New default for both client and host is 10240 (10 MB).
-- Upgraded SimplSockets to fix client bug that could cause disconnect of cache client.
-- Set client default host reconnect interval to 5 seconds (was 10 seconds)
+- Substantially improved performance of TCP networking. This results in even better throughput and lower latency for Dache.
+- Fixed numerous disconnect/reconnect bugs in client and server. Dache should be much more reliable now, if not rock solid. Fixes #36.
+- Adjusted tests a little to be more intuitive.
 
 # INSTALLATION INSTRUCTIONS
 
