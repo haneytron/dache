@@ -11,10 +11,10 @@ namespace Dache.PerformanceTests.RemovedItemCallback
             int totalCallbacks = 0;
             var cacheClient = new CacheClient();
 
-            // 502 chars = 1 kb
+            // 502 chars = ~1 kb
             string value = "asdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasas";
 
-            int itemsToAdd = 1000;
+            int itemsToAdd = 5;
 
             Console.WriteLine("***** BEGIN REMOVED ITEM CALLBACK TEST *****");
             Console.WriteLine();

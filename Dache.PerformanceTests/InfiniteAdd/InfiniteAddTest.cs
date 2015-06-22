@@ -12,12 +12,12 @@ namespace Dache.PerformanceTests.InfiniteAdd
         {
             var cacheClient = new CacheClient();
 
-            // 502 chars = 1 kb
+            // 502 chars = ~1 kb
             string value = "asdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasas";
 
             int itemsToAdd = 1000;
 
-            Console.WriteLine("***** BEGIN INFINITE ADD " + itemsToAdd + " ITEMS TEST (WILL NEVER END) *****");
+            Console.WriteLine("***** BEGIN INFINITE ADD " + itemsToAdd + " 1 KB STRING OBJECTS TEST (WILL NEVER END) *****");
             Console.WriteLine();
 
             cacheClient.HostDisconnected += (sender, e) => { Console.WriteLine("*** Host disconnected"); };
