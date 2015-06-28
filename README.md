@@ -16,11 +16,12 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.5.6
+## 1.5.8
 
-- Substantially improved performance of TCP networking. This results in even better throughput and lower latency for Dache.
-- Fixed numerous disconnect/reconnect bugs in client and server. Dache should be much more reliable now, if not rock solid. Fixes #36.
-- Adjusted tests a little to be more intuitive.
+- Completely revamped and fixed TCP networking via SimplSockets. NOW COMPLETELY ROCK SOLID! Fixes #37
+- TCP fixes included SocketAsyncEventArgs accept bug, 0 byte graceful disconnect bug, refused to accept connections after a 0 byte disconnect, etc.
+- Optimized SimplSocket memory usage via better object pools. Throughput of Dache substantially increased (1 test client can to 50000+ adds/sec)
+- Added graceful disconnect to tests via 'q' character being pressed. Just another way to test the TCP communication.
 
 # INSTALLATION INSTRUCTIONS
 
