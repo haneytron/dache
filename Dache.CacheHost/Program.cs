@@ -33,9 +33,7 @@ namespace Dache.CacheHost
             Console.WriteLine("INFO: Loading Settings...");
             Console.WriteLine();
 
-            var result = ConfigureCacheHostEngine();
-            if (!result) return;
-
+            if (!ConfigureCacheHostEngine()) return;
             
             Console.WriteLine("INFO: Starting " + Console.Title + "...");
 

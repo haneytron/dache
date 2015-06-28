@@ -110,6 +110,14 @@ namespace Dache.Client
         }
 
         /// <summary>
+        /// Disconnects from the cache host.
+        /// </summary>
+        public void Disconnect()
+        {
+            _client.Close();
+        }
+
+        /// <summary>
         /// Gets the serialized objects stored at the given cache keys from the cache.
         /// </summary>
         /// <param name="cacheKeys">The cache keys.</param>

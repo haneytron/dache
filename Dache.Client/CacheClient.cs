@@ -820,6 +820,31 @@ namespace Dache.Client
         }
 
         /// <summary>
+        /// Shuts down the connection. Call this when unloading an app domain to gracefully exit.
+        /// </summary>
+        public void Shutdown()
+        {
+            do
+            {
+                // Enumerate all cache hosts
+                try
+                {
+                    foreach (var cacheHostBucket in _cacheHostBuckets)
+                    {
+                        cacheHostBucket.PerformActionOnAll(c => c.Disconnect());
+                    }
+
+                    // If we got here we succeeded
+                    break;
+                }
+                catch
+                {
+                    // Rebalance and try again if a cache host could not be reached or the list changed
+                }
+            } while (true);
+        }
+
+        /// <summary>
         /// Event that fires when the cache client is disconnected from a cache host.
         /// </summary>
         public event EventHandler HostDisconnected;

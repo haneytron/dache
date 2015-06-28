@@ -121,6 +121,11 @@ namespace Dache.Client
         void Clear();
 
         /// <summary>
+        /// Shuts down the connection. Call this when unloading an app domain to gracefully exit.
+        /// </summary>
+        void Shutdown();
+
+        /// <summary>
         /// Event that fires when the cache client is disconnected from a cache host.
         /// </summary>
         event EventHandler HostDisconnected;

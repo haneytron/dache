@@ -56,7 +56,12 @@ namespace Dache.PerformanceTests.CacheMiss
                 Console.WriteLine("FAIL: Received values for tag cache keys");
             }
 
-            Console.ReadKey();
+            var key = Console.ReadKey();
+            // Graceful shutdown option
+            if (key.KeyChar == 'q')
+            {
+                cacheClient.Shutdown();
+            }
         }
     }
 }

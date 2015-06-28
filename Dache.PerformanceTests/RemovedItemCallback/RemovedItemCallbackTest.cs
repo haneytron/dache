@@ -14,7 +14,8 @@ namespace Dache.PerformanceTests.RemovedItemCallback
             // 502 chars = ~1 kb
             string value = "asdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasasdfasdfasas";
 
-            int itemsToAdd = 5;
+            int itemsToAdd = 10;
+            var pause = 2000;
 
             Console.WriteLine("***** BEGIN REMOVED ITEM CALLBACK TEST *****");
             Console.WriteLine();
@@ -30,8 +31,8 @@ namespace Dache.PerformanceTests.RemovedItemCallback
             }
 
             Console.WriteLine("***** " + itemsToAdd + " ITEMS ADDED *****");
-            Console.WriteLine("***** BEGIN REMOVING " + itemsToAdd + " ITEMS AFTER 2000 MS PAUSE *****");
-            Thread.Sleep(2000);
+            Console.WriteLine("***** BEGIN REMOVING " + itemsToAdd + " ITEMS AFTER " + pause + " MS PAUSE *****");
+            Thread.Sleep(pause);
 
             // Remove items
             for (int i = 1; i <= itemsToAdd; i++)
@@ -39,7 +40,12 @@ namespace Dache.PerformanceTests.RemovedItemCallback
                 cacheClient.Remove("test" + i);
             }
 
-            Console.ReadKey();
+            var key = Console.ReadKey();
+            // Graceful shutdown option
+            if (key.KeyChar == 'q')
+            {
+                cacheClient.Shutdown();
+            }
         }
     }
 }

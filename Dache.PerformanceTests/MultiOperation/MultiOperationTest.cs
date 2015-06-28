@@ -213,7 +213,13 @@ namespace Dache.PerformanceTests.MultiOperation
             Console.WriteLine();
 
             Console.WriteLine("Total time taken: " + overallStopwatch.ElapsedMilliseconds + " ms, " + overallStopwatch.ElapsedTicks + " ticks");
-            Console.ReadKey();
+
+            var key = Console.ReadKey();
+            // Graceful shutdown option
+            if (key.KeyChar == 'q')
+            {
+                cacheClient.Shutdown();
+            }
         }
     }
 }
