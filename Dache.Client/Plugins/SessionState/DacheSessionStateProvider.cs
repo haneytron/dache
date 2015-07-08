@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Dache.Client.Configuration;
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;
@@ -15,13 +16,25 @@ namespace Dache.Client.Plugins.SessionState
     {
         // The cache key
         private const string _cacheKey = "__DacheCustomSessionState_SessionID:{0}_ApplicationName:{1}";
-        // The cache client
-        private readonly ICacheClient _cacheClient = new CacheClient();
+        // The cache client needs to be static because n copies of this class get instantiated
+        private static readonly ICacheClient _cacheClient = null;
 
         // The application name
         private string _applicationName = null;
         // The session state config
         private SessionStateSection _sessionStateSection = null;
+
+        /// <summary>
+        /// Static constructor.
+        /// </summary>
+        static DacheSessionStateProvider()
+        {
+            // Use the user provided settings
+            var cacheClientConfig = CacheClientConfigurationSection.Settings;
+            // No custom serializer for this connection
+            cacheClientConfig.CustomSerializer = null;
+            _cacheClient = new CacheClient(cacheClientConfig);
+        }
 
         /// <summary>
         /// Initializes the provider.
