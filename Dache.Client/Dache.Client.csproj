@@ -37,6 +37,10 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="protobuf-net">
       <HintPath>..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
@@ -68,6 +72,7 @@
     <Compile Include="Plugins\OutputCache\DacheOutputCacheProvider.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionState.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionStateProvider.cs" />
+    <Compile Include="Serialization\JsonSerializer.cs" />
     <Compile Include="Serialization\ProtoBufSerializer.cs" />
     <Compile Include="Serialization\BinarySerializer.cs" />
     <Compile Include="CacheClient.cs" />
