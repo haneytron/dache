@@ -36,6 +36,8 @@ namespace Dache.Client.Plugins.SessionState
 
             if (cacheClientConfig == null) throw new InvalidOperationException("You cannot use the Dache session state provider without supplying Dache configuration in your web or app config file");
 
+            // TODO: the below sucks. Improve it.
+
             // Clone to protect from mutated state
             var cacheClientConfigClone = (CacheClientConfigurationSection)cacheClientConfig.Clone();
             // Use ProtoBuf serializer
