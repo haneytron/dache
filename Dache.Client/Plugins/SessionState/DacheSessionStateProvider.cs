@@ -1,5 +1,6 @@
 ﻿using Dache.Client.Configuration;
 using Dache.Client.Serialization;
+using Dache.Core.Logging;
 using System;
 using System.Collections.Specialized;
 using System.IO;
@@ -37,8 +38,10 @@ namespace Dache.Client.Plugins.SessionState
 
             // Clone to protect from mutated state
             var cacheClientConfigClone = (CacheClientConfigurationSection)cacheClientConfig.Clone();
-            // Use ProtoBuf
+            // Use ProtoBuf serializer
             cacheClientConfigClone.CustomSerializer.Type = typeof(ProtoBufSerializer).AssemblyQualifiedName;
+            // Use Debug logger
+            cacheClientConfigClone.CustomLogger.Type = typeof(DebugLogger).AssemblyQualifiedName;
             _cacheClient = new CacheClient(cacheClientConfigClone);
         }
 
