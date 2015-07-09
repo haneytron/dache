@@ -11,7 +11,7 @@ namespace Dache.Tests.Dache.Client
         public void BinarySerializer_Serialize_GivenNullInput_ShouldReturnNull()
         {
             var binarySerializer = new BinarySerializer();
-            var result = binarySerializer.Serialize(null);
+            var result = binarySerializer.Serialize<object>(null);
             
             Assert.IsNull(result);
         }
@@ -42,7 +42,7 @@ namespace Dache.Tests.Dache.Client
         public void BinarySerializer_Deserialize_GivenNullInput_ShouldReturnNull()
         {
             var binarySerializer = new BinarySerializer();
-            var result = binarySerializer.Deserialize(null);
+            var result = binarySerializer.Deserialize<object>(null);
 
             Assert.IsNull(result);
         }
@@ -56,13 +56,10 @@ namespace Dache.Tests.Dache.Client
             { 0, 1, 0, 0, 0, 255, 255, 255, 255, 1, 0, 0, 0, 0, 0, 0, 0, 4, 1, 0, 0, 0, 12, 83, 121, 115, 116, 101, 
                 109, 46, 73, 110, 116, 51, 50, 1, 0, 0, 0, 7, 109, 95, 118, 97, 108, 117, 101, 0, 8, 123, 0, 0, 0, 11 };
 
-            var resultObject = binarySerializer.Deserialize(serializedInt);
+            var resultObject = binarySerializer.Deserialize<int>(serializedInt);
 
             Assert.IsNotNull(resultObject);
-
-            var deserializedInt = (int)resultObject;
-
-            Assert.AreEqual(123, deserializedInt);
+            Assert.AreEqual(123, resultObject);
         }
 
         [TestMethod]
@@ -73,14 +70,10 @@ namespace Dache.Tests.Dache.Client
             var serializedString = new byte[] { 0, 1, 0, 0, 0, 255, 255, 255, 255, 1, 0, 0, 0, 0, 0, 0, 0, 6, 1, 0, 0, 0, 4, 116, 101, 115, 116, 11 };
 
 
-            var resultObject = binarySerializer.Deserialize(serializedString);
+            var resultObject = binarySerializer.Deserialize<string>(serializedString);
 
             Assert.IsNotNull(resultObject);
-
-            var deserializedString = resultObject as string;
-
-            Assert.IsNotNull(deserializedString);
-            Assert.AreEqual("test", deserializedString);
+            Assert.AreEqual("test", resultObject);
         }
 
         [TestMethod]
@@ -92,14 +85,10 @@ namespace Dache.Tests.Dache.Client
 
             Assert.IsNotNull(serializedResult);
 
-            var deserializedResult = binarySerializer.Deserialize(serializedResult);
+            var deserializedResult = binarySerializer.Deserialize<string>(serializedResult);
 
             Assert.IsNotNull(deserializedResult);
-
-            var resultString = deserializedResult as string;
-
-            Assert.IsNotNull(resultString);
-            Assert.AreEqual("test", resultString);
+            Assert.AreEqual("test", deserializedResult);
         }
     }
 }

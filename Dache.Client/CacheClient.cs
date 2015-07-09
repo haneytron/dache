@@ -157,7 +157,7 @@ namespace Dache.Client
             // Deserialize
             try
             {
-                value = (T)_binarySerializer.Deserialize(rawValues[0]);
+                value = _binarySerializer.Deserialize<T>(rawValues[0]);
                 return true;
             }
             catch
@@ -250,7 +250,7 @@ namespace Dache.Client
             {
                 try
                 {
-                    results.Add((T)_binarySerializer.Deserialize(rawResults[i]));
+                    results.Add(_binarySerializer.Deserialize<T>(rawResults[i]));
                 }
                 catch
                 {
@@ -310,7 +310,7 @@ namespace Dache.Client
             {
                 try
                 {
-                    results.Add((T)_binarySerializer.Deserialize(rawResults[i]));
+                    results.Add(_binarySerializer.Deserialize<T>(rawResults[i]));
                 }
                 catch
                 {

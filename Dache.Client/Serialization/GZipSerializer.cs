@@ -14,11 +14,10 @@ namespace Dache.Client.Serialization
         /// Compresses and serializes an object to byte array.
         /// </summary>
         /// <param name="value">The object that should be compressed and serialized.</param>
-        /// <returns>
-        /// A byte array of the serialized object, or null if the object was null.
-        /// </returns>
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <returns>A byte array of the serialized object, or null if the object was null.</returns>
         /// <exception cref="System.ArgumentNullException">value;Can't compress null value</exception>
-        public byte[] Serialize(object value)
+        public byte[] Serialize<T>(T value)
         {
             // Sanitize
             if (value == null)
@@ -41,22 +40,21 @@ namespace Dache.Client.Serialization
         /// Deserializes and decompresses a byte array into an object.
         /// </summary>
         /// <param name="bytes">The byte array that should be decompressed and deserialized.</param>
-        /// <returns>
-        /// A deserialized and decomressed object, or null if the byte array was null.
-        /// </returns>
-        public object Deserialize(byte[] bytes)
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <returns>A deserialized and decomressed object, or null if the byte array was null.</returns>
+        public T Deserialize<T>(byte[] bytes)
         {
             // Sanitize
             if (bytes == null)
             {
-                return null;
+                return default(T);
             }
 
             using (MemoryStream originalStream = new MemoryStream(bytes))
             {
                 using (GZipStream decompressionStream = new GZipStream(originalStream, CompressionMode.Decompress, false))
                 {
-                    return new BinaryFormatter().Deserialize(decompressionStream);
+                    return (T)new BinaryFormatter().Deserialize(decompressionStream);
                 }
             }
         }

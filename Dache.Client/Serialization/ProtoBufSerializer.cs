@@ -1,12 +1,13 @@
-﻿using System.IO;
+﻿using ProtoBuf;
+using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Dache.Client.Serialization
 {
     /// <summary>
-    /// Serializes and deserializes objects to and from binary. Thread safe.
+    /// Serializes and deserializes objects to and from binary using ProtoBuf. Thread safe.
     /// </summary>
-    internal class BinarySerializer : IBinarySerializer
+    internal class ProtoBufSerializer : IBinarySerializer
     {
         /// <summary>
         /// Serializes an object to byte array.
@@ -24,7 +25,7 @@ namespace Dache.Client.Serialization
 
             using (var memoryStream = new MemoryStream())
             {
-                new BinaryFormatter().Serialize(memoryStream, value);
+                Serializer.Serialize(memoryStream, value);
                 return memoryStream.ToArray();
             }
         }
@@ -45,7 +46,7 @@ namespace Dache.Client.Serialization
 
             using (var memoryStream = new MemoryStream(bytes))
             {
-                return (T)new BinaryFormatter().Deserialize(memoryStream);
+                return Serializer.Deserialize<T>(memoryStream);
             }
         }
     }

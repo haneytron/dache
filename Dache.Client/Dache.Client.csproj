@@ -37,6 +37,9 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="protobuf-net">
+      <HintPath>..\packages\protobuf-net.2.0.0.668\lib\net40\protobuf-net.dll</HintPath>
+    </Reference>
     <Reference Include="SharpMemoryCache">
       <HintPath>..\packages\SharpMemoryCache.1.0.0\lib\SharpMemoryCache.dll</HintPath>
     </Reference>
@@ -50,6 +53,7 @@
     <Reference Include="System.Net" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Web" />
+    <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\CacheClientConfigurationSection.cs" />
@@ -64,6 +68,7 @@
     <Compile Include="Plugins\OutputCache\DacheOutputCacheProvider.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionState.cs" />
     <Compile Include="Plugins\SessionState\DacheSessionStateProvider.cs" />
+    <Compile Include="Serialization\ProtoBufSerializer.cs" />
     <Compile Include="Serialization\BinarySerializer.cs" />
     <Compile Include="CacheClient.cs" />
     <Compile Include="CommunicationClient.cs" />

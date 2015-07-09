@@ -16,7 +16,7 @@ namespace Dache.Tests.Dache.Client
         {
             GZipSerializer sut = new GZipSerializer();
 
-            sut.Serialize(null);
+            sut.Serialize<object>(null);
         }
 
         [TestMethod]
@@ -32,7 +32,7 @@ namespace Dache.Tests.Dache.Client
             GZipSerializer sut = new GZipSerializer();
 
             byte[] serializedClass = sut.Serialize(serializeTestClass);
-            SerializeTestClass result = sut.Deserialize(serializedClass) as SerializeTestClass;
+            SerializeTestClass result = sut.Deserialize<SerializeTestClass>(serializedClass);
 
             Assert.IsNotNull(serializedClass);
             Assert.IsNotNull(result);
@@ -76,11 +76,11 @@ namespace Dache.Tests.Dache.Client
         }
 
         [TestMethod]
-        public void GZipSerializer_Serialize_Null_Value_Returns_Null()
+        public void GZipSerializer_Deserialize_Null_Value_Returns_Null()
         {
             GZipSerializer sut = new GZipSerializer();
 
-            object result = sut.Deserialize(null);
+            object result = sut.Deserialize<object>(null);
 
             Assert.IsNull(result);
         }

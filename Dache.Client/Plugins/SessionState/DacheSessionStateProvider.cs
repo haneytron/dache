@@ -31,7 +31,7 @@ namespace Dache.Client.Plugins.SessionState
         {
             // Use the user provided settings
             var cacheClientConfig = CacheClientConfigurationSection.Settings;
-            // No custom serializer for this connection
+            // Use ProtoBuf
             cacheClientConfig.CustomSerializer = null;
             _cacheClient = new CacheClient(cacheClientConfig);
         }
@@ -96,7 +96,7 @@ namespace Dache.Client.Plugins.SessionState
         /// <param name="timeout">The session Timeout for the current request.</param>
         public override void CreateUninitializedItem(HttpContext context, string id, int timeout)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             _cacheClient.AddOrUpdate(string.Format(_cacheKey, id, _applicationName), new DacheSessionState
             {
@@ -157,7 +157,7 @@ namespace Dache.Client.Plugins.SessionState
             int timeout = 0;
 
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // Get the current session
             DacheSessionState currentSession = null;
@@ -231,7 +231,7 @@ namespace Dache.Client.Plugins.SessionState
         public override SessionStateStoreData GetItemExclusive(HttpContext context, string id, out bool locked, out TimeSpan lockAge, out object lockId, out SessionStateActions actions)
         {
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // Get the current session
             DacheSessionState currentSession = null;
@@ -271,7 +271,7 @@ namespace Dache.Client.Plugins.SessionState
         public override void ReleaseItemExclusive(HttpContext context, string id, object lockId)
         {
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // Get the current session
             DacheSessionState currentSession = null;
@@ -297,7 +297,7 @@ namespace Dache.Client.Plugins.SessionState
         public override void RemoveItem(HttpContext context, string id, object lockId, SessionStateStoreData item)
         {
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // Get the current session
             DacheSessionState currentSession = null;
@@ -321,7 +321,7 @@ namespace Dache.Client.Plugins.SessionState
             DacheSessionState currentSession = null;
             if (_cacheClient.TryGet<DacheSessionState>(cacheKey, out currentSession))
             {
-                currentSession.Expires = DateTime.Now.AddMinutes(_sessionStateSection.Timeout.TotalMinutes);
+                currentSession.Expires = DateTime.UtcNow.AddMinutes(_sessionStateSection.Timeout.TotalMinutes);
                 _cacheClient.AddOrUpdate(cacheKey, currentSession);
             }
         }
@@ -341,14 +341,18 @@ namespace Dache.Client.Plugins.SessionState
             byte[] serializedItems = new byte[0];
             if (sessionItems != null)
             {
-                var memoryStream = new MemoryStream();
-                var writer = new BinaryWriter(memoryStream);
-                sessionItems.Serialize(writer);
-                writer.Close();
-                serializedItems = memoryStream.ToArray();
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var writer = new BinaryWriter(memoryStream))
+                    {
+                        sessionItems.Serialize(writer);
+                        writer.Close();
+                        serializedItems = memoryStream.ToArray();
+                    }
+                }
             }
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var cacheKey = string.Format(_cacheKey, id, _applicationName);
 
             // Try and get the existing session item
