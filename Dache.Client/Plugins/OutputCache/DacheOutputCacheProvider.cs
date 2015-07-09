@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Dache.Client.Configuration;
+using Dache.Client.Serialization;
+using Dache.Core.Logging;
+using System;
 using System.Diagnostics;
 using System.Web.Caching;
 
@@ -12,7 +15,28 @@ namespace Dache.Client.Plugins.OutputCache
         // The cache key
         private const string _cacheKey = "__DacheCustomOutputCaching_CacheKey:{0}";
         // The cache client
-        private static readonly ICacheClient _cacheClient = new CacheClient();
+        private static readonly ICacheClient _cacheClient = null;
+
+        /// <summary>
+        /// Static constructor.
+        /// </summary>
+        static DacheOutputCacheProvider()
+        {
+            // Use the user provided settings
+            var cacheClientConfig = CacheClientConfigurationSection.Settings;
+
+            if (cacheClientConfig == null) throw new InvalidOperationException("You cannot use the Dache output cache provider without supplying Dache configuration in your web or app config file");
+
+            // TODO: the below sucks. Improve it.
+
+            // Clone to protect from mutated state
+            var cacheClientConfigClone = (CacheClientConfigurationSection)cacheClientConfig.Clone();
+            // Use binary serializer
+            cacheClientConfigClone.CustomSerializer.Type = typeof(BinarySerializer).AssemblyQualifiedName;
+            // Use Debug logger
+            cacheClientConfigClone.CustomLogger.Type = typeof(DebugLogger).AssemblyQualifiedName;
+            _cacheClient = new CacheClient(cacheClientConfigClone);
+        }
 
         /// <summary>
         /// Inserts the specified entry into the output cache. 
