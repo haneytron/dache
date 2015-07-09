@@ -1,12 +1,13 @@
 ﻿using System.Configuration;
 using Dache.CacheHost.Configuration;
+using System;
 
 namespace Dache.Client.Configuration
 {
     /// <summary>
     /// An application configuration section that allows a user to specify cache client settings.
     /// </summary>
-    public class CacheClientConfigurationSection : ConfigurationSection
+    public class CacheClientConfigurationSection : ConfigurationSection, ICloneable
     {
         // The static readonly cache client configuration section of the application configuration
         private static readonly CacheClientConfigurationSection _settings = ConfigurationManager.GetSection("cacheClientSettings") as CacheClientConfigurationSection;
@@ -155,6 +156,15 @@ namespace Dache.Client.Configuration
             {
                 this["cacheHosts"] = value;
             }
+        }
+
+        /// <summary>
+        /// Clones this object.
+        /// </summary>
+        /// <returns>A shallow clone of this object.</returns>
+        public object Clone()
+        {
+            return this.MemberwiseClone();
         }
     }
 }

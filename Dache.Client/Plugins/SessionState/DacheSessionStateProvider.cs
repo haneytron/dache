@@ -1,4 +1,5 @@
 ﻿using Dache.Client.Configuration;
+using Dache.Client.Serialization;
 using System;
 using System.Collections.Specialized;
 using System.IO;
@@ -31,9 +32,14 @@ namespace Dache.Client.Plugins.SessionState
         {
             // Use the user provided settings
             var cacheClientConfig = CacheClientConfigurationSection.Settings;
+
+            if (cacheClientConfig == null) throw new InvalidOperationException("You cannot use the Dache session state provider without supplying Dache configuration in your web or app config file");
+
+            // Clone to protect from mutated state
+            var cacheClientConfigClone = (CacheClientConfigurationSection)cacheClientConfig.Clone();
             // Use ProtoBuf
-            cacheClientConfig.CustomSerializer = null;
-            _cacheClient = new CacheClient(cacheClientConfig);
+            cacheClientConfigClone.CustomSerializer.Type = typeof(ProtoBufSerializer).AssemblyQualifiedName;
+            _cacheClient = new CacheClient(cacheClientConfigClone);
         }
 
         /// <summary>
@@ -201,14 +207,19 @@ namespace Dache.Client.Plugins.SessionState
                 }
                 else
                 {
-                    // Deserialize
-                    MemoryStream memoryStream = new MemoryStream(serializedItems);
-                    SessionStateItemCollection sessionItems = new SessionStateItemCollection();
+                    var sessionItems = new SessionStateItemCollection();
 
-                    if (memoryStream.Length > 0)
+                    // Deserialize
+                    using (var memoryStream = new MemoryStream(serializedItems))
                     {
-                        BinaryReader reader = new BinaryReader(memoryStream);
-                        sessionItems = SessionStateItemCollection.Deserialize(reader);
+                        if (memoryStream.Length > 0)
+                        {
+                            using (var reader = new BinaryReader(memoryStream))
+                            {
+                                sessionItems = SessionStateItemCollection.Deserialize(reader);
+                            }
+                            
+                        }
                     }
 
                     item = new SessionStateStoreData(sessionItems, SessionStateUtility.GetSessionStaticObjects(context), timeout);
@@ -238,6 +249,7 @@ namespace Dache.Client.Plugins.SessionState
             _cacheClient.TryGet<DacheSessionState>(cacheKey, out currentSession);
 
             // Obtain a lock if possible. Ignore the record if it is expired.
+            // TODO: this isn't actually thread safe due to a lack of "global" lock
                 
             // Set locked to true if the record was not updated and false if it was
             locked = !(currentSession != null && !currentSession.Locked && currentSession.Expires > now);
@@ -357,21 +369,21 @@ namespace Dache.Client.Plugins.SessionState
 
             // Try and get the existing session item
             DacheSessionState currentSession = null;
-            _cacheClient.TryGet<DacheSessionState>(cacheKey, out currentSession);
+            bool success = _cacheClient.TryGet<DacheSessionState>(cacheKey, out currentSession);
 
             // Create or update the session item
             _cacheClient.AddOrUpdate(cacheKey, new DacheSessionState
             {
                 SessionId = id,
                 ApplicationName = _applicationName,
-                Created = currentSession != null ? currentSession.Created : now,
+                Created = success ? currentSession.Created : now,
                 Expires = now.AddMinutes(item.Timeout),
-                LockDate = currentSession != null ? currentSession.LockDate : now,
-                LockId = currentSession != null ? currentSession.LockId : 0,
-                Timeout = currentSession != null ? currentSession.Timeout : item.Timeout,
+                LockDate = success ? currentSession.LockDate : now,
+                LockId = success ? currentSession.LockId : 0,
+                Timeout = success ? currentSession.Timeout : item.Timeout,
                 Locked = false,
                 SessionItems = serializedItems,
-                Flags = currentSession != null ? currentSession.Flags : SessionStateActions.None
+                Flags = success ? currentSession.Flags : SessionStateActions.None
             });
         }
 
