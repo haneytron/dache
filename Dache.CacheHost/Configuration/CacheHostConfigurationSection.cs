@@ -54,27 +54,10 @@ namespace Dache.CacheHost.Configuration
         }
 
         /// <summary>
-        /// The maximum connections. The default is 20. Valid range is &gt; 0.
+        /// The message buffer size. The default is 65536. Valid range is 1024 to 524288.
         /// </summary>
-        [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("maximumConnections", IsRequired = false, DefaultValue = 20)]
-        public int MaximumConnections
-        {
-            get
-            {
-                return (int)this["maximumConnections"];
-            }
-            set
-            {
-                this["maximumConnections"] = value;
-            }
-        }
-
-        /// <summary>
-        /// The message buffer size. The default is 1024. Valid range is 1024 to 4096.
-        /// </summary>
-        [IntegerValidator(MinValue = 1024, MaxValue = 4096)]
-        [ConfigurationProperty("messageBufferSize", IsRequired = false, DefaultValue = 1024)]
+        [IntegerValidator(MinValue = 1024, MaxValue = 524288)]
+        [ConfigurationProperty("messageBufferSize", IsRequired = false, DefaultValue = 65536)]
         public int MessageBufferSize
         {
             get

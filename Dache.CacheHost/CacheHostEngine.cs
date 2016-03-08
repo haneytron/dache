@@ -44,7 +44,6 @@ namespace Dache.CacheHost
 
             var port = configuration.Port;
             var physicalMemoryLimitPercentage = configuration.CacheMemoryLimitPercentage;
-            var maximumConnections = configuration.MaximumConnections;
 
             // Configure the performance counter data manager
             PerformanceDataManager performanceDataManager = null;
@@ -71,7 +70,7 @@ namespace Dache.CacheHost
 
             // Initialize the cache host server
             var cacheHostServer = new CacheHostServer(memCache, tagRoutingTable, CustomLoggerLoader.LoadLogger(), configuration.Port, 
-                configuration.MaximumConnections, configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSizeKB * 1024);
+                configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSizeKB * 1024);
 
             // Instantiate the cache host runner
             _cacheHostRunner = new CacheHostRunner(cacheHostServer);

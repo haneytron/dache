@@ -77,8 +77,10 @@ namespace Dache.Client
             // Assign the cache hosts to buckets in a specified order
             foreach (CacheHostElement cacheHost in cacheHosts.OfType<CacheHostElement>().OrderBy(i => i.Address).ThenBy(i => i.Port))
             {
+                // TODO: implement cacheHost.Connections in a way that isn't buckets since buckets redundantly replicate data
+                    
                 // Instantiate a communication client
-                var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, configuration.HostReconnectIntervalSeconds * 1000, 
+                var communicationClient = new CommunicationClient(cacheHost.Address, cacheHost.Port, configuration.HostReconnectIntervalSeconds * 1000,
                     configuration.MessageBufferSize, configuration.CommunicationTimeoutSeconds * 1000, configuration.MaximumMessageSizeKB * 1024);
 
                 // Hook up the disconnected and reconnected events

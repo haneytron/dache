@@ -24,10 +24,10 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds. The default is 5. Valid range is &gt;= 5.
+        /// How often to attempt to re-establish the connection to a disconnected cache host, in seconds. The default is 1. Valid range is &gt;= 1.
         /// </summary>
-        [IntegerValidator(MinValue = 5, MaxValue = int.MaxValue)]
-        [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = false, DefaultValue = 5)]
+        [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("hostReconnectIntervalSeconds", IsRequired = false, DefaultValue = 1)]
         public int HostReconnectIntervalSeconds
         {
             get
@@ -59,10 +59,10 @@ namespace Dache.Client.Configuration
         }
 
         /// <summary>
-        /// The message buffer size. The default is 1024. Valid range is 1024 to 4096.
+        /// The message buffer size. The default is 65536. Valid range is 1024 to 524288.
         /// </summary>
-        [IntegerValidator(MinValue = 1024, MaxValue = 4096)]
-        [ConfigurationProperty("messageBufferSize", IsRequired = false, DefaultValue = 1024)]
+        [IntegerValidator(MinValue = 1024, MaxValue = 524288)]
+        [ConfigurationProperty("messageBufferSize", IsRequired = false, DefaultValue = 65536)]
         public int MessageBufferSize
         {
             get

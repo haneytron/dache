@@ -80,7 +80,6 @@ namespace Dache.CacheHost
 
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("SETTINGS: Listening on port     " + configuration.Port);
-            Console.WriteLine("SETTINGS: Max Connections       " + configuration.MaximumConnections);
             Console.WriteLine("SETTINGS: Message Buffer Size   " + configuration.MessageBufferSize + " BYTES");
             Console.WriteLine("SETTINGS: Communication Timeout " + configuration.CommunicationTimeoutSeconds + " SECONDS");
             Console.WriteLine("SETTINGS: Max Message Size      " + configuration.MaximumMessageSizeKB + " KB");

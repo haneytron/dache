@@ -27,10 +27,6 @@ namespace Dache.CacheHost.Communication
         private readonly ISimplSocketServer _server;
         // The local end point
         private readonly IPEndPoint _localEndPoint;
-        // The maximum number of simultaneous connections
-        private readonly int _maximumConnections = 0; //not in use
-        // The message buffer size
-        private readonly int _messageBufferSize = 0; //not in use
 
         // The default cache item policy
         private readonly CacheItemPolicy _defaultCacheItemPolicy = null;
@@ -50,11 +46,10 @@ namespace Dache.CacheHost.Communication
         /// <param name="tagRoutingTable">The tag routing table.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="port">The port.</param>
-        /// <param name="maximumConnections">The maximum number of simultaneous connections.</param>
         /// <param name="messageBufferSize">The buffer size to use for sending and receiving data.</param>
         /// <param name="timeoutMilliseconds">The communication timeout, in milliseconds.</param>
         /// <param name="maxMessageSize">The maximum message size, in bytes.</param>
-        public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, ILogger logger, int port, int maximumConnections, int messageBufferSize, int timeoutMilliseconds, int maxMessageSize)
+        public CacheHostServer(IMemCache memCache, ITagRoutingTable tagRoutingTable, ILogger logger, int port, int messageBufferSize, int timeoutMilliseconds, int maxMessageSize)
         {
             // Sanitize
             if (memCache == null)
@@ -81,10 +76,6 @@ namespace Dache.CacheHost.Communication
             // Set the logger
             _logger = logger;
 
-            // Set maximum connections and message buffer size
-            _maximumConnections = maximumConnections;
-            _messageBufferSize = messageBufferSize;
-
             // Establish the endpoint for the socket
             var ipHostInfo = Dns.GetHostEntry(string.Empty);
             // Listen on all interfaces
@@ -92,7 +83,7 @@ namespace Dache.CacheHost.Communication
 
             // Define the server
             _server = new SimplSocketServer(() => new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp), messageBufferSize: messageBufferSize, 
-                communicationTimeout: timeoutMilliseconds, maxMessageSize: maxMessageSize, maximumConnections: maximumConnections);
+                communicationTimeout: timeoutMilliseconds, maxMessageSize: maxMessageSize);
 
             // Hook into events
             _server.ClientConnected += (sender, e) =>

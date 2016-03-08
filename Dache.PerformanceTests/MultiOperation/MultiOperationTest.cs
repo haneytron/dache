@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Dache.PerformanceTests.MultiOperation
@@ -92,14 +93,17 @@ namespace Dache.PerformanceTests.MultiOperation
 
             #region Regular Get 10000 strings
             stopwatch.Restart();
+            var failedKeyCount = 0;
             for (int i = 1; i <= 10000; i++)
             {
                 if (!cacheClient.TryGet("test" + i, out otherValue))
                 {
-                    Console.WriteLine("Get failed for cache key: " + "test" + i);
+                    failedKeyCount++;
                 }
             }
             stopwatch.Stop();
+
+            Console.WriteLine("Failed Key Count: " + failedKeyCount + (failedKeyCount > 0 ? ", NOTE: network is probably slow" : ""));
 
             Console.WriteLine("Get time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
             #endregion
@@ -116,7 +120,8 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Stop();
 
             Console.WriteLine("Get Many time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
-            Console.WriteLine("Get Many object count: " + getManyResults.Count);
+            var getManyResultsCount = getManyResults != null ? getManyResults.Count : 0;
+            Console.WriteLine("Get Many object count: " + getManyResultsCount + ( getManyResultsCount < 10000 ? ", NOTE: network is probably slow" : ""));
             #endregion
 
             #region Tagged Get 10000 strings
@@ -125,7 +130,8 @@ namespace Dache.PerformanceTests.MultiOperation
             stopwatch.Stop();
 
             Console.WriteLine("Get Tagged time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
-            Console.WriteLine("Get Tagged object count: " + getManyResults.Count);
+            getManyResultsCount = getManyResults != null ? getManyResults.Count : 0;
+            Console.WriteLine("Get Tagged object count: " + getManyResultsCount + (getManyResultsCount < 10000 ? ", NOTE: network is probably slow" : ""));
             #endregion
 
             Console.WriteLine();
@@ -197,11 +203,17 @@ namespace Dache.PerformanceTests.MultiOperation
 
             #region Regular Get 10000 complex objects with sliding expiration
             stopwatch.Restart();
+            failedKeyCount = 0;
             for (int i = 1; i <= 10000; i++)
             {
-                cacheClient.TryGet("testabsolutecomplex" + i, out myObject);
+                if (!cacheClient.TryGet("testabsolutecomplex" + i, out myObject))
+                {
+                    failedKeyCount++;
+                }
             }
             stopwatch.Stop();
+
+            Console.WriteLine("Failed Key Count: " + failedKeyCount + (failedKeyCount > 0 ? ", NOTE: network is probably slow" : ""));
 
             Console.WriteLine("Get complex object time taken: " + stopwatch.ElapsedMilliseconds + " ms, " + stopwatch.ElapsedTicks + " ticks");
             #endregion

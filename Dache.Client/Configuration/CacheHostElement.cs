@@ -40,5 +40,22 @@ namespace Dache.Client.Configuration
                 this["port"] = value;
             }
         }
+
+        /// <summary>
+        /// The number of connections to hold to the cache host.
+        /// </summary>
+        [IntegerValidator(MinValue = 1, MaxValue = int.MaxValue)]
+        [ConfigurationProperty("connections", IsRequired = false, DefaultValue = 1)]
+        public int Connections
+        {
+            get
+            {
+                return (int)this["connections"];
+            }
+            set
+            {
+                this["connections"] = value;
+            }
+        }
     }
 }

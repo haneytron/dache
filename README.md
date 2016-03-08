@@ -16,12 +16,13 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.5.9
+## 1.6.0
 
-- Added ProtoBufSerializer and JsonSerializer
-- Added DebugLogger
-- Added some unit tests
-- Fixed a bug in DacheSessionStateProvider where a CacheClient was created per pooled instance.
+- Removed MaximumConnections, in hindsight it was a little silly
+- Client: HostReconnectIntervalSeconds minimum value is now 1 second (was 5), defaulted to 1 second (was 10)
+- Client: MessageBufferSize range changed to 1024 - 524288, defaulted to 65536 (was 4096)
+- Client: Stubbed "connections" value to cacheHosts section, it will eventually allow you to make more connections to each host for better throughput, but it currently has no effect
+- Upgraded SimplSockets to 1.4.6 which provides better memory usage and stability. It also prioritizes sends which expect a response over async sends that have no response (like cache adds)
 
 # INSTALLATION INSTRUCTIONS
 
