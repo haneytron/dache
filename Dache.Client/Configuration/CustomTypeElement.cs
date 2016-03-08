@@ -23,5 +23,10 @@ namespace Dache.CacheHost.Configuration
                 this["type"] = value;
             }
         }
+
+        public override bool IsReadOnly()
+        {
+            return false;
+        }
     }
 }
