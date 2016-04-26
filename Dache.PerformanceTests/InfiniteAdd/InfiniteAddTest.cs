@@ -30,7 +30,7 @@ namespace Dache.PerformanceTests.InfiniteAdd
                 {
                     try
                     {
-                        cacheClient.AddOrUpdate("test" + i, value);
+                        cacheClient.AddOrUpdate(string.Intern("test" + i), value);
                     }
                     catch (NoCacheHostsAvailableException)
                     {

@@ -1,4 +1,5 @@
 ﻿using Dache.Client;
+using Dache.Client.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

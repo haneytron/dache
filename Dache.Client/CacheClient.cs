@@ -363,7 +363,7 @@ namespace Dache.Client
             do
             {
                 // Get the cache host bucket - use tagName if specified
-                var cacheHostBucket = DetermineBucket(tagName != null ? tagName : cacheKey);
+                var cacheHostBucket = DetermineBucket(tagName ?? cacheKey);
 
                 try
                 {
@@ -964,6 +964,7 @@ namespace Dache.Client
         /// <returns>The cache host bucket.</returns>
         private CacheHostBucket DetermineBucket(string cacheKey)
         {
+
             _lock.EnterReadLock();
 
             try
@@ -974,11 +975,17 @@ namespace Dache.Client
                     throw new NoCacheHostsAvailableException("There are no reachable cache hosts available. Verify your client settings and ensure that all cache hosts can be successfully communicated with from this client.");
                 }
 
+                // base case of 1 host, just skip all the math
+                if (_cacheHostBuckets.Count == 1)
+                {
+                    return _cacheHostBuckets[0];
+                }
+
                 // Compute hash code
                 var hashCode = ComputeHashCode(cacheKey);
 
                 // The index to use is value of the (fairly evenly distributed) hashcode modulus the total cache host count
-                var index = Math.Abs(hashCode % _cacheHostBuckets.Count);
+                var index = hashCode % _cacheHostBuckets.Count;
 
                 // Consistent hashing: if current is offline, use the one above it (rolling over to 0)
                 while (_offlineCacheHostBucketIndexes.Contains(index))
@@ -995,22 +1002,23 @@ namespace Dache.Client
         }
 
         /// <summary>
-        /// Computes an integer hash code for a cache key.
+        /// Computes an integer hash code for a cache key. Guaranteed to be a positive integer (which reduces the possible space by half).
         /// </summary>
         /// <param name="cacheKey">The cache key.</param>
         /// <returns>A hash code.</returns>
         private static int ComputeHashCode(string cacheKey)
         {
-            unchecked
+            int hash = 17;
+            for (var i = 0; i < cacheKey.Length; i++)
             {
-                int hash = 17;
-                foreach (char c in cacheKey)
+                // Very modulus-friendly
+                unchecked
                 {
-                    // Very modulus-friendly
-                    hash += c;
+                    hash += cacheKey[i];
                 }
-                return hash;
             }
+
+            return hash < 0 ? hash * -1 : hash;
         }
 
         /// <summary>
@@ -1024,12 +1032,12 @@ namespace Dache.Client
             foreach (var cacheKey in cacheKeys)
             {
                 int hash = 17;
-                unchecked
+                for (var i = 0; i < cacheKey.Length; i++)
                 {
-                    foreach (char c in cacheKey)
+                    // Very modulus-friendly
+                    unchecked
                     {
-                        // Very modulus-friendly
-                        hash += c;
+                        hash += cacheKey[i];
                     }
                 }
                 resultHash ^= hash;
@@ -1134,16 +1142,14 @@ namespace Dache.Client
                 _lock.EnterReadLock();
                 try
                 {
-                    if (_cacheHosts.Count == 0)
+                    if (_cacheHostCount == 0)
                     {
                         return null;
                     }
 
-                    unchecked
-                    {
-                        // Should be close enough to atomic and never escape the bounds of the list
-                        return _cacheHosts[_currentCacheHostIndex++ % _cacheHosts.Count];
-                    }
+                    // Should be close enough to atomic and never escape the bounds of the list
+                    _currentCacheHostIndex = _currentCacheHostIndex++ % _cacheHostCount;
+                    return _cacheHosts[_currentCacheHostIndex];
                 }
                 finally
                 {
