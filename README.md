@@ -16,13 +16,13 @@ Fast, scalable distributed caching with meaningful performance metrics for your 
 
 # VERSION INFORMATION
 
-## 1.6.0
+## 1.6.1
 
-- Removed MaximumConnections, in hindsight it was a little silly
-- Client: HostReconnectIntervalSeconds minimum value is now 1 second (was 5), defaulted to 1 second (was 10)
-- Client: MessageBufferSize range changed to 1024 - 524288, defaulted to 65536 (was 4096)
-- Client: Stubbed "connections" value to cacheHosts section, it will eventually allow you to make more connections to each host for better throughput, but it currently has no effect
-- Upgraded SimplSockets to 1.4.6 which provides better memory usage and stability. It also prioritizes sends which expect a response over async sends that have no response (like cache adds)
+- Client: Minor performance improvements
+- Cache Host: Minor performance improvements
+- Performance Tests: Updated Infinite Add test to insert 1ms sleep every 1000 adds (helps with infinite loop CPU contention that was sometimes overloading outgoing Socket send buffer)
+- Performance Tests: Changed all tests to use ProtoBuf-Net serializer. It's faster and better than BinarySerializer, and a much better demonstration of the speed and performance of Dache
+- Upgraded SimplSockets to 1.4.7 which provides performance and memory optimizations at the TCP socket level
 
 # INSTALLATION INSTRUCTIONS
 
