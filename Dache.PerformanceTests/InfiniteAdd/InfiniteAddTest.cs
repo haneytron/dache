@@ -24,9 +24,10 @@ namespace Dache.PerformanceTests.InfiniteAdd
             cacheClient.HostReconnected += (sender, e) => { Console.WriteLine("*** Host reconnected"); };
 
             // Add items
+            var cts = new CancellationTokenSource();
             Task.Factory.StartNew(() => {
                 int i = 0;
-                while (true)
+                while (!cts.Token.IsCancellationRequested)
                 {
                     try
                     {
@@ -38,18 +39,17 @@ namespace Dache.PerformanceTests.InfiniteAdd
                         continue;
                     }
 
-                    i++;
-                    if (i == itemsToAdd)
-                    {
-                        i = 0;
-                    }
+                    i = ++i % itemsToAdd;
+
+                    if (i == 0) Thread.Sleep(1);
                 }
-            });
+            }, cts.Token);
 
             var key = Console.ReadKey();
             // Graceful shutdown option
             if (key.KeyChar == 'q')
             {
+                cts.Cancel();
                 cacheClient.Shutdown();
             }
         }
